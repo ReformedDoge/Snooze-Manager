@@ -1,8 +1,8 @@
 /**
  * @name Snooze-WhaleHelper
- * @version 1.0.0
+ * @version 1.0.1
  * @author SnoozeFest - github@ReformedDoge
- * @description Whale Helper: Rerollable Pool Button (Loot page) & Skin Tier Badges (Champ Select).
+ * @description Whale Helper: Rerollable Pool Button (Loot page), Drop Chance viewer (Loot page), Skin Tier Badges (Champ Select), Hide Unowned Skins/Chromas (Champion Select).
  * @link https://github.com/ReformedDoge/Snooze-Manager
  */
 import Utils from './generalUtils.js';
@@ -22,6 +22,7 @@ const CLASSIC_RARITIES = new Set(['kNoRarity', 'kDefault', '']);
 let isLootEnabled     = true;
 let isSkinTierEnabled = true;
 let isDropOddsEnabled = true;
+let isHideUnownedEnabled = false;
 
 // Shared Cache
 let skinsCache = new Map(); // skinId → skin object
@@ -1522,25 +1523,6 @@ export function installEmberHook() {
         }
     });
 
-    // Champ Select Tiers
-    Utils.Hooks.Ember.registerRule({
-        name: 'skin-tier-carousel-hook',
-        matcher: 'skin-carousel',
-        mixin() {
-            return {
-                didRender() {
-                    this._super(...arguments);
-                    if (!isSkinTierEnabled || !this.element) return;
-                    const skinSelectEl = this.element.closest('.skin-select');
-                    const skinId = extractSkinIdFromDOM(skinSelectEl ?? this.element);
-                    if (!skinId) return;
-                    const nameEl = skinSelectEl?.querySelector('.champion-skin-name') ?? document.querySelector('.champion-skin-name');
-                    if (nameEl) updateBadge(nameEl, skinId);
-                },
-            };
-        }
-    });
-
     Utils.Hooks.Ember.registerRule({
         name: 'skin-tier-name-hook',
         matcher: 'champion-skin-name',
@@ -1549,15 +1531,13 @@ export function installEmberHook() {
                 didRender() {
                     this._super(...arguments);
                     if (!isSkinTierEnabled || !this.element) return;
-                    const skinSelectEl = this.element.closest('.skin-select');
-                    const skinId = extractSkinIdFromDOM(skinSelectEl) ?? extractSkinIdFromComponent(this);
+                    const skinId = extractSkinIdFromComponent(this) || extractSkinIdFromDOM(this.element.closest('.skin-select'));
                     updateBadge(this.element, skinId);
                 },
                 didUpdate() {
                     this._super(...arguments);
                     if (!isSkinTierEnabled || !this.element) return;
-                    const skinSelectEl = this.element.closest('.skin-select');
-                    const skinId = extractSkinIdFromDOM(skinSelectEl) ?? extractSkinIdFromComponent(this);
+                    const skinId = extractSkinIdFromComponent(this) || extractSkinIdFromDOM(this.element.closest('.skin-select'));
                     updateBadge(this.element, skinId);
                 },
             };
@@ -1567,17 +1547,32 @@ export function installEmberHook() {
     Utils.Hooks.Ember.registerRule({
         name: 'skin-tier-select-hook',
         matcher: 'skin-select',
-        mixin() {
-            return {
-                didRender() {
-                    this._super(...arguments);
-                    if (!isSkinTierEnabled || !this.element) return;
-                    const skinId = extractSkinIdFromDOM(this.element);
-                    const nameEl = this.element.querySelector('.champion-skin-name');
-                    if (nameEl) updateBadge(nameEl, skinId);
-                },
-            };
-        }
+        wraps: [
+            {
+                name: 'handleSkinCarouselSkins',
+                replacement: function(original, args) {
+                    if (isHideUnownedEnabled && args && args[0] && Array.isArray(args[0])) {
+                        // Filter skins natively
+                        args[0] = args[0].filter(skin => {
+                            if (!skin.unlocked && !skin.isBase && (!skin.id || skin.id % 1000 !== 0)) {
+                                return false;
+                            }
+                            
+                            // Mutate childSkins in-place to preserve object references for Ember observers
+                            if (skin.childSkins && Array.isArray(skin.childSkins)) {
+                                for (let i = skin.childSkins.length - 1; i >= 0; i--) {
+                                    if (!skin.childSkins[i].unlocked) {
+                                        skin.childSkins.splice(i, 1);
+                                    }
+                                }
+                            }
+                            return true;
+                        });
+                    }
+                    return original.apply(this, args);
+                }
+            }
+        ]
     });
 
     
@@ -1597,6 +1592,7 @@ export function init(context) {
     isLootEnabled     = Utils.Store.get('whaleHelper', 'lootHelperEnabled') ?? true;
     isSkinTierEnabled = Utils.Store.get('whaleHelper', 'skinTierEnabled') ?? true;
     isDropOddsEnabled = Utils.Store.get('whaleHelper', 'dropOddsEnabled') ?? true;
+    isHideUnownedEnabled = Utils.Store.get('whaleHelper', 'hideUnownedEnabled') ?? false;
 
     if (window.SnoozeManager?.registerModule) {
         window.SnoozeManager.registerModule({
@@ -1644,6 +1640,16 @@ export function init(context) {
                         isDropOddsEnabled = val;
                         Utils.Store.set('whaleHelper', 'dropOddsEnabled', val);
                     }
+                },
+                {
+                    type: 'toggle',
+                    id: 'sm:hideUnownedSkins',
+                    label: 'Hide Unowned Skins & Chromas (Champ Select)',
+                    value: isHideUnownedEnabled,
+                    onChange: (val) => {
+                        isHideUnownedEnabled = val;
+                        Utils.Store.set('whaleHelper', 'hideUnownedEnabled', val);
+                    }
                 }
             ]
         });
@@ -1687,6 +1693,10 @@ export function init(context) {
 
             plugin.appendChild(createToggle("Enable Loot Drop Odds Previewer", isDropOddsEnabled, (val) => {
                 isDropOddsEnabled = val; Utils.Store.set('whaleHelper', 'dropOddsEnabled', val);
+            }));
+
+            plugin.appendChild(createToggle("Hide Unowned Skins & Chromas (Champ Select)", isHideUnownedEnabled, (val) => {
+                isHideUnownedEnabled = val; Utils.Store.set('whaleHelper', 'hideUnownedEnabled', val);
             }));
         });
     }

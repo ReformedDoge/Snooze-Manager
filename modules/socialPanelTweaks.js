@@ -1324,6 +1324,8 @@ export function installEmberHook() {
         matcher: 'lol-social-roster-member',
         mixin() {
             return {
+                /*
+				// Commented out since these seems redundent. keeping for keeps sake
                 didInsertElement() {
                     this._super(...arguments);
                     refreshRosterMemberElement(this.element);
@@ -1332,6 +1334,7 @@ export function installEmberHook() {
                     this._super(...arguments);
                     refreshRosterMemberElement(this.element);
                 },
+                */
                 didRender() {
                     this._super(...arguments);
                     refreshRosterMemberElement(this.element);

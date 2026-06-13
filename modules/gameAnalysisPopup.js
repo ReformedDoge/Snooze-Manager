@@ -415,6 +415,7 @@ let previousPhase = null;
 
 function clearLobbyCache() {
     champSelectStatsCache.clear();
+    matchHistoryGameIdsCache.clear(); // ensure premade detection re-fetches fresh game IDs each new lobby
     currentChampSelectSessionId = null;
     champSelectPremadeMap = new Map();
     computingPremades = null;
@@ -545,7 +546,11 @@ export function init(context) {
         matcher: 'lobby-member',
         mixin() {
             return {
-                didRender() {
+                /* 
+				Swapped to didInsertElement instead, keeping this comment for keeps sake!
+				didRender() { 
+				*/
+                didInsertElement() {
                     this._super(...arguments);
                     if (!Utils.Store.get('gameAnalysisPopup', 'enabled')) return;
                     if (!this.element) return;
