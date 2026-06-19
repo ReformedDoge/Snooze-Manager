@@ -318,44 +318,9 @@ function renderExtraSettings(container) {
         updatePickers();
     });
 
-    // Lock Before End Input Row
-    const lockRow = document.createElement('div');
-    Object.assign(lockRow.style, { display: 'flex', alignItems: 'center', gap: '10px', marginTop: '5px' });
-
-    const lockLabel = document.createElement('span');
-    lockLabel.textContent = 'Lock in X seconds before turn ends (0 = instant)';
-    Object.assign(lockLabel.style, { color: '#a09b8c', fontSize: '12px', whiteSpace: 'nowrap' });
-
-    const lockInput = document.createElement('input');
-    lockInput.type = 'number';
-    lockInput.min = String(LOCK_BEFORE_END_MIN);
-    lockInput.max = String(LOCK_BEFORE_END_MAX);
-    lockInput.step = '0.5';
-    lockInput.value = String(getLockBeforeEndMs() / 1000);
-    Object.assign(lockInput.style, {
-        background: '#111',
-        border: '1px solid #3e2e13',
-        color: '#f0e6d2',
-        padding: '5px 8px',
-        borderRadius: '2px',
-        outline: 'none',
-        width: '70px',
-        fontSize: '13px'
-    });
-
-    lockInput.addEventListener('click', (e) => e.stopPropagation());
-    lockInput.addEventListener('change', () => {
-        let v = parseFloat(lockInput.value);
-        if (!isFinite(v)) v = 0;
-        v = Math.min(LOCK_BEFORE_END_MAX, Math.max(LOCK_BEFORE_END_MIN, v));
-        v = Math.round(v * 10) / 10;
-        lockInput.value = String(v);
+    container.appendChild(Utils.Settings.createNumberInputRow('Lock in X seconds before turn ends (0 = instant)', getLockBeforeEndMs() / 1000, LOCK_BEFORE_END_MIN, LOCK_BEFORE_END_MAX, 0.5, (v) => {
         Utils.Store.set('autoLockChampion', LOCK_BEFORE_END_KEY, v);
-    });
-
-    lockRow.appendChild(lockLabel);
-    lockRow.appendChild(lockInput);
-    container.appendChild(lockRow);
+    }));
 
     if (Utils.LCU) {
         Utils.LCU.get('/lol-game-data/assets/v1/champion-summary.json').then(champs => {

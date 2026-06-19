@@ -614,12 +614,7 @@ function renderSettings(container, showMasterToggle = true) {
 
   container.appendChild(createLabeledInput('Drag bar height (%)', dragInputContainer));
 
-  const note = document.createElement('div');
-  note.textContent = 'Settings are applied when enabled and when values change.';
-  note.style.color = '#8a9aaa';
-  note.style.fontSize = '12px';
-  note.style.lineHeight = '1.4';
-  container.appendChild(note);
+  container.appendChild(Utils.Settings.createInfoBox('Settings are applied when enabled and when values change.'));
 }
 
 export function init(context) {

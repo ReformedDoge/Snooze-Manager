@@ -1252,65 +1252,15 @@ export function init(context) {
             plugin.appendChild(createFlatCheckbox('Highlight friends in the same lobby', isPartyGroupEnabled, togglePartyGroup));
             plugin.appendChild(createFlatCheckbox('Enable Group Folder Invite Option', isFolderInviteEnabled, toggleFolderInvite));
 
-            // Flat Select for STANDALONE mode
-            const methodRow = document.createElement('div');
-            methodRow.classList.add('plugins-settings-row');
-            methodRow.style.marginTop = '10px';
-            methodRow.style.display = 'flex';
-            methodRow.style.justifyContent = 'space-between';
-            methodRow.style.alignItems = 'center';
+            plugin.appendChild(Utils.Settings.createSelectRow('Collapse Method', [
+                { value: 'crop', label: 'Crop (Resize Window)' },
+                { value: 'stretch', label: 'Stretch (Scale Layout)' },
+                { value: 'slide', label: 'Slide (Shift Layout)' }
+            ], collapseMethod, (v) => {
+                toggleCollapseMethod(v);
+            }));
 
-            const selectLabel = document.createElement('label');
-            selectLabel.innerHTML = 'Collapse Method';
-            selectLabel.style.color = '#a09b8c';
-            selectLabel.style.fontSize = '12px';
-
-            const select = document.createElement('select');
-            select.style.background = '#111';
-            select.style.color = '#f0e6d2';
-            select.style.border = '1px solid #3e2e13';
-            select.style.padding = '4px 8px';
-            select.style.outline = 'none';
-
-            const optCrop = document.createElement('option');
-            optCrop.value = 'crop';
-            optCrop.textContent = 'Crop (Resize Window)';
-            select.appendChild(optCrop);
-
-            const optStretch = document.createElement('option');
-            optStretch.value = 'stretch';
-            optStretch.textContent = 'Stretch (Scale Layout)';
-            select.appendChild(optStretch);
-
-            const optSlide = document.createElement('option');
-            optSlide.value = 'slide';
-            optSlide.textContent = 'Slide (Shift Layout)';
-            select.appendChild(optSlide);
-
-            select.value = collapseMethod;
-            select.addEventListener('change', () => {
-                toggleCollapseMethod(select.value);
-            });
-
-            methodRow.appendChild(selectLabel);
-            methodRow.appendChild(select);
-            plugin.appendChild(methodRow);
-
-            const slideNoteRow = document.createElement('div');
-            slideNoteRow.classList.add('plugins-settings-row');
-            Object.assign(slideNoteRow.style, {
-                display: 'block',
-                marginTop: '10px',
-                padding: '10px',
-                background: 'rgba(0,0,0,0.2)',
-                border: '1px solid rgba(255,255,255,0.05)',
-                borderRadius: '4px',
-                color: '#8a9aaa',
-                fontSize: '12px',
-                lineHeight: '1.5'
-            });
-            slideNoteRow.innerHTML = '<span style="color:#c8aa6e;font-weight:600;">Slide mode note:</span> Unlike Crop and Stretch, this method shifts interface elements without resizing the window — the original client background stays visible in the uncovered sidebar area. For the cleanest look, pair it with a custom theme that removes or replaces that background.';
-            plugin.appendChild(slideNoteRow);
+            plugin.appendChild(Utils.Settings.createInfoBox('<span style="color:#c8aa6e;font-weight:600;">Slide mode note:</span> Unlike Crop and Stretch, this method shifts interface elements without resizing the window — the original client background stays visible in the uncovered sidebar area. For the cleanest look, pair it with a custom theme that removes or replaces that background.'));
         });
     }
 }

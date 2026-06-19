@@ -1643,34 +1643,14 @@ export function init(context) {
     } else {
         Utils.DOM.observer.observe("lol-uikit-scrollable.whale-helper-settings", (plugin) => {
             plugin.innerHTML = '';
-            const createToggle = (labelStr, isChecked, onClick) => {
-                const row = document.createElement("div");
-                row.classList.add("plugins-settings-row");
-                const origin = document.createElement("lol-uikit-flat-checkbox");
-                const checkbox = document.createElement("input");
-                const label = document.createElement("label");
-
-                checkbox.type = "checkbox"; checkbox.checked = isChecked;
-                if (isChecked) origin.setAttribute("class", "checked");
-
-                checkbox.onclick = () => {
-                    const val = checkbox.checked; onClick(val);
-                    if (val) origin.setAttribute("class", "checked"); else origin.removeAttribute("class");
-                };
-
-                checkbox.setAttribute("slot", "input"); label.innerHTML = labelStr; label.setAttribute("slot", "label");
-                origin.appendChild(checkbox); origin.appendChild(label); row.appendChild(origin);
-                return row;
-            };
-
-            plugin.appendChild(createToggle("Enable Whale Helper (Loot Page)", isLootEnabled, (val) => {
+            plugin.appendChild(Utils.Settings.createToggleRow("Enable Whale Helper (Loot Page)", isLootEnabled, (val) => {
                 isLootEnabled = val; Utils.Store.set('whaleHelper', 'lootHelperEnabled', val);
                 if (!val) { removeButton(); closePanel(); } else {
                     const container = document.querySelector('.loot-action-tabs-container'); if (container) injectButton(container);
                 }
             }));
 
-            plugin.appendChild(createToggle("Enable Skin Tier Badges (Champ Select)", isSkinTierEnabled, (val) => {
+            plugin.appendChild(Utils.Settings.createToggleRow("Enable Skin Tier Badges (Champ Select)", isSkinTierEnabled, (val) => {
                 isSkinTierEnabled = val; Utils.Store.set('whaleHelper', 'skinTierEnabled', val);
                 if (!val) {
                     document.querySelectorAll(`[${BADGE_ATTR}]`).forEach(el => el.remove());
@@ -1678,11 +1658,11 @@ export function init(context) {
                 } else { mountSessionObserver(); refreshAllBadges(); }
             }));
 
-            plugin.appendChild(createToggle("Enable Loot Drop Odds Previewer (Loot Page)", isDropOddsEnabled, (val) => {
+            plugin.appendChild(Utils.Settings.createToggleRow("Enable Loot Drop Odds Previewer (Loot Page)", isDropOddsEnabled, (val) => {
                 isDropOddsEnabled = val; Utils.Store.set('whaleHelper', 'dropOddsEnabled', val);
             }));
 
-            plugin.appendChild(createToggle("Hide Unowned Skins & Chromas (Champ Select)", isHideUnownedEnabled, (val) => {
+            plugin.appendChild(Utils.Settings.createToggleRow("Hide Unowned Skins & Chromas (Champ Select)", isHideUnownedEnabled, (val) => {
                 isHideUnownedEnabled = val; Utils.Store.set('whaleHelper', 'hideUnownedEnabled', val);
             }));
         });

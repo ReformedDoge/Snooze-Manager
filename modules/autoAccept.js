@@ -47,44 +47,9 @@ function renderExtraSettings(container, native = false) {
     container.style.marginTop = '0';
     container.style.borderLeft = '2px solid #3e2e13';
 
-    // Delay Row
-    const delayRow = document.createElement('div');
-    Object.assign(delayRow.style, { display: 'flex', alignItems: 'center', gap: '10px' });
-
-    const delayLabel = document.createElement('span');
-    delayLabel.textContent = 'Accept Delay (seconds)';
-    Object.assign(delayLabel.style, { color: '#a09b8c', fontSize: '12px', whiteSpace: 'nowrap' });
-
-    const delayInput = document.createElement('input');
-    delayInput.type = 'number';
-    delayInput.min = String(DELAY_MIN);
-    delayInput.max = String(DELAY_MAX);
-    delayInput.step = '0.5';
-    delayInput.value = String(getDelay());
-    Object.assign(delayInput.style, {
-        background: '#111',
-        border: '1px solid #3e2e13',
-        color: '#f0e6d2',
-        padding: '5px 8px',
-        borderRadius: '2px',
-        outline: 'none',
-        width: '70px',
-        fontSize: '13px'
-    });
-
-    delayInput.addEventListener('click', (e) => e.stopPropagation());
-    delayInput.addEventListener('change', () => {
-        let v = parseFloat(delayInput.value);
-        if (!isFinite(v)) v = 0;
-        v = Math.min(DELAY_MAX, Math.max(DELAY_MIN, v));
-        v = Math.round(v * 10) / 10;
-        delayInput.value = String(v);
+    container.appendChild(Utils.Settings.createNumberInputRow('Accept Delay (seconds)', getDelay(), DELAY_MIN, DELAY_MAX, 0.5, (v) => {
         Utils.Store.set('autoAccept', DELAY_KEY, v);
-    });
-
-    delayRow.appendChild(delayLabel);
-    delayRow.appendChild(delayInput);
-    container.appendChild(delayRow);
+    }));
 
     // Exit on Decline Toggle
     const exitEnabled = Utils.Store.get('autoAccept', EXIT_ON_DECLINE_KEY) || false;

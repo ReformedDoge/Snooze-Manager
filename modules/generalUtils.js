@@ -731,6 +731,100 @@ function createToggleRow(labelText, checked, onChange) {
     return row;
 }
 
+function createSelectRow(labelText, options, value, onChange) {
+    const row = document.createElement('div');
+    row.style.display = 'flex';
+    row.style.alignItems = 'center';
+    row.style.gap = '10px';
+
+    const label = document.createElement('span');
+    label.textContent = labelText;
+    label.style.color = '#a09b8c';
+    label.style.fontSize = '12px';
+    label.style.whiteSpace = 'nowrap';
+
+    const select = document.createElement('select');
+    select.style.background = '#111';
+    select.style.color = '#f0e6d2';
+    select.style.border = '1px solid #3e2e13';
+    select.style.padding = '5px 8px';
+    select.style.borderRadius = '2px';
+    select.style.outline = 'none';
+    select.style.fontSize = '13px';
+
+    (options || []).forEach(o => {
+        const opt = document.createElement('option');
+        opt.value = o.value;
+        opt.textContent = o.label;
+        if (String(o.value) === String(value)) opt.selected = true;
+        select.appendChild(opt);
+    });
+
+    select.addEventListener('click', (e) => e.stopPropagation());
+    select.addEventListener('change', () => {
+        if (typeof onChange === 'function') onChange(select.value);
+    });
+
+    row.appendChild(label);
+    row.appendChild(select);
+    return row;
+}
+
+function createNumberInputRow(labelText, value, min, max, step, onChange) {
+    const row = document.createElement('div');
+    row.style.display = 'flex';
+    row.style.alignItems = 'center';
+    row.style.gap = '10px';
+
+    const label = document.createElement('span');
+    label.textContent = labelText;
+    label.style.color = '#a09b8c';
+    label.style.fontSize = '12px';
+    label.style.whiteSpace = 'nowrap';
+
+    const input = document.createElement('input');
+    input.type = 'number';
+    input.min = String(min);
+    input.max = String(max);
+    input.step = String(step);
+    input.value = String(value);
+    input.style.background = '#111';
+    input.style.border = '1px solid #3e2e13';
+    input.style.color = '#f0e6d2';
+    input.style.padding = '5px 8px';
+    input.style.borderRadius = '2px';
+    input.style.outline = 'none';
+    input.style.width = '70px';
+    input.style.fontSize = '13px';
+
+    input.addEventListener('click', (e) => e.stopPropagation());
+    input.addEventListener('change', () => {
+        let v = parseFloat(input.value);
+        if (!isFinite(v)) v = min;
+        v = Math.min(max, Math.max(min, v));
+        v = Math.round(v * 10) / 10;
+        input.value = String(v);
+        if (typeof onChange === 'function') onChange(v);
+    });
+
+    row.appendChild(label);
+    row.appendChild(input);
+    return row;
+}
+
+function createInfoBox(htmlContent) {
+    const box = document.createElement('div');
+    box.style.padding = '10px';
+    box.style.background = 'rgba(0,0,0,0.2)';
+    box.style.border = '1px solid rgba(255,255,255,0.05)';
+    box.style.borderRadius = '4px';
+    box.style.color = '#8a9aaa';
+    box.style.fontSize = '12px';
+    box.style.lineHeight = '1.5';
+    box.innerHTML = htmlContent;
+    return box;
+}
+
 // Shared Assets & Match History Helpers
 
 const Assets = {
@@ -1362,7 +1456,7 @@ export const Utils = {
     LCU,
     Store,
     Panic,
-    Settings: { inject: settingsUtils, createToggleRow, createHotkeyRow },
+    Settings: { inject: settingsUtils, createToggleRow, createSelectRow, createNumberInputRow, createInfoBox, createHotkeyRow },
     GameData: { Assets, getSgpContext, getSgpMatchHistory }
 };
 export default Utils;
