@@ -25,6 +25,7 @@ Everything is built to be lightweight and event driven: no embedded React applic
 - `Profile Tweaks`: Remove profile banner/border, clone challenge token & unlock profile background.
 - `Social Panel Tweaks`: Enhances the social panel with queue labels, in-game timers, highlighting for same lobby friends, a collapsible sidebar (crop/stretch/slide) & a group folder invite option.
 - `Whale Helper`: Shows rerollable skins, icons, wards & emotes you don't own via a button on the loot page. Adds skin tier badges above name in champion select. Filters out unowned skins/chromas in champion select for a less cluttered skin carousel & chroma picker. Adds a loot drop table odds previewer accessible via the loot tab context menu (right click).
+- `Name Spoofer`: Locally spoofs displayed names for you and other players. Cosmetic only.
 
 ### Modes: Manager vs Standalone
 
@@ -32,7 +33,7 @@ Everything is built to be lightweight and event driven: no embedded React applic
 - Standalone mode: if you only want one module without the manager, copy `generalUtils.js` plus the desired module file from `modules` into `\Pengu Loader\plugins`. In that case, the module will use the League of Legends native settings menu instead of the manager hotkey interface.
 
 ### Credits
-
-Original balance buff viewer concept by Nomi.
-The idea of packaging a collection of plugins came from wjz_p's Sona.
-Better Friends Status, champion select player analysis, custom online status initial concept from sona.
+- Name Spoofer By [Lx](https://github.com/iIlusion)
+- Original balance buff viewer concept by Nomi.
+- The idea of packaging a collection of plugins came from wjz_p's Sona.
+- Better Friends Status, champion select player analysis, custom online status initial concept from sona.
