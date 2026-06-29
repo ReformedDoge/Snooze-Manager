@@ -941,7 +941,7 @@ const Assets = {
         if (ps && Array.isArray(ps.styles) && ps.styles.length > 0) ps.styles.forEach(x => this.perks[x.id] = x);
         if (Array.isArray(q) && q.length > 0) {
           this.queues = q.filter(x => x.name && x.id).map(x => ({
-            id: x.id, name: x.shortName || x.name, tag: 'q_' + x.id
+            ...x, tag: 'q_' + x.id
           })).sort((a, b) => a.name.localeCompare(b.name));
         }
         

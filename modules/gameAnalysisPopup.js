@@ -356,6 +356,7 @@ function sortPlayersWithPremades(players, premadeMap) {
 
 let isEnabled = false;
 let isChampSelectStatsEnabled = false;
+let includeAllQueues = false;
 let gameAnalysisPhaseUnsub = null;
 let gameAnalysisBtnObserver = null;
 let analysisShownForCurrentGame = false;
@@ -434,6 +435,7 @@ async function analyzePlayer(p, currentTag, premadeColor) {
 
           const results = h.games.map(g => {
              const pt = g.json.participants.find(x => x.puuid === puuid) || g.json.participants[0];
+             if (!pt) return 'remake';
              const isWin = pt.win !== undefined ? pt.win : g.json.teams.find(t=>t.teamId===pt.teamId)?.win;
              const isRemake = g.json.gameDuration < 240 && g.json.gameMode !== 'PRACTICETOOL'; 
              
@@ -707,6 +709,7 @@ export function init(context) {
     isPremadeHighlightEnabled = Utils.Store.get('gameAnalysisPopup', 'premadeHighlight');
     if (isPremadeHighlightEnabled === undefined) isPremadeHighlightEnabled = true;
     isChampSelectStatsEnabled = Utils.Store.get('gameAnalysisPopup', 'champSelectStats') || false;
+    includeAllQueues = Utils.Store.get('gameAnalysisPopup', 'includeAllQueues') || false;
 
     if (window.SnoozeManager && window.SnoozeManager.registerModule) {
         window.SnoozeManager.registerModule({
@@ -742,6 +745,16 @@ export function init(context) {
                         Utils.Store.set('gameAnalysisPopup', 'premadeHighlight', val);
                         champSelectStatsCache.clear();
                     }
+                },
+                {
+                    type: 'toggle',
+                    id: 'sm:includeAllQueues',
+                    label: 'Include all game modes in dropdown',
+                    value: includeAllQueues,
+                    onChange: (val) => {
+                        includeAllQueues = val;
+                        Utils.Store.set('gameAnalysisPopup', 'includeAllQueues', val);
+                    }
                 }
             ]
         });
@@ -768,6 +781,13 @@ export function init(context) {
             });
             row3.style.marginTop = "10px";
             plugin.appendChild(row3);
+
+            const row4 = Utils.Settings.createToggleRow("Include all game modes in dropdown", includeAllQueues, (next) => {
+                includeAllQueues = next;
+                Utils.Store.set('gameAnalysisPopup', 'includeAllQueues', includeAllQueues);
+            });
+            row4.style.marginTop = "10px";
+            plugin.appendChild(row4);
         });
     }
 
@@ -1254,6 +1274,7 @@ function renderStatsElements(el, statsData, premadeColor) {
 
                                 h.games.forEach(g => {
                                     const pt = g.json.participants.find(x => x.puuid === puuid) || g.json.participants[0];
+                                    if (!pt) return;
                                     const isWin = pt.win !== undefined ? pt.win : g.json.teams.find(t => t.teamId === pt.teamId)?.win;
                                     const isRemake = g.json.gameDuration < 240 && g.json.gameMode !== 'PRACTICETOOL'; 
                                     
@@ -1360,6 +1381,7 @@ export function formatTime(ts) {
 
 export function buildMatchRow(g, player, globalIdx) {
     const p = g.json.participants.find(x => x.puuid === player.puuid) || g.json.participants[0];
+    if (!p) return '';
     const win = p.win !== undefined ? p.win : g.json.teams.find(t => t.teamId === p.teamId)?.win;
     const qData = Utils.GameData.Assets.queues?.find(q => Number(q.id) === g.json.queueId);
     const mode = qData ? qData.name : (g.json.gameMode || 'UNKNOWN');
@@ -1852,6 +1874,7 @@ export const MatchHistoryModal = (function() {
     const dateStr = formatTime(game.json.gameCreation || 0);
     
     const me = participants.find(p => p.puuid === _player.puuid) || participants[0];
+    if (!me) return '<div style="color:#a09b8c;text-align:center;padding:40px;font-size:13px;">Match data unavailable</div>';
     const isWin = me.win;
     const remakeMode = game.json.gameDuration < 240 && mode !== 'PRACTICETOOL';
     const statusText = remakeMode ? 'REMAKE' : (isWin ? 'VICTORY' : 'DEFEAT');
@@ -2180,7 +2203,10 @@ export const MatchHistoryModal = (function() {
     if (select) {
       select.innerHTML = '<option value="">All Modes</option>';
       if (Utils.GameData.Assets.queues && Utils.GameData.Assets.queues.length > 0) {
-        Utils.GameData.Assets.queues.forEach(q => {
+        const queueList = includeAllQueues
+          ? Utils.GameData.Assets.queues
+          : Utils.GameData.Assets.queues.filter(q => q.queueAvailability === 'Available');
+        queueList.forEach(q => {
           const opt = document.createElement('option');
           opt.value = q.tag;
           opt.textContent = q.name;

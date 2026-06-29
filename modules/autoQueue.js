@@ -12,29 +12,28 @@ let _armed = false;
 // Prevent double-firing
 let _queuing = false;
 
-let _availableQueues = []; // [{ id, name }] fetched from LCU once
-
-function log(...args) {
-    Utils.Debug.log('[AutoQueue]', ...args);
-}
+let _availableQueues = []; // [{ id, name }] from Utils.GameData.Assets
 
 // Queue list 
 
 async function fetchQueues() {
-    log('Fetching available queues from LCU...');
+    Utils.Debug.log('[AutoQueue]', 'Loading queues...');
     try {
-        const queues = await Utils.LCU.get('/lol-game-queues/v1/queues');
-        if (!Array.isArray(queues)) {
-            log('WARN: /lol-game-queues/v1/queues did not return an array:', queues);
+        if (!Utils.GameData.Assets._initialized) {
+            await Utils.GameData.Assets.init();
+        }
+        const queues = Utils.GameData.Assets.queues;
+        if (!Array.isArray(queues) || queues.length === 0) {
+            Utils.Debug.log('[AutoQueue]', 'No queues available from Assets.');
             return;
         }
         _availableQueues = queues
             .filter(q => q.queueAvailability === 'Available' && q.isVisible)
             .map(q => ({ id: q.id, name: q.name || q.description || String(q.id) }))
             .sort((a, b) => a.id - b.id);
-        log(`Loaded ${_availableQueues.length} queues:`, _availableQueues.map(q => `${q.name}(${q.id})`).join(', '));
+        Utils.Debug.log('[AutoQueue]', `Loaded ${_availableQueues.length} queues:`, _availableQueues.map(q => `${q.name}(${q.id})`).join(', '));
     } catch (e) {
-        Utils.Debug.warn('[AutoQueue] Failed to fetch queue list:', e);
+        Utils.Debug.warn('[AutoQueue] Failed to load queues from Assets:', e);
     }
 }
 
@@ -42,7 +41,7 @@ async function fetchQueues() {
 
 async function reQueue() {
     if (_queuing) {
-        log('reQueue() called but already queuing — skipped.');
+        Utils.Debug.log('[AutoQueue]', 'reQueue() called but already queuing — skipped.');
         return;
     }
     _queuing = true;
@@ -51,16 +50,16 @@ async function reQueue() {
         const delay   = Utils.Store.get('autoQueue', 'delay') || 0;
         const enabled = Utils.Store.get('autoQueue', 'enabled');
 
-        log(`reQueue() — enabled=${enabled}, queueId=${queueId}, delay=${delay}s`);
+        Utils.Debug.log('[AutoQueue]', `reQueue() — enabled=${enabled}, queueId=${queueId}, delay=${delay}s`);
 
         if (!queueId) {
-            log('No queue selected in settings — aborting re-queue.');
+            Utils.Debug.log('[AutoQueue]', 'No queue selected in settings — aborting re-queue.');
             return;
         }
 
         const delayMs = delay * 1000;
         if (delayMs > 0) {
-            log(`Waiting ${delay}s before re-queuing...`);
+            Utils.Debug.log('[AutoQueue]', `Waiting ${delay}s before re-queuing...`);
             let isCancelled = false;
             const unregisterPanic = Utils.Panic.register(() => {
                 isCancelled = true;
@@ -69,44 +68,44 @@ async function reQueue() {
             unregisterPanic();
             
             if (isCancelled) {
-                log('Cancelled via Panic Key - aborting.');
+                Utils.Debug.log('[AutoQueue]', 'Cancelled via Panic Key - aborting.');
                 return;
             }
             if (!Utils.Store.get('autoQueue', 'enabled')) {
-                log('Feature was disabled during delay - aborting.');
+                Utils.Debug.log('[AutoQueue]', 'Feature was disabled during delay - aborting.');
                 return;
             }
         }
 
         // Play-again dismisses the EOG screen and returns us to a lobby.
         // Immediately overwrite the lobby with the chosen queue.
-        log('POST /lol-lobby/v2/play-again');
+        Utils.Debug.log('[AutoQueue]', 'POST /lol-lobby/v2/play-again');
         try {
             await Utils.LCU.post('/lol-lobby/v2/play-again');
-            log('play-again accepted.');
+            Utils.Debug.log('[AutoQueue]', 'play-again accepted.');
         } catch (e) {
-            log('ERROR on play-again (may already be in lobby):', e?.message ?? e);
+            Utils.Debug.log('[AutoQueue]', 'ERROR on play-again (may already be in lobby):', e?.message ?? e);
             // if we're already past EOG the endpoint will 404, continue anyway
         }
 
         // Small settle pause so the lobby is fully created before we mutate it
         await new Promise(r => setTimeout(r, 500));
 
-        log(`POST /lol-lobby/v2/lobby  { queueId: ${queueId} }`);
+        Utils.Debug.log('[AutoQueue]', `POST /lol-lobby/v2/lobby  { queueId: ${queueId} }`);
         try {
             const lobbyRes = await Utils.LCU.post('/lol-lobby/v2/lobby', { queueId: Number(queueId) });
-            log('Lobby created:', JSON.stringify(lobbyRes)?.slice(0, 120));
+            Utils.Debug.log('[AutoQueue]', 'Lobby created:', JSON.stringify(lobbyRes)?.slice(0, 120));
         } catch (e) {
-            log('ERROR creating lobby:', e?.message ?? e);
+            Utils.Debug.log('[AutoQueue]', 'ERROR creating lobby:', e?.message ?? e);
             return;
         }
 
-        log('POST /lol-lobby/v2/lobby/matchmaking/search');
+        Utils.Debug.log('[AutoQueue]', 'POST /lol-lobby/v2/lobby/matchmaking/search');
         try {
             await Utils.LCU.post('/lol-lobby/v2/lobby/matchmaking/search');
-            log('Matchmaking search started — waiting for ready check.');
+            Utils.Debug.log('[AutoQueue]', 'Matchmaking search started — waiting for ready check.');
         } catch (e) {
-            log('ERROR starting matchmaking search:', e?.message ?? e);
+            Utils.Debug.log('[AutoQueue]', 'ERROR starting matchmaking search:', e?.message ?? e);
         }
     } finally {
         _queuing = false;
@@ -154,7 +153,6 @@ function renderSettings(container) {
             if (String(q.id) === String(savedId)) opt.selected = true;
             queueSelect.appendChild(opt);
         });
-        // If nothing saved yet, save the first option as default
         if (!savedId && _availableQueues.length > 0) {
             Utils.Store.set('autoQueue', 'queueId', _availableQueues[0].id);
             queueSelect.value = String(_availableQueues[0].id);
@@ -224,7 +222,6 @@ export function init(context) {
             ]
         });
     } else {
-        // Native settings UI injection
         Utils.DOM.observer.observe("lol-uikit-scrollable.auto-queue-settings", (plugin) => {
             plugin.appendChild(Utils.Settings.createToggleRow("Enable Auto Queue", isEnabled, (next) => {
                 isEnabled = next;
@@ -241,11 +238,11 @@ export function init(context) {
 }
 
 export async function load() {
-    log('load() called — fetching queues and subscribing to gameflow phase.');
+    Utils.Debug.log('[AutoQueue]', 'load() called — loading queues and subscribing to gameflow phase.');
     await fetchQueues();
 
     if (!Utils.LCU || !Utils.LCU.observe) {
-        log('ERROR: Utils.LCU.observe not available — module inactive.');
+        Utils.Debug.log('[AutoQueue]', 'ERROR: Utils.LCU.observe not available — module inactive.');
         return;
     }
 
@@ -258,27 +255,24 @@ export async function load() {
         }
 
         const phase = e.data;
-        log(`Phase → "${phase}"  |  armed=${_armed}  queuing=${_queuing}  enabled=${isEnabled}`);
+        Utils.Debug.log('[AutoQueue]', `Phase → "${phase}"  |  armed=${_armed}  queuing=${_queuing}  enabled=${isEnabled}`);
 
-        // Arm on early end-of-game phases
         if (phase === 'WaitingForStats' || phase === 'PreEndOfGame') {
-            if (!_armed) log(`Arming on "${phase}".`);
+            if (!_armed) Utils.Debug.log('[AutoQueue]', `Arming on "${phase}".`);
             _armed = true;
             return;
         }
 
-        // Fire on EndOfGame
         if (phase === 'EndOfGame') {
-            if (!_armed) log('Arming on "EndOfGame".');
+            if (!_armed) Utils.Debug.log('[AutoQueue]', 'Arming on "EndOfGame".');
             _armed = true;
-            log('"EndOfGame" reached while armed — triggering re-queue.');
+            Utils.Debug.log('[AutoQueue]', '"EndOfGame" reached while armed — triggering re-queue.');
             _armed = false;
             reQueue();
             return;
         }
 
-        // Anything else: disarm
-        if (_armed) log(`Phase "${phase}" — disarming.`);
+        if (_armed) Utils.Debug.log('[AutoQueue]', `Phase "${phase}" — disarming.`);
         _armed = false;
         _queuing = false;
     });
