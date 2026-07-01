@@ -571,6 +571,7 @@ export function init(context) {
 					type: 'toggle',
 					id: 'sm:unlockProfileBackground',
 					label: 'Unlock Profile Background',
+					description: 'Fakes champion and skin ownership so any splash can be set as your profile background',
 					value: unlockBackgroundEnabled,
 					onChange: (val) => toggleUnlockProfileBackground(val)
 				},

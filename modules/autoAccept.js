@@ -15,7 +15,6 @@ const DELAY_MAX = 10;
 
 let isEnabled = false;
 let acceptedCurrentReadyCheck = false;
-let wasInReadyCheck = false;
 
 function toggleAutoAccept(enabled) {
     isEnabled = enabled;
@@ -48,9 +47,44 @@ function renderExtraSettings(container, native = false) {
     container.style.marginTop = '0';
     container.style.borderLeft = '2px solid #3e2e13';
 
-    container.appendChild(Utils.Settings.createNumberInputRow('Accept Delay (seconds)', getDelay(), DELAY_MIN, DELAY_MAX, 0.5, (v) => {
+    // Delay Row
+    const delayRow = document.createElement('div');
+    Object.assign(delayRow.style, { display: 'flex', alignItems: 'center', gap: '10px' });
+
+    const delayLabel = document.createElement('span');
+    delayLabel.textContent = 'Accept Delay (seconds)';
+    Object.assign(delayLabel.style, { color: '#a09b8c', fontSize: '12px', whiteSpace: 'nowrap' });
+
+    const delayInput = document.createElement('input');
+    delayInput.type = 'number';
+    delayInput.min = String(DELAY_MIN);
+    delayInput.max = String(DELAY_MAX);
+    delayInput.step = '0.5';
+    delayInput.value = String(getDelay());
+    Object.assign(delayInput.style, {
+        background: '#111',
+        border: '1px solid #3e2e13',
+        color: '#f0e6d2',
+        padding: '5px 8px',
+        borderRadius: '2px',
+        outline: 'none',
+        width: '70px',
+        fontSize: '13px'
+    });
+
+    delayInput.addEventListener('click', (e) => e.stopPropagation());
+    delayInput.addEventListener('change', () => {
+        let v = parseFloat(delayInput.value);
+        if (!isFinite(v)) v = 0;
+        v = Math.min(DELAY_MAX, Math.max(DELAY_MIN, v));
+        v = Math.round(v * 10) / 10;
+        delayInput.value = String(v);
         Utils.Store.set('autoAccept', DELAY_KEY, v);
-    }));
+    });
+
+    delayRow.appendChild(delayLabel);
+    delayRow.appendChild(delayInput);
+    container.appendChild(delayRow);
 
     // Exit on Decline Toggle
     const exitEnabled = Utils.Store.get('autoAccept', EXIT_ON_DECLINE_KEY) || false;
@@ -58,14 +92,12 @@ function renderExtraSettings(container, native = false) {
         Utils.Store.set('autoAccept', EXIT_ON_DECLINE_KEY, next);
     }));
 
-    // Panic Key Hotkey
-    const currentPanicKey = Utils.Store.get('global', 'panicKey') || 'F2';
-    container.appendChild(Utils.Settings.createHotkeyRow(
-        'Panic Key (Cancel Auto Actions)', 
-        currentPanicKey, 
-        (newKey) => Utils.Store.set('global', 'panicKey', newKey),
-        'Note: The Panic Key only works if you have set an Accept Delay greater than 0 seconds. You must press the key during the countdown window to cancel the action.'
-    ));
+    // Panic key lives in the Settings tab (shared with the menu shortcut); note it here
+    const panicNote = document.createElement('div');
+    Object.assign(panicNote.style, { color: '#8a9aaa', fontSize: '12px', marginTop: '12px', lineHeight: '1.4' });
+    const panicKey = Utils.Store.get('global', 'panicKey') || 'F2';
+    panicNote.textContent = `Panic Key (${panicKey}): press it during the accept countdown to cancel (only works with an Accept Delay greater than 0). Set the key in the Settings tab.`;
+    container.appendChild(panicNote);
 }
 
 export function init(context) {
@@ -96,6 +128,7 @@ export function init(context) {
                     type: 'toggle',
                     id: SETTINGS_KEY,
                     label: 'Enable Auto Accept',
+                    description: 'Accepts ready checks for you, after the configured delay if set',
                     value: isEnabled,
                     onChange: (val) => toggleAutoAccept(val)
                 },
@@ -119,7 +152,6 @@ export function init(context) {
             extraRow.classList.add("plugins-settings-row");
             extraRow.style.marginTop = "10px";
             renderExtraSettings(extraRow, true);
-            plugin.appendChild(row);
             plugin.appendChild(extraRow);
         });
     }
@@ -128,47 +160,39 @@ export function init(context) {
 export function load() {
     if (Utils.LCU && Utils.LCU.observe) {
         Utils.LCU.observe('/lol-gameflow/v1/gameflow-phase', e => {
-            const phase = e.data;
-            const exitOnDecline = Utils.Store.get('autoAccept', EXIT_ON_DECLINE_KEY);
-
-            if (phase === 'ReadyCheck') {
-                wasInReadyCheck = true;
+            if (e.data !== 'ReadyCheck') {
                 acceptedCurrentReadyCheck = false;
-                if (!isEnabled) return;
-                if (acceptedCurrentReadyCheck) return;
-                acceptedCurrentReadyCheck = true;
+                return;
+            }
 
-                const delay = getDelay();
-                if (delay <= 0) {
-                    Utils.LCU.post('/lol-matchmaking/v1/ready-check/accept').catch(() => {});
-                } else {
-                    let isCancelled = false;
-                    const unregisterPanic = Utils.Panic.register(() => {
-                        isCancelled = true;
-                    });
+            if (!isEnabled) return;
 
-                    setTimeout(() => {
-                        unregisterPanic();
-                        if (isCancelled || !isEnabled || !acceptedCurrentReadyCheck) return;
-                        Utils.LCU.post('/lol-matchmaking/v1/ready-check/accept').catch(() => {});
-                    }, delay * 1000);
-                }
-            } else if (phase === 'Lobby' && wasInReadyCheck && exitOnDecline) {
-                wasInReadyCheck = false;
-                acceptedCurrentReadyCheck = false;
-                Utils.Debug.log('[AutoAccept] ReadyCheck ended without accepting (decline/timeout). Exiting queue...');
-                Utils.LCU.delete('/lol-lobby/v2/lobby/matchmaking/search').catch(() => {});
+            if (acceptedCurrentReadyCheck) return;
+            acceptedCurrentReadyCheck = true;
+
+            const delay = getDelay();
+            if (delay <= 0) {
+                Utils.LCU.post('/lol-matchmaking/v1/ready-check/accept').catch(() => {});
             } else {
-                wasInReadyCheck = false;
-                acceptedCurrentReadyCheck = false;
+                let isCancelled = false;
+                const unregisterPanic = Utils.Panic.register(() => {
+                    isCancelled = true;
+                });
+
+                setTimeout(() => {
+                    unregisterPanic();
+                    if (isCancelled || !isEnabled || !acceptedCurrentReadyCheck) return;
+                    Utils.LCU.post('/lol-matchmaking/v1/ready-check/accept').catch(() => {});
+                }, delay * 1000);
             }
         });
 
         Utils.LCU.observe('/lol-matchmaking/v1/ready-check', e => {
             if (!e.data || !Utils.Store.get('autoAccept', EXIT_ON_DECLINE_KEY)) return;
-            if (e.data.state === 'StrangerNotReady' || e.data.state === 'PartyNotReady') {
+			// playerResponse === "Declined" ? check needed?
+            if (e.data.state === 'StrangerDeclined' || e.data.state === 'PartyDeclined') {
                 Utils.Debug.log('[AutoAccept] Queue declined by someone. Exiting queue...');
-                Utils.LCU.delete('/lol-lobby/v2/lobby/matchmaking/search').catch(() => {});
+                Utils.LCU.delete('/lol-matchmaking/v1/search').catch(() => {});
             }
         });
     }

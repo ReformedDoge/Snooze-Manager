@@ -19,7 +19,7 @@ const PARTY_LOCK_ATTR = 'data-sm-party-lock';
 const PARTY_HUE_SEED = 200;
 const PARTY_GOLDEN_ANGLE = 137.508;
 const LOCK_SCALE = 0.9;
-const SIDEBAR_WIDTH = 224; //  Social panel sidebar
+const SIDEBAR_WIDTH = 224; // Custom 224px sidebar
 
 const CLOSED_LOCK_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="100%" height="100%" fill="none">
   <rect x="3" y="7" width="10" height="7" rx="2" fill="currentColor"/>
@@ -61,32 +61,22 @@ const RATIO_COLLAPSED = (1280 - SIDEBAR_WIDTH) / 720;
 
 let nativeClientHeight = 720;
 
-function getCwtTarget() {
-    if (window.__snoozeTargetResolution) return window.__snoozeTargetResolution;
+function getActivePhysicalHeight() {
     const tweaksEnabled = Utils.Store.get('clientWindowTweaks', 'enabled');
     const resizeEnabled = Utils.Store.get('clientWindowTweaks', 'applyResolution');
+    
     if (tweaksEnabled && resizeEnabled) {
-        const w = Number(Utils.Store.get('clientWindowTweaks', 'width'));
-        const h = Number(Utils.Store.get('clientWindowTweaks', 'height'));
-        if (w > 0 && h > 0) return { w, h };
+        const customH = Number(Utils.Store.get('clientWindowTweaks', 'height'));
+        if (customH > 0) return customH;
     }
-    return null;
-}
-
-const NATIVE_HEIGHT = 720;
-
-function getActivePhysicalHeight() {
-    const cwt = getCwtTarget();
-    if (cwt) return cwt.h;
-    return nativeClientHeight || NATIVE_HEIGHT;
+    
+    return nativeClientHeight;
 }
 
 function getPhysicalDimensions() {
-    const cwt = getCwtTarget();
-    if (cwt) return { w: cwt.w, h: cwt.h };
-    const h = nativeClientHeight || NATIVE_HEIGHT;
-    const w = Math.round((window.innerWidth * h) / NATIVE_HEIGHT);
-    return { w, h };
+    const h = getActivePhysicalHeight();
+    const w = Math.round((window.innerWidth * h) / 720);
+    return { h, w };
 }
 
 // color generation
@@ -153,17 +143,12 @@ function toggleCollapseMethod(method) {
 
     const isCurrentlyCollapsed = document.body.classList.contains('snooze-collapsed');
     if (isCurrentlyCollapsed) {
-        if (typeof window?.riotInvoke === 'function' && !document.fullscreenElement) {
-            const cwt = getCwtTarget();
-            if (cwt) {
-                const targetW = method === 'crop'
-                    ? Math.round(cwt.w * (1280 - SIDEBAR_WIDTH) / 1280) : cwt.w;
-                window.riotInvoke({ request: JSON.stringify({ name: 'Window.ResizeTo', params: [targetW, cwt.h] }) });
-            } else {
-                const targetW = method === 'crop'
-                    ? Math.round(NATIVE_HEIGHT * RATIO_COLLAPSED) : Math.round(NATIVE_HEIGHT * RATIO_16_9);
-                window.riotInvoke({ request: JSON.stringify({ name: 'Window.ResizeTo', params: [targetW, NATIVE_HEIGHT] }) });
-            }
+        // Handle physical window transitions when changing settings live
+        if (typeof window?.riotInvoke === 'function') {
+            const dims = getPhysicalDimensions();
+            const h = dims.h;
+            const targetW = (method === 'crop') ? Math.round(h * RATIO_COLLAPSED) : Math.round(h * RATIO_16_9);
+            window.riotInvoke({ request: JSON.stringify({ name: 'Window.ResizeTo', params: [targetW, h] }) });
         }
     }
 
@@ -180,21 +165,13 @@ function applyCollapsedState(isCollapsed, options = {}) {
         Utils.Store.set('socialPanelTweaks', 'isCollapsed', isCollapsed);
     }
     if (typeof window?.riotInvoke === 'function') {
-        if (document.fullscreenElement) {
-            Utils.Debug.log('[Snooze-SocialPanelTweaks] applyCollapsedState: in fullscreen, skipping physical resize');
-            return;
-        }
-        const cwt = getCwtTarget();
-        if (cwt) {
-            const targetW = isCollapsed && collapseMethod === 'crop'
-                ? Math.round(cwt.w * (1280 - SIDEBAR_WIDTH) / 1280) : cwt.w;
-            window.riotInvoke({ request: JSON.stringify({ name: 'Window.ResizeTo', params: [targetW, cwt.h] }) });
-        } else {
-            const targetW = collapseMethod === 'crop'
-                ? Math.round(NATIVE_HEIGHT * (isCollapsed ? RATIO_COLLAPSED : RATIO_16_9))
-                : Math.round(NATIVE_HEIGHT * RATIO_16_9);
-            window.riotInvoke({ request: JSON.stringify({ name: 'Window.ResizeTo', params: [targetW, NATIVE_HEIGHT] }) });
-        }
+        const dims = getPhysicalDimensions();
+        const h = dims.h;
+        if (!h) return;
+        const targetW = (collapseMethod === 'crop')
+            ? Math.round(h * (isCollapsed ? RATIO_COLLAPSED : RATIO_16_9))
+            : Math.round(h * RATIO_16_9);
+        window.riotInvoke({ request: JSON.stringify({ name: 'Window.ResizeTo', params: [targetW, h] }) });
     }
 }
 
@@ -788,7 +765,7 @@ function syncLcuObserver() {
     }
 }
 
-// Dynamic css generation depending on active method ('crop', 'stretch', or 'slide')
+// Dynamic stylesheet generation depending on active method ('crop', 'stretch', or 'slide')
 function recreateSidebarStyles() {
     let style = document.getElementById('snooze-sidebar-toggle-style');
     if (!style) {
@@ -1030,7 +1007,7 @@ function recreateSidebarStyles() {
 
         #snooze-sidebar-toggle {
             position: absolute;
-            top: 40%;
+            top: 50%;
             right: 10px;
             transform: translateY(-50%) scale(0.95);
             width: 30px;
@@ -1100,45 +1077,24 @@ function mountSidebarToggle() {
     document.body.appendChild(zone);
 
     const enforceWindowSize = () => {
-        Utils.Debug.log('[Snooze-SocialPanelTweaks] enforceWindowSize FIRED, inner:', window.innerWidth, 'x', window.innerHeight, '| fullscreen:', !!document.fullscreenElement);
         if (typeof window?.riotInvoke !== 'function') return;
-        // In fullscreen, the collapse state is visual-only (CSS class toggle).
-        // Physical ResizeTo would exit fullscreen, skip it.
-        if (document.fullscreenElement) {
-            Utils.Debug.log('[Snooze-SocialPanelTweaks] enforceWindowSize: in fullscreen, skipping physical resize');
-            return;
-        }
         const dims = getPhysicalDimensions();
         const h = dims.h;
         const w = dims.w;
         if (!h || !w) return;
 
+        const currentRatio = w / h;
         const isCurrentlyCollapsed = document.body.classList.contains('snooze-collapsed');
-        const cwt = getCwtTarget();
 
-        if (cwt) {
-            const targetW = isCurrentlyCollapsed && collapseMethod === 'crop'
-                ? Math.round(cwt.w * (1280 - SIDEBAR_WIDTH) / 1280)
-                : cwt.w;
-            Utils.Debug.log('[Snooze-SocialPanelTweaks] enforceWindowSize: cwtActive target:', cwt.w, 'x', cwt.h, '| collapsed:', isCurrentlyCollapsed, '| targetW:', targetW);
-            if (window.innerWidth !== targetW || window.innerHeight !== cwt.h) {
-                Utils.Debug.log('[Snooze-SocialPanelTweaks] enforceWindowSize: MISMATCH, re-applying ResizeTo(', targetW, ',', cwt.h, ')');
-                window.riotInvoke({ request: JSON.stringify({ name: 'Window.ResizeTo', params: [targetW, cwt.h] }) });
-            } else {
-                Utils.Debug.log('[Snooze-SocialPanelTweaks] enforceWindowSize: MATCH, no action needed');
+        if (collapseMethod === 'crop') {
+            if (isCurrentlyCollapsed && Math.abs(currentRatio - RATIO_16_9) < 0.05) {
+                window.riotInvoke({ request: JSON.stringify({ name: 'Window.ResizeTo', params: [Math.round(h * RATIO_COLLAPSED), h] }) });
+            } else if (!isCurrentlyCollapsed && Math.abs(currentRatio - RATIO_COLLAPSED) < 0.05) {
+                window.riotInvoke({ request: JSON.stringify({ name: 'Window.ResizeTo', params: [Math.round(h * RATIO_16_9), h] }) });
             }
         } else {
-            const currentRatio = w / h;
-            if (collapseMethod === 'crop') {
-                if (isCurrentlyCollapsed && Math.abs(currentRatio - RATIO_16_9) < 0.05) {
-                    window.riotInvoke({ request: JSON.stringify({ name: 'Window.ResizeTo', params: [Math.round(NATIVE_HEIGHT * RATIO_COLLAPSED), NATIVE_HEIGHT] }) });
-                } else if (!isCurrentlyCollapsed && Math.abs(currentRatio - RATIO_COLLAPSED) < 0.05) {
-                    window.riotInvoke({ request: JSON.stringify({ name: 'Window.ResizeTo', params: [Math.round(NATIVE_HEIGHT * RATIO_16_9), NATIVE_HEIGHT] }) });
-                }
-            } else {
-                if (Math.abs(currentRatio - RATIO_16_9) > 0.05) {
-                    window.riotInvoke({ request: JSON.stringify({ name: 'Window.ResizeTo', params: [Math.round(NATIVE_HEIGHT * RATIO_16_9), NATIVE_HEIGHT] }) });
-                }
+            if (Math.abs(currentRatio - RATIO_16_9) > 0.05) {
+                window.riotInvoke({ request: JSON.stringify({ name: 'Window.ResizeTo', params: [Math.round(h * RATIO_16_9), h] }) });
             }
         }
     };
@@ -1160,10 +1116,23 @@ function mountSidebarToggle() {
             e.preventDefault();
             e.stopPropagation();
 
-            applyCollapsedState(!document.body.classList.contains('snooze-collapsed'), { persist: true });
+            const isNowCollapsed = !document.body.classList.contains('snooze-collapsed');
+            applyCollapsedState(isNowCollapsed, { persist: true });
             if (isChampSelectAutoUncollapseActive) {
                 isChampSelectAutoUncollapseActive = false;
                 shouldRestoreCollapseAfterChampSelect = false;
+            }
+
+            if (typeof window?.riotInvoke === 'function') {
+                const dims = getPhysicalDimensions();
+                const h = dims.h;
+                let targetW;
+                if (collapseMethod === 'crop') {
+                    targetW = isNowCollapsed ? Math.round(h * RATIO_COLLAPSED) : Math.round(h * RATIO_16_9);
+                } else {
+                    targetW = Math.round(h * RATIO_16_9);
+                }
+                window.riotInvoke({ request: JSON.stringify({ name: 'Window.ResizeTo', params: [targetW, h] }) });
             }
         }, { capture: true });
     }
@@ -1210,6 +1179,7 @@ export function init(context) {
                     type: 'toggle',
                     id: 'sm:socialPanelTweaks',
                     label: 'Enable Better Friends Status',
+                    description: 'Rewrites friend status lines with queue names and live in-game timers',
                     value: isEnabled,
                     onChange: (val) => toggleFeature(val),
                 },
@@ -1217,6 +1187,7 @@ export function init(context) {
                     type: 'toggle',
                     id: 'sm:sidebarToggle',
                     label: 'Enable Sidebar Collapse Toggle',
+                    description: 'Adds a button to hide the social sidebar using the collapse method below',
                     value: isSidebarToggleEnabled,
                     onChange: (val) => toggleSidebarFeature(val),
                 },
@@ -1224,6 +1195,7 @@ export function init(context) {
                     type: 'toggle',
                     id: 'sm:partyGroup',
                     label: 'Highlight Friends In The Same Lobby',
+                    description: 'Draws colored borders around friends who are in your current party',
                     value: isPartyGroupEnabled,
                     onChange: (val) => togglePartyGroup(val),
                 },
@@ -1231,6 +1203,7 @@ export function init(context) {
                     type: 'toggle',
                     id: 'sm:folderInvite',
                     label: 'Enable Group Folder Invite Option',
+                    description: 'Adds a right-click option to invite a whole friend folder at once',
                     value: isFolderInviteEnabled,
                     onChange: (val) => toggleFolderInvite(val),
                 },
@@ -1283,15 +1256,65 @@ export function init(context) {
             plugin.appendChild(createFlatCheckbox('Highlight friends in the same lobby', isPartyGroupEnabled, togglePartyGroup));
             plugin.appendChild(createFlatCheckbox('Enable Group Folder Invite Option', isFolderInviteEnabled, toggleFolderInvite));
 
-            plugin.appendChild(Utils.Settings.createSelectRow('Collapse Method', [
-                { value: 'crop', label: 'Crop (Resize Window)' },
-                { value: 'stretch', label: 'Stretch (Scale Layout)' },
-                { value: 'slide', label: 'Slide (Shift Layout)' }
-            ], collapseMethod, (v) => {
-                toggleCollapseMethod(v);
-            }));
+            // Flat Select for STANDALONE mode
+            const methodRow = document.createElement('div');
+            methodRow.classList.add('plugins-settings-row');
+            methodRow.style.marginTop = '10px';
+            methodRow.style.display = 'flex';
+            methodRow.style.justifyContent = 'space-between';
+            methodRow.style.alignItems = 'center';
 
-            plugin.appendChild(Utils.Settings.createInfoBox('<span style="color:#c8aa6e;font-weight:600;">Slide mode note:</span> Unlike Crop and Stretch, this method shifts interface elements without resizing the window — the original client background stays visible in the uncovered sidebar area. For the cleanest look, pair it with a custom theme that removes or replaces that background.'));
+            const selectLabel = document.createElement('label');
+            selectLabel.innerHTML = 'Collapse Method';
+            selectLabel.style.color = '#a09b8c';
+            selectLabel.style.fontSize = '12px';
+
+            const select = document.createElement('select');
+            select.style.background = '#111';
+            select.style.color = '#f0e6d2';
+            select.style.border = '1px solid #3e2e13';
+            select.style.padding = '4px 8px';
+            select.style.outline = 'none';
+
+            const optCrop = document.createElement('option');
+            optCrop.value = 'crop';
+            optCrop.textContent = 'Crop (Resize Window)';
+            select.appendChild(optCrop);
+
+            const optStretch = document.createElement('option');
+            optStretch.value = 'stretch';
+            optStretch.textContent = 'Stretch (Scale Layout)';
+            select.appendChild(optStretch);
+
+            const optSlide = document.createElement('option');
+            optSlide.value = 'slide';
+            optSlide.textContent = 'Slide (Shift Layout)';
+            select.appendChild(optSlide);
+
+            select.value = collapseMethod;
+            select.addEventListener('change', () => {
+                toggleCollapseMethod(select.value);
+            });
+
+            methodRow.appendChild(selectLabel);
+            methodRow.appendChild(select);
+            plugin.appendChild(methodRow);
+
+            const slideNoteRow = document.createElement('div');
+            slideNoteRow.classList.add('plugins-settings-row');
+            Object.assign(slideNoteRow.style, {
+                display: 'block',
+                marginTop: '10px',
+                padding: '10px',
+                background: 'rgba(0,0,0,0.2)',
+                border: '1px solid rgba(255,255,255,0.05)',
+                borderRadius: '4px',
+                color: '#8a9aaa',
+                fontSize: '12px',
+                lineHeight: '1.5'
+            });
+            slideNoteRow.innerHTML = '<span style="color:#c8aa6e;font-weight:600;">Slide mode note:</span> Unlike Crop and Stretch, this method shifts interface elements without resizing the window — the original client background stays visible in the uncovered sidebar area. For the cleanest look, pair it with a custom theme that removes or replaces that background.';
+            plugin.appendChild(slideNoteRow);
         });
     }
 }
@@ -1303,43 +1326,30 @@ export function installEmberHook() {
     Utils.Hooks.Ember.registerRule({
         name: 'social-panel-tweaks-roster-member',
         matcher: 'lol-social-roster-member',
-        hookMethods: [
-            /*
-            // Commented out since these seems redundent. keeping for keeps sake
-            {
-                name: 'didInsertElement',
-                callback(Ember, original, ...args) {
-                    original(...args);
+        mixin() {
+            return {
+                /*
+				// Commented out since these seems redundent. keeping for keeps sake
+                didInsertElement() {
+                    this._super(...arguments);
                     refreshRosterMemberElement(this.element);
-                }
-            },
-            {
-                name: 'didUpdate',
-                callback(Ember, original, ...args) {
-                    original(...args);
+                },
+                didUpdate() {
+                    this._super(...arguments);
                     refreshRosterMemberElement(this.element);
-                }
-            },
-            */
-            {
-                name: 'didInsertElement',
-                callback(Ember, original, ...args) {
-                    original(...args);
+                },
+                */
+                didInsertElement() {
+                    this._super(...arguments);
                     if (this.element) this.element.dataset.snoozeFriendName = this.get('gameName') || '';
                     refreshRosterMemberElement(this.element);
-                }
-            },
-            {
-                name: 'didRender',
-                callback(Ember, original, ...args) {
-                    original(...args);
+                },
+                didRender() {
+                    this._super(...arguments);
                     if (this.element) this.element.dataset.snoozeFriendName = this.get('gameName') || '';
                     refreshRosterMemberElement(this.element);
-                }
-            },
-            {
-                name: 'willDestroyElement',
-                callback(Ember, original, ...args) {
+                },
+                willDestroyElement() {
                     const element = this.element;
                     if (element) {
                         const member = resolveRosterMember(element);
@@ -1349,74 +1359,75 @@ export function installEmberHook() {
                         }
                         element.querySelectorAll?.(`[${ACTIVE_ATTR}]`).forEach(restoreStatusLine);
                     }
-                    original(...args);
-                }
-            }
-        ]
+                    this._super(...arguments);
+                },
+            };
+        },
     });
     Utils.Hooks.Ember.registerRule({
         name: 'social-panel-tweaks-roster-group',
         matcher: 'lol-social-roster-group',
-        hookMethods: [{
-            name: 'contextMenu',
-            callback(Ember, original, ...args) {
-                if (isFolderInviteEnabled) {
-                    const group = this.get ? this.get('group') : this.group;
-                    const isMetaGroup = group?.isMetaGroup || (this.element && this.element.querySelector('.group.meta'));
-                    
-                    if (currentGameflowPhase === 'Lobby' && !isMetaGroup) {
-                        const tryInject = () => {
-                            const menuEl = document.querySelector('lol-uikit-context-menu');
-                            if (!menuEl) {
-                                requestAnimationFrame(tryInject);
-                                return;
-                            }
-
-                            const root = menuEl.shadowRoot;
-                            if (!root) {
-                                requestAnimationFrame(tryInject);
-                                return;
-                            }
-
-                            const container = root.querySelector('.context-menu, .context-menu-root');
-                            if (!container) {
-                                requestAnimationFrame(tryInject);
-                                return;
-                            }
-
-                            const existing = root.querySelector('[data-snooze-folder-invite-btn]');
-                            if (existing) {
-                                existing.remove();
-                            }
-
-                            const customItem = document.createElement('div');
-                            customItem.className = 'menu-item';
-                            customItem.setAttribute('data-snooze-folder-invite-btn', 'true');
-                            customItem.textContent = 'Invite Folder';
-
-                            customItem.addEventListener('click', async (e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-
-                                if (typeof menuEl.close === 'function') {
-                                    menuEl.close();
+        mixin() {
+            return {
+                contextMenu(event) {
+                    if (isFolderInviteEnabled) {
+                        const group = this.get ? this.get('group') : this.group;
+                        const isMetaGroup = group?.isMetaGroup || (this.element && this.element.querySelector('.group.meta'));
+                        
+                        if (currentGameflowPhase === 'Lobby' && !isMetaGroup) {
+                            const tryInject = () => {
+                                const menuEl = document.querySelector('lol-uikit-context-menu');
+                                if (!menuEl) {
+                                    requestAnimationFrame(tryInject);
+                                    return;
                                 }
 
-                                const name = group?.name || this.get?.('group.name') || this.get?.('name') || this.name;
-                                if (name) {
-                                    await inviteFolderGroup(name);
+                                const root = menuEl.shadowRoot;
+                                if (!root) {
+                                    requestAnimationFrame(tryInject);
+                                    return;
                                 }
-                            });
 
-                            container.prepend(customItem);
-                        };
+                                const container = root.querySelector('.context-menu, .context-menu-root');
+                                if (!container) {
+                                    requestAnimationFrame(tryInject);
+                                    return;
+                                }
 
-                        requestAnimationFrame(tryInject);
+                                const existing = root.querySelector('[data-snooze-folder-invite-btn]');
+                                if (existing) {
+                                    existing.remove();
+                                }
+
+                                const customItem = document.createElement('div');
+                                customItem.className = 'menu-item';
+                                customItem.setAttribute('data-snooze-folder-invite-btn', 'true');
+                                customItem.textContent = 'Invite Folder';
+
+                                customItem.addEventListener('click', async (e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+
+                                    if (typeof menuEl.close === 'function') {
+                                        menuEl.close();
+                                    }
+
+                                    const name = group?.name || this.get?.('group.name') || this.get?.('name') || this.name;
+                                    if (name) {
+                                        await inviteFolderGroup(name);
+                                    }
+                                });
+
+                                container.prepend(customItem);
+                            };
+
+                            requestAnimationFrame(tryInject);
+                        }
                     }
+                    this._super(...arguments);
                 }
-                original(...args);
-            }
-        }]
+            };
+        }
     });
 }
 

@@ -282,10 +282,8 @@ export function init(context) {
             matcher: (args) => {
                 return args.some(arg => arg && typeof arg === 'object' && 'showQueueErrorModal' in arg);
             },
-            hookMethods: [{
-                name: 'showQueueErrorModal',
-                callback(Ember, original, ...args) {
-                    const [errorType, errorId] = args;
+            mixin: (Ember) => ({
+                showQueueErrorModal(errorType, errorId, penalizedSummonerId) {
                     Utils.Debug.log(`[LowPrioWarningSuppress] [Ember] showQueueErrorModal() intercepted. errorType: ${errorType}, enabled: ${enabled}`);
                     
                     if (enabled && (
@@ -297,6 +295,7 @@ export function init(context) {
                     )) {
                         Utils.Debug.log('[LowPrioWarningSuppress] [Ember] BLOCKED showQueueErrorModal execution completely for:', errorType);
                         
+                        // Sync native state so LCU knows we received/notified the error
                         const notified = this.get('_notifiedSearchErrorIds') || Ember.Object.create({});
                         notified[errorId] = true;
                         this.set('_notifiedSearchErrorIds', notified);
@@ -305,9 +304,9 @@ export function init(context) {
                     }
                     
                     Utils.Debug.log('[LowPrioWarningSuppress] [Ember] Pass-through to original showQueueErrorModal()');
-                    return original(...args);
+                    return this._super(...arguments);
                 }
-            }]
+            })
         });
 
         // Fallback Ember rules for lockout dialog components
@@ -381,6 +380,7 @@ export function init(context) {
                     type: 'toggle',
                     id: 'sm:lowPrioWarningSuppress',
                     label: 'Enable Warning Suppression',
+                    description: 'Blocks penalty and lockout dialogs before they can pop up',
                     value: enabled,
                     onChange: (v) => setEnabled(v)
                 }

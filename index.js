@@ -18,21 +18,6 @@ let CURRENT_VERSION = '1.0.0'; // fallback; overwritten by syncVersionWithMetada
 let _latestRelease = null;     // { version, url, name, body } or null
 let _updateCheckPending = false;
 let _updateBadgeCallback = null; // set by the Settings tab while it's open
-let _welcomeUpdateCallback = null; // set by the first-launch welcome modal while it's open
-
-const DEFAULT_MENU_HOTKEY = { ctrlKey: false, shiftKey: false, altKey: false, metaKey: false, code: 'F1', display: 'F1' };
-
-function getMenuHotkey() {
-  const stored = Utils.Store.get('core', 'hotkeyObj');
-  if (stored && typeof stored === 'object') return stored;
-
-  const legacy = Utils.Store.get('core', 'hotkey');
-  if (typeof legacy === 'string') {
-    return { ctrlKey: false, shiftKey: false, altKey: false, metaKey: false, code: legacy, display: legacy };
-  }
-
-  return { ...DEFAULT_MENU_HOTKEY };
-}
 
 async function syncVersionWithMetadata() {
   try {
@@ -86,12 +71,47 @@ export async function checkForUpdates(force = false) {
       _latestRelease = null;
     }
     if (_updateBadgeCallback) _updateBadgeCallback(_latestRelease);
-    if (_welcomeUpdateCallback) _welcomeUpdateCallback(_latestRelease);
   } catch (err) {
     Utils.Debug.warn('[Snooze-Manager] Update check failed:', err);
   } finally {
     _updateCheckPending = false;
   }
+}
+
+// Sidebar grouping: which part of the client each module touches. Order here
+// is the order categories appear in the menu; ids not listed fall to 'Other'.
+const CATEGORY_ORDER = [
+  'Champion Select',
+  'Matchmaking',
+  'In-Game & Post-Game',
+  'Profile & Social',
+  'Store & Loot',
+  'Client',
+  'Other',
+];
+const DEFAULT_CATEGORY = 'Other';
+const MODULE_CATEGORY = {
+  autoLockChampion: 'Champion Select',
+  champSelectQuitButton: 'Champion Select',
+  aramNocd: 'Champion Select',
+  SnoozeBalanceTooltip: 'Champion Select',
+  arenaGod: 'Champion Select',
+  autoAccept: 'Matchmaking',
+  autoQueue: 'Matchmaking',
+  modeSelectorTweaks: 'Matchmaking',
+  lowPrioWarningSuppress: 'Matchmaking',
+  gameAnalysisPopup: 'In-Game & Post-Game',
+  autoHonor: 'In-Game & Post-Game',
+  profileTweaks: 'Profile & Social',
+  customOnlineStatus: 'Profile & Social',
+  socialPanelTweaks: 'Profile & Social',
+  whaleHelper: 'Store & Loot',
+  whaleHelperSkins: 'Champion Select',
+  clientWindowTweaks: 'Client',
+};
+function categoryOrderIndex(moduleId) {
+  const idx = CATEGORY_ORDER.indexOf(MODULE_CATEGORY[moduleId] || DEFAULT_CATEGORY);
+  return idx === -1 ? CATEGORY_ORDER.length : idx;
 }
 
 const Modal = (function() {
@@ -121,6 +141,12 @@ const Modal = (function() {
       .pm-tab { padding: 14px 20px; cursor: pointer; color: #a09b8c; font-size: 14px; font-weight: 600; border-bottom: 1px solid rgba(255, 255, 255, 0.02); transition: all 0.2s ease; border-left: 3px solid transparent; }
       .pm-tab:hover { background: rgba(200, 170, 110, 0.08); color: #f0e6d2; }
       .pm-tab.active { background: rgba(200, 170, 110, 0.15); color: #c8aa6e; border-left-color: #c8aa6e; }
+      .pm-tab-category { padding: 16px 20px 6px; font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #5a7080; cursor: default; user-select: none; border-top: 1px solid rgba(255, 255, 255, 0.04); }
+      .pm-merged-module { margin: 18px 0 8px; }
+      .pm-merged-module-title { color: #f0e6d2; font-size: 15px; font-weight: 700; }
+      .pm-merged-module-desc { color: #a09b8c; font-size: 12px; line-height: 1.4; margin-top: 2px; }
+      .pm-info { display: inline-flex; align-items: center; margin-left: 6px; color: #5a7080; vertical-align: middle; }
+      .pm-info svg { display: block; }
       .pm-content { flex: 1; padding: 24px; overflow-y: auto; position: relative; }
       .pm-tab-content { display: none; animation: fadeIn 0.2s ease-in-out; }
       .pm-tab-content.active { display: block; }
@@ -230,6 +256,13 @@ const Modal = (function() {
       sidebar.appendChild(tab);
     }
 
+    function createCategoryDivider(title) {
+      const divider = document.createElement('div');
+      divider.className = 'pm-tab-category';
+      divider.textContent = title;
+      sidebar.appendChild(divider);
+    }
+
     // Search Section (Player Lookup)
     createTab('tab-lookup', 'Player Lookup', true);
     
@@ -272,13 +305,6 @@ const Modal = (function() {
     const resultDiv = document.createElement('div');
     resultDiv.style.marginTop = '16px';
     resultDiv.style.fontSize = '14px';
-
-    searchInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        searchBtn.click();
-      }
-    });
 
     searchBtn.addEventListener('click', async () => {
       const input = searchInput.value.trim();
@@ -342,46 +368,22 @@ const Modal = (function() {
     lookupContent.appendChild(resultDiv);
     content.appendChild(lookupContent);
 
-    // Modules Sections
-    registeredModules.sort((a, b) => a.name.localeCompare(b.name));
-    
-    function getHiddenModuleIds() {
-      const v = Utils.Store.get('core', 'hiddenModules');
-      return Array.isArray(v) ? new Set(v) : new Set();
-    }
+    // Modules Sections (grouped by where each feature applies)
+    const orderedModules = registeredModules
+      .filter(mod => mod.settings && mod.settings.length > 0)
+      .sort((a, b) => {
+        const oa = categoryOrderIndex(a.id);
+        const ob = categoryOrderIndex(b.id);
+        if (oa !== ob) return oa - ob;
+        return a.name.localeCompare(b.name);
+      });
 
-    function isModuleEnabled(mod) {
-      return (mod.settings || []).some(s => s.type === 'toggle' && s.value === true);
-    }
+    const isSimpleModule = (mod) => mod.settings.every(s => s.type === 'toggle');
+    const categorySlug = (name) =>
+      name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
-    registeredModules.forEach(mod => {
-      if (!mod.settings || mod.settings.length === 0) return;
-      
-      const hiddenIds = getHiddenModuleIds();
-      const isHidden = hiddenIds.has(mod.id);
-      
-      const tabId = 'tab-' + mod.id;
-      createTab(tabId, mod.name);
-      
-      const tabEl = sidebar.querySelector(`[data-target="${tabId}"]`);
-      if (tabEl && isHidden) tabEl.style.display = 'none';
-
-      const tabContent = document.createElement('div');
-      tabContent.id = tabId;
-      tabContent.className = 'pm-tab-content';
-      
-      const modTitle = document.createElement('div');
-      modTitle.className = 'pm-section-title';
-      modTitle.textContent = mod.name;
-      
-      const modDesc = document.createElement('div');
-      Object.assign(modDesc.style, { color: '#a09b8c', fontSize: '13px', marginBottom: '20px', lineHeight: '1.5' });
-      modDesc.textContent = mod.description;
-
-      tabContent.appendChild(modTitle);
-      tabContent.appendChild(modDesc);
-      
-      mod.settings.forEach(setting => {
+    // renders one setting (toggle/select/textarea/custom) into a tab page
+    function appendSettingRow(tabContent, mod, setting) {
         if (setting.type === 'toggle') {
           const row = document.createElement('div');
           row.className = 'pm-row';
@@ -391,6 +393,14 @@ const Modal = (function() {
           const lblTitle = document.createElement('div');
           lblTitle.className = 'pm-label-title';
           lblTitle.textContent = setting.label || mod.name;
+          if (setting.description) {
+            const info = document.createElement('span');
+            info.className = 'pm-info';
+            info.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>';
+            info.title = setting.description;
+            lblTitle.appendChild(info);
+            row.title = setting.description;
+          }
           lblWrapper.appendChild(lblTitle);
 
           const sw = document.createElement('button');
@@ -470,8 +480,79 @@ const Modal = (function() {
           
           tabContent.appendChild(row);
         }
+    }
+
+    // Group modules by category (order preserved from orderedModules above),
+    // then render each category: one merged page for its toggle-only modules,
+    // plus a dedicated tab for every module with richer settings.
+    const modulesByCategory = new Map();
+    orderedModules.forEach(mod => {
+      const category = MODULE_CATEGORY[mod.id] || DEFAULT_CATEGORY;
+      if (!modulesByCategory.has(category)) modulesByCategory.set(category, []);
+      modulesByCategory.get(category).push(mod);
+    });
+
+    modulesByCategory.forEach((mods, category) => {
+      createCategoryDivider(category);
+
+      const simpleMods = mods.filter(isSimpleModule);
+      const complexMods = mods.filter((mod) => !isSimpleModule(mod));
+
+      if (simpleMods.length) {
+        const tabId = 'tab-cat-' + categorySlug(category);
+        createTab(tabId, category);
+
+        const tabContent = document.createElement('div');
+        tabContent.id = tabId;
+        tabContent.className = 'pm-tab-content';
+
+        const pageTitle = document.createElement('div');
+        pageTitle.className = 'pm-section-title';
+        pageTitle.textContent = category;
+        tabContent.appendChild(pageTitle);
+
+        simpleMods.forEach((mod) => {
+          const modBlock = document.createElement('div');
+          modBlock.className = 'pm-merged-module';
+          const h = document.createElement('div');
+          h.className = 'pm-merged-module-title';
+          h.textContent = mod.name;
+          modBlock.appendChild(h);
+          if (mod.description) {
+            const d = document.createElement('div');
+            d.className = 'pm-merged-module-desc';
+            d.textContent = mod.description;
+            modBlock.appendChild(d);
+          }
+          tabContent.appendChild(modBlock);
+          mod.settings.forEach((setting) => appendSettingRow(tabContent, mod, setting));
+        });
+
+        content.appendChild(tabContent);
+      }
+
+      complexMods.forEach((mod) => {
+        const tabId = 'tab-' + mod.id;
+        createTab(tabId, mod.name);
+
+        const tabContent = document.createElement('div');
+        tabContent.id = tabId;
+        tabContent.className = 'pm-tab-content';
+
+        const modTitle = document.createElement('div');
+        modTitle.className = 'pm-section-title';
+        modTitle.textContent = mod.name;
+
+        const modDesc = document.createElement('div');
+        Object.assign(modDesc.style, { color: '#a09b8c', fontSize: '13px', marginBottom: '20px', lineHeight: '1.5' });
+        modDesc.textContent = mod.description;
+
+        tabContent.appendChild(modTitle);
+        tabContent.appendChild(modDesc);
+
+        mod.settings.forEach((setting) => appendSettingRow(tabContent, mod, setting));
+        content.appendChild(tabContent);
       });
-      content.appendChild(tabContent);
     });
 
     // Settings Tab
@@ -543,7 +624,15 @@ const Modal = (function() {
       hotkeyBtn.className = 'pm-btn';
       hotkeyBtn.style.minWidth = '140px';
       
-      let currentHotkey = getMenuHotkey();
+      let currentHotkey = Utils.Store.get('core', 'hotkeyObj');
+      if (!currentHotkey) {
+        const legacyHotkey = Utils.Store.get('core', 'hotkey');
+        if (typeof legacyHotkey === 'string') {
+          currentHotkey = { ctrlKey: false, shiftKey: false, altKey: false, metaKey: false, code: legacyHotkey, display: legacyHotkey };
+        } else {
+          currentHotkey = { ctrlKey: false, shiftKey: false, altKey: false, metaKey: false, code: 'F1', display: 'F1' };
+        }
+      }
       
       hotkeyBtn.textContent = currentHotkey.display;
 
@@ -655,6 +744,54 @@ const Modal = (function() {
       hotkeyRow.appendChild(hotkeyLabel);
       hotkeyRow.appendChild(hotkeyBtn);
       generalSection.appendChild(hotkeyRow);
+
+      const panicRow = document.createElement('div');
+      panicRow.className = 'pm-settings-row';
+      const panicLabel = document.createElement('span');
+      panicLabel.className = 'pm-settings-row-label';
+      panicLabel.textContent = 'Panic Key (Cancel Auto Actions)';
+
+      const panicBtn = document.createElement('button');
+      panicBtn.className = 'pm-btn';
+      panicBtn.style.minWidth = '140px';
+
+      let currentPanicKey = Utils.Store.get('global', 'panicKey') || 'F2';
+      panicBtn.textContent = currentPanicKey;
+
+      panicBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (panicBtn.dataset.capturing) return;
+        panicBtn.dataset.capturing = '1';
+        panicBtn.textContent = 'Press a key...';
+        panicBtn.style.borderColor = '#0ac8b9';
+        panicBtn.style.color = '#0ac8b9';
+
+        const handler = (ev) => {
+          ev.preventDefault();
+          ev.stopPropagation();
+          let newKey = ev.key;
+          if (newKey === ' ') newKey = 'Space';
+          document.removeEventListener('keydown', handler, { capture: true });
+          delete panicBtn.dataset.capturing;
+          currentPanicKey = newKey;
+          Utils.Store.set('global', 'panicKey', newKey);
+          panicBtn.textContent = newKey;
+          panicBtn.style.borderColor = '';
+          panicBtn.style.color = '';
+        };
+        document.addEventListener('keydown', handler, { capture: true });
+      });
+
+      panicRow.appendChild(panicLabel);
+      panicRow.appendChild(panicBtn);
+      generalSection.appendChild(panicRow);
+
+      const panicDesc = document.createElement('div');
+      panicDesc.className = 'pm-settings-section-desc';
+      panicDesc.style.marginTop = '8px';
+      panicDesc.textContent = 'Press this key during champion select to cancel auto-lock for the current champ select only. It re-enables automatically next champ select.';
+      generalSection.appendChild(panicDesc);
+
       wrap.appendChild(generalSection);
 
       // Updates Section 
@@ -805,152 +942,7 @@ const Modal = (function() {
       debugRow.appendChild(debugLabel);
       debugRow.appendChild(debugToggle);
       devSection.appendChild(debugRow);
-
-      const resetWelcomeRow = document.createElement('div');
-      resetWelcomeRow.className = 'pm-settings-row';
-      resetWelcomeRow.style.cssText = 'padding:8px 10px;background:rgba(255,255,255,0.008);';
-      const resetWelcomeLabelWrap = document.createElement('div');
-      resetWelcomeLabelWrap.className = 'pm-label-wrapper';
-      const resetWelcomeTitle = document.createElement('div');
-      resetWelcomeTitle.className = 'pm-settings-row-label';
-      resetWelcomeTitle.textContent = 'Welcome modal';
-      const resetWelcomeDesc = document.createElement('div');
-      resetWelcomeDesc.className = 'pm-label-desc';
-      resetWelcomeDesc.style.color = '#4a6070';
-      resetWelcomeDesc.textContent = 'Show again on next startup.';
-      resetWelcomeLabelWrap.appendChild(resetWelcomeTitle);
-      resetWelcomeLabelWrap.appendChild(resetWelcomeDesc);
-
-      const resetWelcomeBtn = document.createElement('button');
-      resetWelcomeBtn.type = 'button';
-      resetWelcomeBtn.className = 'pm-btn';
-      resetWelcomeBtn.style.cssText = 'font-size:11px;padding:4px 10px;flex-shrink:0;background:rgba(255,255,255,0.015);border-color:rgba(200,170,110,0.16);color:#785a28;';
-      resetWelcomeBtn.textContent = 'Reset';
-      resetWelcomeBtn.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        Utils.Store.remove('core', 'welcomeModalDismissed');
-        resetWelcomeBtn.textContent = 'Reset done';
-        setTimeout(() => { resetWelcomeBtn.textContent = 'Reset'; }, 1800);
-      });
-
-      resetWelcomeRow.appendChild(resetWelcomeLabelWrap);
-      resetWelcomeRow.appendChild(resetWelcomeBtn);
-      devSection.appendChild(resetWelcomeRow);
       wrap.appendChild(devSection);
-
-      // Module Visibility Section
-      const visSection = makeSettingsSection('Module Visibility', 'Choose which modules appear in the sidebar. Modules with an active toggle are marked with a dot — unlist them to hide, not disable.');
-
-      const visDualList = document.createElement('div');
-      visDualList.style.cssText = 'display:flex;gap:12px;margin-top:10px;';
-
-      function buildVisibilityList() {
-        visDualList.innerHTML = '';
-
-        const hiddenIds = (() => {
-          const v = Utils.Store.get('core', 'hiddenModules');
-          return Array.isArray(v) ? new Set(v) : new Set();
-        })();
-
-        const visibleMods = registeredModules.filter(m => m.settings && m.settings.length > 0 && !hiddenIds.has(m.id));
-        const hiddenMods  = registeredModules.filter(m => m.settings && m.settings.length > 0 && hiddenIds.has(m.id));
-
-        function makeColumn(title, mods, actionLabel, actionClass, onAction) {
-          const col = document.createElement('div');
-          col.style.cssText = 'flex:1;display:flex;flex-direction:column;gap:6px;min-width:0;';
-
-          const colTitle = document.createElement('div');
-          colTitle.textContent = title;
-          colTitle.style.cssText = 'font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#c8aa6e;margin-bottom:4px;';
-          col.appendChild(colTitle);
-
-          const list = document.createElement('div');
-          list.style.cssText = 'display:flex;flex-direction:column;gap:4px;min-height:80px;max-height:240px;overflow-y:auto;background:rgba(0,0,0,0.2);border:1px solid rgba(255,255,255,0.06);border-radius:6px;padding:6px;';
-          list.style.scrollbarWidth = 'thin';
-
-          if (mods.length === 0) {
-            const empty = document.createElement('div');
-            empty.textContent = 'None';
-            empty.style.cssText = 'color:#3a5060;font-size:12px;text-align:center;padding:20px 0;';
-            list.appendChild(empty);
-          }
-
-          mods.forEach(mod => {
-            const enabled = (mod.settings || []).some(s => s.type === 'toggle' && s.value === true);
-            const item = document.createElement('div');
-            item.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:6px;padding:5px 8px;border-radius:4px;background:rgba(255,255,255,0.015);border:1px solid rgba(255,255,255,0.04);transition:background 0.15s;';
-            item.onmouseover = () => item.style.background = 'rgba(255,255,255,0.05)';
-            item.onmouseout = () => item.style.background = 'rgba(255,255,255,0.015)';
-
-            const nameWrap = document.createElement('div');
-            nameWrap.style.cssText = 'display:flex;align-items:center;gap:6px;min-width:0;flex:1;overflow:hidden;';
-
-            if (enabled) {
-              const dot = document.createElement('span');
-              dot.title = 'This module has active settings';
-              dot.style.cssText = 'width:6px;height:6px;border-radius:50%;background:#0ac8b9;flex-shrink:0;';
-              nameWrap.appendChild(dot);
-            }
-
-            const nameEl = document.createElement('span');
-            nameEl.textContent = mod.name;
-            nameEl.style.cssText = 'font-size:12px;color:#f0e6d2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
-            nameWrap.appendChild(nameEl);
-
-            const btn = document.createElement('button');
-            btn.textContent = actionLabel;
-            btn.className = actionClass;
-            btn.style.cssText = 'flex-shrink:0;padding:2px 8px;font-size:11px;border-radius:2px;cursor:pointer;border:1px solid rgba(200,170,110,0.3);background:rgba(200,170,110,0.06);color:#c8aa6e;transition:all 0.15s;';
-            btn.onmouseover = () => { btn.style.background = 'rgba(200,170,110,0.15)'; btn.style.color = '#f0e6d2'; };
-            btn.onmouseout  = () => { btn.style.background = 'rgba(200,170,110,0.06)'; btn.style.color = '#c8aa6e'; };
-            btn.addEventListener('click', (e) => { e.stopPropagation(); onAction(mod.id); });
-
-            item.appendChild(nameWrap);
-            item.appendChild(btn);
-            list.appendChild(item);
-          });
-
-          col.appendChild(list);
-          return col;
-        }
-
-        function toggleVisibility(modId) {
-          const current = (() => {
-            const v = Utils.Store.get('core', 'hiddenModules');
-            return Array.isArray(v) ? new Set(v) : new Set();
-          })();
-          
-          const tabEl = document.querySelector(`#pm-root .pm-tab[data-target="tab-${modId}"]`);
-          
-          if (current.has(modId)) {
-            current.delete(modId);
-            if (tabEl) tabEl.style.display = '';
-          } else {
-            current.add(modId);
-            if (tabEl) {
-              tabEl.style.display = 'none';
-              if (tabEl.classList.contains('active')) {
-                document.querySelector('#pm-root .pm-tab[data-target="tab-lookup"]')?.click();
-              }
-            }
-          }
-          
-          Utils.Store.set('core', 'hiddenModules', [...current]);
-          buildVisibilityList();
-        }
-
-        const leftCol  = makeColumn('Visible in Menu', visibleMods, 'Hide', 'pm-vis-hide-btn', toggleVisibility);
-        const rightCol = makeColumn('Hidden from Menu', hiddenMods, 'Show', 'pm-vis-show-btn', toggleVisibility);
-
-        visDualList.appendChild(leftCol);
-        visDualList.appendChild(rightCol);
-      }
-
-      buildVisibilityList();
-      visSection.appendChild(visDualList);
-
-      wrap.appendChild(visSection);
 
       container.appendChild(wrap);
     }
@@ -991,7 +983,15 @@ const Modal = (function() {
     document.addEventListener('keydown', (e) => {
       if (window._isCapturingHotkey) return;
 
-      let shortcut = getMenuHotkey();
+      let shortcut = Utils.Store.get('core', 'hotkeyObj');
+      if (!shortcut) {
+        const legacy = Utils.Store.get('core', 'hotkey');
+        if (typeof legacy === 'string') {
+          shortcut = { ctrlKey: false, shiftKey: false, altKey: false, metaKey: false, code: legacy, display: legacy };
+        } else {
+          shortcut = { ctrlKey: false, shiftKey: false, altKey: false, metaKey: false, code: 'F1', display: 'F1' };
+        }
+      }
 
       if (!e.repeat && 
           e.ctrlKey === shortcut.ctrlKey &&
@@ -1017,329 +1017,6 @@ const Modal = (function() {
   return { init, show, hide, toggle, onChange };
 })();
 
-const WelcomeModal = (function() {
-  const STORE_KEY = 'welcomeModalDismissed';
-  let _root = null;
-  let _visible = false;
-  let _listenerDocument = null;
-  let _documentClickHandler = null;
-  let _documentKeyHandler = null;
-
-  function markDismissed() {
-    try {
-      Utils.Store.set('core', STORE_KEY, true);
-    } catch (err) {
-      Utils.Debug.warn('[Snooze-Manager] Failed to persist welcome modal state:', err);
-    }
-  }
-
-  function getRoot() {
-    return (_root && document.body.contains(_root)) ? _root : document.getElementById('pm-welcome-root');
-  }
-
-  function isVisible() {
-    const root = getRoot();
-    return _visible || !!root?.classList.contains('pm-welcome-show');
-  }
-
-  function installDocumentListeners() {
-    if (_listenerDocument === document && _documentClickHandler && _documentKeyHandler) return;
-
-    if (_listenerDocument && _documentClickHandler) {
-      _listenerDocument.removeEventListener('click', _documentClickHandler, true);
-    }
-    if (_listenerDocument && _documentKeyHandler) {
-      _listenerDocument.removeEventListener('keydown', _documentKeyHandler, true);
-    }
-
-    _documentClickHandler = (e) => {
-      const root = getRoot();
-      if (!root || !root.classList.contains('pm-welcome-show')) return;
-
-      const target = e.target;
-      if (!(target instanceof Element)) return;
-      const shouldDismiss =
-        target.id === 'pm-welcome-overlay' ||
-        !!target.closest('.pm-welcome-close, .pm-welcome-btn');
-
-      if (!shouldDismiss) return;
-      e.preventDefault();
-      e.stopPropagation();
-      hide();
-    };
-
-    _documentKeyHandler = (e) => {
-      if (!isVisible() || e.key !== 'Escape') return;
-      e.preventDefault();
-      e.stopPropagation();
-      hide();
-    };
-
-    _listenerDocument = document;
-    document.addEventListener('click', _documentClickHandler, true);
-    document.addEventListener('keydown', _documentKeyHandler, true);
-  }
-
-  function create() {
-    installDocumentListeners();
-
-    const old = document.getElementById('pm-welcome-root');
-    if (old) old.remove();
-
-    const styleId = 'pm-welcome-styles';
-    if (!document.getElementById(styleId)) {
-      const style = document.createElement('style');
-      style.id = styleId;
-      style.textContent = `
-      #pm-welcome-root { position: fixed; inset: 0; z-index: 2147483647; display: none; align-items: center; justify-content: center; padding: 24px; font-family: var(--font-body), "Segoe UI", sans-serif; color: #a09b8c; }
-      #pm-welcome-root.pm-welcome-show { display: flex; }
-      #pm-welcome-overlay { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.58); backdrop-filter: blur(5px); pointer-events: auto; }
-      #pm-welcome-modal { position: relative; z-index: 1; width: min(760px, calc(100vw - 48px)); max-height: calc(100vh - 48px); overflow: hidden; display: flex; flex-direction: column; background: radial-gradient(circle at 50% 0%, rgba(10, 200, 185, 0.14), transparent 32%), linear-gradient(180deg, rgba(1, 10, 19, 0.96), rgba(1, 10, 19, 0.88)); border: 1px solid rgba(200, 170, 110, 0.32); border-radius: 12px; box-shadow: 0 22px 60px rgba(0, 0, 0, 0.78), inset 0 1px 0 rgba(255, 255, 255, 0.06); backdrop-filter: blur(24px) saturate(140%); pointer-events: auto; }
-      .pm-welcome-header { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 16px 22px 14px; border-bottom: 1px solid rgba(255, 255, 255, 0.06); background: rgba(0, 0, 0, 0.18); }
-      .pm-welcome-kicker { color: #c8aa6e; font-size: 12px; font-weight: 700; text-transform: uppercase; margin-bottom: 5px; }
-      .pm-welcome-title { color: #f0e6d2; font-size: 24px; line-height: 1.15; font-weight: 800; margin: 0; }
-      .pm-welcome-close { width: 34px; height: 34px; display: grid; place-items: center; flex-shrink: 0; background: rgba(255, 255, 255, 0.025); border: 1px solid rgba(200, 170, 110, 0.18); border-radius: 6px; color: #a09b8c; font-size: 20px; cursor: pointer; transition: all 0.16s ease; }
-      .pm-welcome-close:hover { color: #f0e6d2; border-color: rgba(200, 170, 110, 0.55); background: rgba(200, 170, 110, 0.08); }
-      .pm-welcome-body { padding: 18px 22px 20px; overflow-y: auto; }
-      .pm-welcome-copy { color: #a09b8c; font-size: 13px; line-height: 1.45; margin: 0 0 14px; }
-      .pm-welcome-hotkey-card { position: relative; display: grid; grid-template-columns: minmax(145px, 190px) 1fr; gap: 18px; align-items: center; margin-bottom: 14px; padding: 14px; border: 1px solid rgba(200, 170, 110, 0.42); border-radius: 10px; background: linear-gradient(135deg, rgba(200, 170, 110, 0.16), rgba(10, 200, 185, 0.08)), rgba(255, 255, 255, 0.02); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 12px 28px rgba(0, 0, 0, 0.34); }
-      .pm-welcome-keycap { min-height: 112px; display: grid; place-items: center; border: 1px solid rgba(240, 230, 210, 0.24); border-bottom-color: rgba(200, 170, 110, 0.62); border-radius: 8px; background: linear-gradient(180deg, rgba(240, 230, 210, 0.10), rgba(1, 10, 19, 0.64)); box-shadow: 0 8px 0 rgba(0, 0, 0, 0.25), inset 0 0 30px rgba(200, 170, 110, 0.08); color: #f0e6d2; font-size: 62px; line-height: 1; font-weight: 900; text-shadow: 0 0 22px rgba(200, 170, 110, 0.34); }
-      .pm-welcome-hotkey-label { color: #c8aa6e; font-size: 12px; font-weight: 800; text-transform: uppercase; margin-bottom: 8px; }
-      .pm-welcome-hotkey-title { color: #f0e6d2; font-size: 18px; line-height: 1.25; font-weight: 800; margin-bottom: 7px; }
-      .pm-welcome-hotkey-note { color: #8a9aaa; font-size: 12px; line-height: 1.4; }
-      .pm-welcome-hotkey-note strong { color: #0ac8b9; font-weight: 800; }
-      .pm-welcome-hotkey-actions { margin-top: 12px; }
-      .pm-welcome-grid { display: grid; grid-template-columns: 1.15fr 0.85fr; gap: 12px; margin-top: 0; }
-      .pm-welcome-panel { border: 1px solid rgba(255, 255, 255, 0.055); border-radius: 8px; background: rgba(255, 255, 255, 0.018); padding: 12px; }
-      .pm-welcome-panel-title { color: #c8aa6e; font-size: 12px; font-weight: 800; text-transform: uppercase; margin-bottom: 8px; }
-      .pm-welcome-features { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
-      .pm-welcome-features li { display: flex; align-items: flex-start; gap: 8px; color: #a09b8c; font-size: 12px; line-height: 1.32; }
-      .pm-welcome-features li::before { content: ''; width: 6px; height: 6px; margin-top: 6px; border-radius: 50%; flex-shrink: 0; background: #0ac8b9; box-shadow: 0 0 10px rgba(10, 200, 185, 0.6); }
-      .pm-welcome-about { display: grid; gap: 6px; color: #7a8a9a; font-size: 12px; line-height: 1.32; }
-      .pm-welcome-about-row { display: grid; grid-template-columns: 64px 1fr; gap: 8px; min-width: 0; }
-      .pm-welcome-about-label { color: #5a7080; }
-      .pm-welcome-about a { color: #c8aa6e; text-decoration: underline; cursor: pointer; overflow-wrap: anywhere; }
-      .pm-welcome-version-wrap { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; min-width: 0; }
-      .pm-welcome-update-link { color: #0ac8b9; text-decoration: none; font-weight: 800; cursor: pointer; }
-      .pm-welcome-update-link:hover { color: #f0e6d2; text-decoration: underline; }
-      .pm-welcome-btn { background: rgba(200, 170, 110, 0.12); border: 1px solid rgba(200, 170, 110, 0.45); color: #f0e6d2; padding: 7px 16px; cursor: pointer; border-radius: 4px; font-weight: 800; transition: all 0.16s ease; font-size: 12px; }
-      .pm-welcome-btn:hover { background: rgba(200, 170, 110, 0.22); border-color: #c8aa6e; box-shadow: 0 0 18px rgba(200, 170, 110, 0.16); }
-      #pm-welcome-root .pm-welcome-body::-webkit-scrollbar { width: 6px; }
-      #pm-welcome-root .pm-welcome-body::-webkit-scrollbar-track { background: transparent; }
-      #pm-welcome-root .pm-welcome-body::-webkit-scrollbar-thumb { background: rgba(200, 170, 110, 0.18); border-radius: 3px; }
-      @media (max-width: 620px) {
-        #pm-welcome-root { padding: 14px; }
-        #pm-welcome-modal { width: calc(100vw - 28px); max-height: calc(100vh - 28px); }
-        .pm-welcome-header, .pm-welcome-body { padding-left: 18px; padding-right: 18px; }
-        .pm-welcome-title { font-size: 22px; }
-        .pm-welcome-hotkey-card, .pm-welcome-grid { grid-template-columns: 1fr; }
-        .pm-welcome-keycap { min-height: 108px; font-size: 56px; }
-      }
-      `;
-      document.head.appendChild(style);
-    }
-
-    _root = document.createElement('div');
-    _root.id = 'pm-welcome-root';
-    _root.setAttribute('role', 'dialog');
-    _root.setAttribute('aria-modal', 'true');
-    _root.setAttribute('aria-labelledby', 'pm-welcome-title');
-
-    const overlay = document.createElement('div');
-    overlay.id = 'pm-welcome-overlay';
-    overlay.addEventListener('click', () => hide());
-
-    const modal = document.createElement('div');
-    modal.id = 'pm-welcome-modal';
-
-    const header = document.createElement('div');
-    header.className = 'pm-welcome-header';
-
-    const headingWrap = document.createElement('div');
-    const kicker = document.createElement('div');
-    kicker.className = 'pm-welcome-kicker';
-    kicker.textContent = 'Snooze-Manager';
-    const title = document.createElement('h2');
-    title.id = 'pm-welcome-title';
-    title.className = 'pm-welcome-title';
-    title.textContent = 'Welcome to your new plugin manager';
-    headingWrap.appendChild(kicker);
-    headingWrap.appendChild(title);
-
-    const closeBtn = document.createElement('button');
-    closeBtn.type = 'button';
-    closeBtn.className = 'pm-welcome-close';
-    closeBtn.setAttribute('aria-label', 'Close welcome');
-    closeBtn.innerHTML = '&#x2715;';
-    closeBtn.addEventListener('click', () => hide());
-
-    header.appendChild(headingWrap);
-    header.appendChild(closeBtn);
-
-    const body = document.createElement('div');
-    body.className = 'pm-welcome-body';
-
-    const copy = document.createElement('p');
-    copy.className = 'pm-welcome-copy';
-    copy.textContent = 'Snooze-Manager brings QoL features together in one menu, making them easy to configure and use.';
-    body.appendChild(copy);
-
-    const hotkeyCard = document.createElement('div');
-    hotkeyCard.className = 'pm-welcome-hotkey-card';
-
-    const keycap = document.createElement('div');
-    keycap.className = 'pm-welcome-keycap';
-    keycap.textContent = DEFAULT_MENU_HOTKEY.display;
-
-    const hotkeyText = document.createElement('div');
-    const hotkeyLabel = document.createElement('div');
-    hotkeyLabel.className = 'pm-welcome-hotkey-label';
-    hotkeyLabel.textContent = 'Default menu hotkey';
-    const hotkeyTitle = document.createElement('div');
-    hotkeyTitle.className = 'pm-welcome-hotkey-title';
-    hotkeyTitle.textContent = `Press ${DEFAULT_MENU_HOTKEY.display} anytime to open the Snooze-Manager menu.`;
-    const hotkeyNote = document.createElement('div');
-    hotkeyNote.className = 'pm-welcome-hotkey-note';
-    hotkeyNote.innerHTML = 'Prefer another shortcut? It is <strong>fully customizable</strong> in Settings under General > Menu Shortcut.';
-    const hotkeyActions = document.createElement('div');
-    hotkeyActions.className = 'pm-welcome-hotkey-actions';
-    const gotItBtn = document.createElement('button');
-    gotItBtn.type = 'button';
-    gotItBtn.className = 'pm-welcome-btn';
-    gotItBtn.textContent = 'Got it';
-    gotItBtn.addEventListener('click', () => hide());
-    hotkeyActions.appendChild(gotItBtn);
-    hotkeyText.appendChild(hotkeyLabel);
-    hotkeyText.appendChild(hotkeyTitle);
-    hotkeyText.appendChild(hotkeyNote);
-    hotkeyText.appendChild(hotkeyActions);
-
-    hotkeyCard.appendChild(keycap);
-    hotkeyCard.appendChild(hotkeyText);
-    body.appendChild(hotkeyCard);
-
-    const grid = document.createElement('div');
-    grid.className = 'pm-welcome-grid';
-
-    const featuresPanel = document.createElement('div');
-    featuresPanel.className = 'pm-welcome-panel';
-    const featuresTitle = document.createElement('div');
-    featuresTitle.className = 'pm-welcome-panel-title';
-    featuresTitle.textContent = 'What is inside';
-    const featuresList = document.createElement('ul');
-    featuresList.className = 'pm-welcome-features';
-    [
-      'Player lookup and match history tools',
-      'Auto features for re-queue, auto accept, champion select, and honor',
-      'Champion select quality-of-life options, Dodge Button',
-      'Client window, profile, social panel, and mode selector tweaks',
-      'Whale Helper loot and skin collection utilities',
-      'And more...',
-    ].forEach(feature => {
-      const item = document.createElement('li');
-      item.textContent = feature;
-      featuresList.appendChild(item);
-    });
-    featuresPanel.appendChild(featuresTitle);
-    featuresPanel.appendChild(featuresList);
-
-    const aboutPanel = document.createElement('div');
-    aboutPanel.className = 'pm-welcome-panel';
-    const aboutTitle = document.createElement('div');
-    aboutTitle.className = 'pm-welcome-panel-title';
-    aboutTitle.textContent = 'About';
-    const aboutContent = document.createElement('div');
-    aboutContent.className = 'pm-welcome-about';
-
-    function renderWelcomeUpdate(versionWrap, release) {
-      versionWrap.querySelector('.pm-welcome-update-link')?.remove();
-      if (!release) return;
-
-      const updateLink = document.createElement('a');
-      updateLink.className = 'pm-welcome-update-link';
-      updateLink.href = release.url || 'https://github.com/ReformedDoge/Snooze-Manager/releases';
-      updateLink.target = '_blank';
-      updateLink.textContent = `Update available: v${release.version}`;
-      versionWrap.appendChild(updateLink);
-    }
-
-    [
-      { label: 'Plugin:', value: 'Snooze-Manager' },
-      { label: 'Version:', value: `v${CURRENT_VERSION}` },
-      { label: 'GitHub:', value: 'github.com/ReformedDoge/Snooze-Manager', href: 'https://github.com/ReformedDoge/Snooze-Manager' },
-	  { label: 'By:', value: 'SnoozeFest @ReformedDoge on github.' },
-    ].forEach(({ label, value, href }) => {
-      const row = document.createElement('div');
-      row.className = 'pm-welcome-about-row';
-      const labelEl = document.createElement('span');
-      labelEl.className = 'pm-welcome-about-label';
-      labelEl.textContent = label;
-      let valueEl;
-      if (label === 'Version:') {
-        valueEl = document.createElement('span');
-        valueEl.className = 'pm-welcome-version-wrap';
-        const currentVersion = document.createElement('span');
-        currentVersion.textContent = value;
-        valueEl.appendChild(currentVersion);
-        renderWelcomeUpdate(valueEl, _latestRelease);
-        _welcomeUpdateCallback = (release) => renderWelcomeUpdate(valueEl, release);
-      } else if (href) {
-        valueEl = document.createElement('a');
-        valueEl.href = href;
-        valueEl.target = '_blank';
-        valueEl.textContent = value;
-      } else {
-        valueEl = document.createElement('span');
-        valueEl.textContent = value;
-      }
-      row.appendChild(labelEl);
-      row.appendChild(valueEl);
-      aboutContent.appendChild(row);
-    });
-    aboutPanel.appendChild(aboutTitle);
-    aboutPanel.appendChild(aboutContent);
-
-    grid.appendChild(featuresPanel);
-    grid.appendChild(aboutPanel);
-    body.appendChild(grid);
-
-    modal.appendChild(header);
-    modal.appendChild(body);
-    _root.appendChild(overlay);
-    _root.appendChild(modal);
-
-    const viewportOverlay = document.querySelector('.rcp-fe-viewport-overlay');
-    if (viewportOverlay && viewportOverlay.parentNode === document.body) viewportOverlay.after(_root);
-    else document.body.appendChild(_root);
-  }
-
-  function show() {
-    installDocumentListeners();
-    if (!_root || !document.body.contains(_root)) create();
-    _root.classList.add('pm-welcome-show');
-    _visible = true;
-  }
-
-  function hide() {
-    markDismissed();
-    const root = getRoot();
-    if (root) root.classList.remove('pm-welcome-show');
-    _visible = false;
-    _welcomeUpdateCallback = null;
-  }
-
-  function showIfNeeded() {
-    if (Utils.Store.get('core', STORE_KEY) === true) return;
-    show();
-  }
-
-  function init() {
-    installDocumentListeners();
-  }
-
-  return { init, showIfNeeded, hide };
-})();
-
 // Features aka plugins (Modules Loader)
 import * as autoAcceptModule from './modules/autoAccept.js';
 import * as aramNocdModule from './modules/aramNocd.js';
@@ -1357,7 +1034,6 @@ import * as socialPanelTweaksModule from './modules/socialPanelTweaks.js';
 import * as lowPrioWarningSuppressModule from './modules/LowPrioWarningSuppress.js';
 import * as autoQueueModule from './modules/autoQueue.js';
 import * as modeSelectorTweaksModule from './modules/modeSelectorTweaks.js';
-import * as nameSpooferModule from './modules/nameSpoofer.js';
 
 const registeredModules = [];
 
@@ -1395,7 +1071,7 @@ export async function init(ctx) {
   // Register the global SnoozeManager early so modules can hook into it
   window.SnoozeManager = { 
   init, load, 
-  __isLoader: true, // Flag to tell modules NOT to inject into native settings
+  __isLoader: true, // Flag to tell modules NOT to show native settings
   show: () => Modal.show(), 
   hide: () => Modal.hide(), 
   toggle: () => Modal.toggle(),
@@ -1431,23 +1107,16 @@ export async function init(ctx) {
   lowPrioWarningSuppressModule.init(ctx);
   autoQueueModule.init(ctx);
   modeSelectorTweaksModule.init(ctx);
-  nameSpooferModule.init(ctx);
 }
 
 export async function load(context) {
-  if (_loaded) {
-    WelcomeModal.init();
-    WelcomeModal.showIfNeeded();
-    return;
-  }
+  if (_loaded) return;
   _loaded = true;
   await Utils.GameData.Assets.init();
   Modal.init();
-  WelcomeModal.init();
 
   // Sync version from @version tag then check for updates if enabled
   await syncVersionWithMetadata();
-  WelcomeModal.showIfNeeded();
   checkForUpdates();
 
   
@@ -1467,7 +1136,6 @@ export async function load(context) {
   lowPrioWarningSuppressModule.load();
   autoQueueModule.load();
   modeSelectorTweaksModule.load();
-  nameSpooferModule.load();
 }
 
 const LEGACY_MIGRATION_MAP = {

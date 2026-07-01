@@ -18,94 +18,6 @@ const Debug = {
   error(...args) { if (!_debugState.enabled) return; console.error(...args); }
 };
 
-const Toast = {
-    _ensureContainer() {
-        let container = document.getElementById('snooze-toast-container');
-        if (!container) {
-            container = document.createElement('div');
-            container.id = 'snooze-toast-container';
-            Object.assign(container.style, {
-                position: 'fixed',
-                top: '24px',
-                left: '24px',
-                zIndex: '2147483647',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '10px',
-                pointerEvents: 'none'
-            });
-
-            const style = document.createElement('style');
-            style.textContent = `
-                @keyframes snoozeToastSlideIn {
-                    from { transform: translateX(-120%); opacity: 0; filter: blur(4px); }
-                    to { transform: translateX(0); opacity: 1; filter: blur(0); }
-                }
-                @keyframes snoozeToastFadeOut {
-                    from { transform: translateX(0); opacity: 1; }
-                    to { transform: translateX(-20%); opacity: 0; filter: blur(2px); }
-                }
-                .snooze-toast {
-                    background: rgba(1, 10, 19, 0.9);
-                    border-left: 4px solid #0ac8b9;
-                    border-top: 1px solid rgba(255, 255, 255, 0.05);
-                    border-right: 1px solid rgba(255, 255, 255, 0.05);
-                    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-                    border-radius: 6px;
-                    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
-                    backdrop-filter: blur(10px);
-                    color: #f0e6d2;
-                    padding: 12px 18px;
-                    font-family: var(--font-body), "Segoe UI", sans-serif;
-                    font-size: 13px;
-                    display: flex;
-                    align-items: center;
-                    gap: 12px;
-                    animation: snoozeToastSlideIn 0.35s cubic-bezier(0.2, 0.85, 0.32, 1.2) forwards;
-                    transition: all 0.3s ease;
-                }
-                .snooze-toast.hiding {
-                    animation: snoozeToastFadeOut 0.3s forwards;
-                }
-            `;
-            document.head.appendChild(style);
-            document.body.appendChild(container);
-        }
-        return container;
-    },
-
-    show(message, type = 'success', duration = 3000) {
-        const container = this._ensureContainer();
-        const toast = document.createElement('div');
-        toast.className = 'snooze-toast';
-        
-        // Colors match Snooze styling
-        const color = type === 'success' ? '#0ac8b9' : (type === 'error' ? '#e84057' : '#c8aa6e');
-        toast.style.borderLeftColor = color;
-
-        // Custom SVGs based on type
-        const iconSvg = type === 'success' 
-            ? `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`
-            : `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>`;
-
-        toast.innerHTML = `
-            <div style="display:flex;align-items:center;justify-content:center;">${iconSvg}</div>
-            <div style="font-weight:500;line-height:1.4;">${message}</div>
-        `;
-
-        container.appendChild(toast);
-
-        setTimeout(() => {
-            toast.classList.add('hiding');
-            toast.addEventListener('animationend', () => toast.remove());
-        }, duration);
-    },
-
-    success(message, duration) { this.show(message, 'success', duration); },
-    error(message, duration)   { this.show(message, 'error', duration); },
-    info(message, duration)    { this.show(message, 'info', duration); }
-};
-
 /**
  * Smart DOM observer:
  * - Runs callbacks only for matching selectors
@@ -384,29 +296,6 @@ const EmberHook = window.__SM_EmberHook || (window.__SM_EmberHook = {
       }
     }
 
-    const hookList = rule.hookMethods || (rule.hookMethod ? [rule.hookMethod] : []);
-    if (hookList.length) {
-      try {
-        const proto = cur.proto();
-        const applied = (proto[this._appliedRulesKey] ??= new Set());
-        if (!applied.has(rule.name)) {
-          for (const hm of hookList) {
-            const original = proto[hm.name];
-            proto[hm.name] = function(...args) {
-              const proxyOriginal = (...callArgs) => {
-                if (typeof original === 'function') return original.apply(this, callArgs);
-              };
-              return hm.callback.call(this, Ember, proxyOriginal, ...args);
-            };
-          }
-          applied.add(rule.name);
-          proto[this._appliedRulesKey] = applied;
-        }
-      } catch (e) {
-        Debug.warn('[EmberHook] hookMethods failed:', rule.name, e);
-      }
-    }
-
     return cur;
   },
 
@@ -428,7 +317,7 @@ const EmberHook = window.__SM_EmberHook || (window.__SM_EmberHook = {
 
       if (this._rules.length > 0) {
         for (const rule of this._rules) {
-          if (rule.type === 'service' || rule.enabled === false) continue;
+          if (rule.type === 'service') continue;
           const m = rule.matcher;
           let matched = false;
 
@@ -487,7 +376,7 @@ const EmberHook = window.__SM_EmberHook || (window.__SM_EmberHook = {
 
       if (this._rules.length > 0) {
         for (const rule of this._rules) {
-          if (rule.type !== 'service' || rule.enabled === false) continue;
+          if (rule.type !== 'service') continue;
           const m = rule.matcher;
           let matched = false;
 
@@ -514,17 +403,12 @@ const EmberHook = window.__SM_EmberHook || (window.__SM_EmberHook = {
   },
 
   registerRule(rule) {
-    if (rule.enabled === undefined) rule.enabled = true;
     const i = this._rules.findIndex(r => r.name === rule.name);
     if (i >= 0) {
       this._rules[i] = rule;
     } else {
       this._rules.push(rule);
     }
-    return () => {
-      const idx = this._rules.indexOf(rule);
-      if (idx >= 0) this._rules.splice(idx, 1);
-    };
   },
 
   getRulesCount() {
@@ -820,100 +704,6 @@ function createToggleRow(labelText, checked, onChange) {
     return row;
 }
 
-function createSelectRow(labelText, options, value, onChange) {
-    const row = document.createElement('div');
-    row.style.display = 'flex';
-    row.style.alignItems = 'center';
-    row.style.gap = '10px';
-
-    const label = document.createElement('span');
-    label.textContent = labelText;
-    label.style.color = '#a09b8c';
-    label.style.fontSize = '12px';
-    label.style.whiteSpace = 'nowrap';
-
-    const select = document.createElement('select');
-    select.style.background = '#111';
-    select.style.color = '#f0e6d2';
-    select.style.border = '1px solid #3e2e13';
-    select.style.padding = '5px 8px';
-    select.style.borderRadius = '2px';
-    select.style.outline = 'none';
-    select.style.fontSize = '13px';
-
-    (options || []).forEach(o => {
-        const opt = document.createElement('option');
-        opt.value = o.value;
-        opt.textContent = o.label;
-        if (String(o.value) === String(value)) opt.selected = true;
-        select.appendChild(opt);
-    });
-
-    select.addEventListener('click', (e) => e.stopPropagation());
-    select.addEventListener('change', () => {
-        if (typeof onChange === 'function') onChange(select.value);
-    });
-
-    row.appendChild(label);
-    row.appendChild(select);
-    return row;
-}
-
-function createNumberInputRow(labelText, value, min, max, step, onChange) {
-    const row = document.createElement('div');
-    row.style.display = 'flex';
-    row.style.alignItems = 'center';
-    row.style.gap = '10px';
-
-    const label = document.createElement('span');
-    label.textContent = labelText;
-    label.style.color = '#a09b8c';
-    label.style.fontSize = '12px';
-    label.style.whiteSpace = 'nowrap';
-
-    const input = document.createElement('input');
-    input.type = 'number';
-    input.min = String(min);
-    input.max = String(max);
-    input.step = String(step);
-    input.value = String(value);
-    input.style.background = '#111';
-    input.style.border = '1px solid #3e2e13';
-    input.style.color = '#f0e6d2';
-    input.style.padding = '5px 8px';
-    input.style.borderRadius = '2px';
-    input.style.outline = 'none';
-    input.style.width = '70px';
-    input.style.fontSize = '13px';
-
-    input.addEventListener('click', (e) => e.stopPropagation());
-    input.addEventListener('change', () => {
-        let v = parseFloat(input.value);
-        if (!isFinite(v)) v = min;
-        v = Math.min(max, Math.max(min, v));
-        v = Math.round(v * 10) / 10;
-        input.value = String(v);
-        if (typeof onChange === 'function') onChange(v);
-    });
-
-    row.appendChild(label);
-    row.appendChild(input);
-    return row;
-}
-
-function createInfoBox(htmlContent) {
-    const box = document.createElement('div');
-    box.style.padding = '10px';
-    box.style.background = 'rgba(0,0,0,0.2)';
-    box.style.border = '1px solid rgba(255,255,255,0.05)';
-    box.style.borderRadius = '4px';
-    box.style.color = '#8a9aaa';
-    box.style.fontSize = '12px';
-    box.style.lineHeight = '1.5';
-    box.innerHTML = htmlContent;
-    return box;
-}
-
 // Shared Assets & Match History Helpers
 
 const Assets = {
@@ -941,14 +731,8 @@ const Assets = {
         if (ps && Array.isArray(ps.styles) && ps.styles.length > 0) ps.styles.forEach(x => this.perks[x.id] = x);
         if (Array.isArray(q) && q.length > 0) {
           this.queues = q.filter(x => x.name && x.id).map(x => ({
-            ...x, tag: 'q_' + x.id
-          })).sort((a, b) => {
-            const catOrder = { PvP: 0, VersusAi: 1, Custom: 2 };
-            const ac = catOrder[a.category] ?? 3;
-            const bc = catOrder[b.category] ?? 3;
-            if (ac !== bc) return ac - bc;
-            return a.name.localeCompare(b.name);
-          });
+            id: x.id, name: x.shortName || x.name, tag: 'q_' + x.id
+          })).sort((a, b) => a.name.localeCompare(b.name));
         }
         
         this._initialized = true;
@@ -1463,8 +1247,13 @@ const Panic = {
                 this._callbacks.forEach(cb => {
                     try { cb(); } catch(err) {}
                 });
+                this._callbacks.clear();
 
-                Toast.success('Auto Actions Cancelled');
+                if (window.Toast && typeof window.Toast.success === 'function') {
+                    window.Toast.success('Auto Actions Cancelled');
+                } else {
+                    Debug.log('Auto Actions Cancelled (Toast not found)');
+                }
             }
         });
     },
@@ -1478,76 +1267,14 @@ const Panic = {
     }
 };
 
-function createHotkeyRow(labelText, currentKey, onChange, descriptionText) {
-    const container = document.createElement('div');
-    container.style.display = 'flex';
-    container.style.flexDirection = 'column';
-    container.style.width = '100%';
-    container.style.marginTop = '10px';
-
-    const row = document.createElement('div');
-    row.style.display = 'flex';
-    row.style.alignItems = 'center';
-    row.style.justifyContent = 'space-between';
-    row.style.width = '100%';
-    row.style.gap = '10px';
-
-    const label = document.createElement('span');
-    label.textContent = labelText;
-    Object.assign(label.style, { color: '#f0e6d2', fontSize: '13px' });
-
-    const btn = document.createElement('button');
-    btn.textContent = currentKey || 'Unbound';
-    Object.assign(btn.style, {
-        background: '#111', color: '#c8aa6e', border: '1px solid #3e2e13',
-        padding: '5px 12px', borderRadius: '4px', cursor: 'pointer', minWidth: '80px',
-        fontSize: '12px', fontWeight: 'bold'
-    });
-
-    let listening = false;
-    btn.addEventListener('click', () => {
-        if (listening) return;
-        listening = true;
-        btn.textContent = 'Press a key...';
-        btn.style.color = '#f0e6d2';
-
-        const handler = (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            let newKey = e.key;
-            if (newKey === ' ') newKey = 'Space';
-            document.removeEventListener('keydown', handler);
-            listening = false;
-            btn.textContent = newKey;
-            btn.style.color = '#c8aa6e';
-            onChange(newKey);
-        };
-        document.addEventListener('keydown', handler);
-    });
-
-    row.appendChild(label);
-    row.appendChild(btn);
-    container.appendChild(row);
-
-    if (descriptionText) {
-        const desc = document.createElement('div');
-        desc.textContent = descriptionText;
-        Object.assign(desc.style, { color: '#8a9aaa', fontSize: '12px', marginTop: '6px', lineHeight: '1.4' });
-        container.appendChild(desc);
-    }
-
-    return container;
-}
-
 export const Utils = {
     DOM: { createSmartObserver, observer },
     Hooks: { Ember: EmberHook, Fetch: FetchHook, Xhr: XhrHook, WS: WSHook },
-	Debug,
+  Debug,
     LCU,
     Store,
     Panic,
-	Toast, 
-    Settings: { inject: settingsUtils, createToggleRow, createSelectRow, createNumberInputRow, createInfoBox, createHotkeyRow },
+    Settings: { inject: settingsUtils, createToggleRow },
     GameData: { Assets, getSgpContext, getSgpMatchHistory }
 };
 export default Utils;

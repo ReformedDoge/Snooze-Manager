@@ -51,57 +51,57 @@ export function init(context) {
     Utils.Hooks.Ember.registerRule({
         name: 'champ-select-quit-button-hook',
         matcher: 'champion-select',
-        hookMethods: [{
-            name: 'didInsertElement',
-            callback(Ember, original, ...args) {
-                original(...args);
-                if (!Utils.Store.get('champSelectQuitButton', 'enabled')) return;
-                if (!this.element) return;
-                
-                const container = this.element.querySelector('.bottom-right-buttons');
-                if (!container) return;
-                
-                if (!container.querySelector('#pm-quit-btn')) {
-                    const btn = document.createElement('lol-uikit-flat-button');
-                    btn.id = 'pm-quit-btn';
-                    btn.textContent = 'Dodge';
-                    btn.style.cssText = 'margin-right: 10px; margin-top: 5px; width: auto; min-width: 80px; text-align: center;';
+        mixin() {
+            return {
+                didInsertElement() {
+                    this._super(...arguments);
+                    if (!Utils.Store.get('champSelectQuitButton', 'enabled')) return;
+                    if (!this.element) return;
                     
-                    let dodging = false;
-                    btn.onclick = async () => {
-                        if (dodging) return;
-                        dodging = true;
-                        btn.disabled = true;
-                        try { await dodgeQueue(); } 
-                        finally { setTimeout(() => { dodging = false; btn.disabled = false; }, 1000); }
-                    };
+                    const container = this.element.querySelector('.bottom-right-buttons');
+                    if (!container) return;
                     
-                    if (container.firstChild) {
-                        container.insertBefore(btn, container.firstChild);
-                    } else {
-                        container.appendChild(btn);
+                    if (!container.querySelector('#pm-quit-btn')) {
+                        const btn = document.createElement('lol-uikit-flat-button');
+                        btn.id = 'pm-quit-btn';
+                        btn.textContent = 'Dodge';
+                        btn.style.cssText = 'margin-right: 10px; margin-top: 5px; width: auto; min-width: 80px; text-align: center;';
+                        
+                        let dodging = false;
+                        btn.onclick = async () => {
+                            if (dodging) return;
+                            dodging = true;
+                            btn.disabled = true;
+                            try { await dodgeQueue(); } 
+                            finally { setTimeout(() => { dodging = false; btn.disabled = false; }, 1000); }
+                        };
+                        
+                        if (container.firstChild) {
+                            container.insertBefore(btn, container.firstChild);
+                        } else {
+                            container.appendChild(btn);
+                        }
                     }
+                },
+                willDestroyElement() {
+                    const btn = document.getElementById('pm-quit-btn');
+                    if (btn) btn.remove();
+                    this._super(...arguments);
                 }
-            }
-        }, {
-            name: 'willDestroyElement',
-            callback(Ember, original, ...args) {
-                const btn = document.getElementById('pm-quit-btn');
-                if (btn) btn.remove();
-                original(...args);
-            }
-        }]
+            };
+        }
     });
 
     if (window.SnoozeManager && window.SnoozeManager.registerModule) {
         window.SnoozeManager.registerModule({
             id: 'champSelectQuitButton',
             name: 'Champ Select Dodge Button',
-            description: 'Adds a dodge button in the champion select.',
+            description: 'Adds a convenient native dodge button inside the champion select action bar.',
             settings: [{
                 type: 'toggle',
                 id: 'sm:champSelectQuitButton',
                 label: 'Enable Champ Select Dodge Button',
+                description: 'Adds a Dodge button that quits champ select to leave without waiting',
                 value: isEnabled,
                 onChange: (val) => toggleFeature(val)
             }]

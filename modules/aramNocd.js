@@ -128,12 +128,13 @@ export function init(context) {
         window.SnoozeManager.registerModule({
             id: 'aramNocd',
             name: 'ARAM No Cooldown',
-            description: 'Removes the cooldown when swapping champions with the ARAM bench.',
+            description: 'Removes the cooldown when swapping champions with the ARAM bench natively.',
             settings: [
                 {
                     type: 'toggle',
                     id: 'sm:aramNocd',
                     label: 'Enable ARAM No Cooldown',
+                    description: 'Lets you swap bench champions instantly, skipping the swap timer and animation',
                     value: isEnabled,
                     onChange: (val) => toggleFeature(val)
                 }

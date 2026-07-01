@@ -20,7 +20,6 @@ const DRAGBAR_KEY = 'dragBarPercentage';
 const DRAGBAR_DEFAULT = 7;
 const NATIVE_STATE_KEY = 'nativeWindowState';
 const TITLE_DEFAULT = 'League of Legends';
-const FULLSCREEN_KEY = 'fullscreenEnabled';
 
 const PRESETS = [
   { id: 'native-426x240', label: '426 x 240', width: 426, height: 240 },
@@ -78,7 +77,6 @@ async function restoreNativeVideoSettings() {
 
 let isEnabled = false;
 let _hooksInstalled = false;
-let _fullscreenKeyListener = null;
 
 function parseNumber(value, fallback = 0) {
   const n = Number(value);
@@ -144,10 +142,11 @@ function applyZoom(targetWidth, targetHeight) {
   
   const virtualWidth = isCollapsedCrop ? (1280 - 224) : 1280;
   
-  // CEF zooms forced to 1.0, style.zoom is targetHeight / 720
+  // Since the native CEF zoom is forced to 1.0, style.zoom is targetHeight / 720
   const targetCssZoom = targetHeight / 720;
   document.documentElement.style.zoom = targetCssZoom;
   
+  // Show letterbox background only when aspect ratio doesn't match expected ratio
   const expectedRatio = isCollapsedCrop ? (virtualWidth / 720) : (16 / 9);
   if (Math.abs(targetWidth / targetHeight - expectedRatio) > 0.02) {
     document.documentElement.style.backgroundColor = '#000';
@@ -166,36 +165,25 @@ function centerWindow() {
 }
 
 function enableFreeResizing(enable) {
-  Utils.Debug.log('[CWT] enableFreeResizing:', enable ? 'ENABLE' : 'DISABLE');
   if (enable) {
     riotInvoke('Mouse.SetResizeEnabled', [true]);
     riotInvoke('Mouse.SetResizeBounds', [426, 240, 7680, 4320]);
 	riotInvoke('Window.SetResizeBounds', [426, 240, 7680, 4320]);
     window.addEventListener('resize', handleDynamicResize);
-    Utils.Debug.log('[CWT] enableFreeResizing: resize listener ADDED');
   } else {
     riotInvoke('Mouse.SetResizeEnabled', [false]);
     window.removeEventListener('resize', handleDynamicResize);
-    Utils.Debug.log('[CWT] enableFreeResizing: resize listener REMOVED');
   }
 }
 
 function handleDynamicResize() {
-  Utils.Debug.log('[CWT] handleDynamicResize: FIRED, inner:', window.innerWidth, 'x', window.innerHeight, '| fullscreen:', !!document.fullscreenElement, '| progResize:', isProgrammaticResize);
   if (isProgrammaticResize) return;
 
-  if (document.fullscreenElement) {
-    const fsZoom = window.innerHeight / 720;
-    document.documentElement.style.zoom = fsZoom;
-    document.documentElement.style.backgroundColor = '';
-    Utils.Debug.log('[CWT] handleDynamicResize: fullscreen, zoom =', fsZoom);
-    return;
-  }
-
+  // Since the native CEF zoom is forced to 1.0, style.zoom is exactly window.innerHeight / 720!
   const targetCssZoom = window.innerHeight / 720;
   document.documentElement.style.zoom = targetCssZoom;
-  Utils.Debug.log('[CWT] handleDynamicResize: set zoom to', targetCssZoom);
-
+  
+  // Update background letterboxing if needed
   const isCollapsedCrop = document.body.classList.contains('snooze-collapsed') && 
                           (Utils.Store.get('socialPanelTweaks', 'collapseMethod') === 'crop');
   const virtualWidth = isCollapsedCrop ? (1280 - 224) : 1280;
@@ -206,18 +194,16 @@ function handleDynamicResize() {
   
   if (Math.abs(physicalWidth / physicalHeight - expectedRatio) > 0.02) {
     document.documentElement.style.backgroundColor = '#000';
-    Utils.Debug.log('[CWT] handleDynamicResize: letterbox ON');
   } else {
     document.documentElement.style.backgroundColor = '';
-    Utils.Debug.log('[CWT] handleDynamicResize: letterbox OFF');
   }
 
+  // Recalculate drag bar if the physical window height just changed
   const dragEnabled = getStoreValue(DRAG_ENABLED_KEY, true);
   const dragBarPct = parseNumber(getStoreValue(DRAGBAR_KEY, DRAGBAR_DEFAULT));
   if (isEnabled && dragEnabled && dragBarPct >= 0) {
     const activeHeight = window.outerHeight || physicalHeight || 720;
     const dragBarPixels = Math.round((dragBarPct / 100) * activeHeight);
-    Utils.Debug.log('[CWT] handleDynamicResize: set dragBar to', dragBarPixels);
     riotInvoke('Mouse.SetDragBarHeight', [dragBarPixels]);
   }
 }
@@ -230,6 +216,7 @@ function restoreNativeWindowState() {
 
   if (state.width > 0 && state.height > 0) {
     riotInvoke('Window.ResizeTo', [state.width, state.height]);
+    // Do not re-apply zoom here the native settings system will restore the correct ZoomScale for the original window size on its own.
   }
 
   centerWindow();
@@ -249,53 +236,10 @@ function restoreAllNativeSettings() {
   restoreNativeVideoSettings();
   restoreTitle();
   restoreDragBar();
-  uninstallFullscreenListener();
-  delete window.__snoozeTargetResolution;
-}
-
-let _fullscreenChangeHandler = null;
-
-function installFullscreenListener() {
-  if (_fullscreenKeyListener) return;
-  _fullscreenKeyListener = (e) => {
-    if (e.key === 'F11') {
-      e.preventDefault();
-      e.stopPropagation();
-      Utils.Debug.log('[CWT] fullscreenKeyListener: F11 pressed, fullscreenElement =', !!document.fullscreenElement);
-      if (document.fullscreenElement) {
-        document.exitFullscreen().catch(() => {});
-      } else {
-        document.documentElement.requestFullscreen().catch(() => {});
-      }
-    }
-  };
-  document.addEventListener('keydown', _fullscreenKeyListener, true);
-
-  if (!_fullscreenChangeHandler) {
-    _fullscreenChangeHandler = () => {
-      Utils.Debug.log('[CWT] fullscreenchange: fullscreenElement =', !!document.fullscreenElement, '| inner:', window.innerWidth, 'x', window.innerHeight);
-    };
-    document.addEventListener('fullscreenchange', _fullscreenChangeHandler);
-  }
-}
-
-function uninstallFullscreenListener() {
-  if (!_fullscreenKeyListener) return;
-  document.removeEventListener('keydown', _fullscreenKeyListener, true);
-  _fullscreenKeyListener = null;
-  if (_fullscreenChangeHandler) {
-    document.removeEventListener('fullscreenchange', _fullscreenChangeHandler);
-    _fullscreenChangeHandler = null;
-  }
-  if (document.fullscreenElement) {
-    Utils.Debug.log('[CWT] uninstallFullscreenListener: EXIT fullscreen');
-    document.exitFullscreen().catch(() => {});
-  }
 }
 
 function applyWindowSize(width, height) {
   if (width <= 0 || height <= 0) return;
-  window.__snoozeTargetResolution = { w: width, h: height };
 
   isProgrammaticResize = true;
   if (programmaticResizeTimeout) clearTimeout(programmaticResizeTimeout);
@@ -316,7 +260,8 @@ function applyWindowSize(width, height) {
       targetWidth = Math.round(height * ratioCollapsed);
     }
 
-    // Force the native settings to 1280x720 (ZoomScale: 1.0) natively
+    // 1. Force the native settings to 1280x720 (ZoomScale: 1.0) natively
+    // eliminating any scaling conflicts
     try {
       await Utils.LCU.patch('/lol-settings/v1/local/video', {
         data: {
@@ -328,12 +273,12 @@ function applyWindowSize(width, height) {
       Utils.Debug.warn('[ClientWindowTweaks] Failed to reset native video settings:', err);
     }
 
-    // riotInvoke call
+    // 2. Perform the physical window resize via riotInvoke
     riotInvoke('Window.ResizeTo', [targetWidth, targetHeight]);
     applyZoom(targetWidth, targetHeight);
     centerWindow();
 
-    // set the drag bar height based on the targetHeight
+    // 3. Immediately set the drag bar height based on the exact targetHeight
     const dragEnabled = getStoreValue(DRAG_ENABLED_KEY, true);
     const dragBarPct = parseNumber(getStoreValue(DRAGBAR_KEY, DRAGBAR_DEFAULT));
     if (dragEnabled && dragBarPct >= 0) {
@@ -386,7 +331,7 @@ function applySettings() {
     enableFreeResizing(false);
     restoreNativeWindowState();
     
-    // Set drag bar based on live window state
+    // Set drag bar based on live window state since we aren't resizing it programmatically
     if (dragEnabled && dragBarPct >= 0) {
       riotInvoke('Window.ScreenData', [], {
         onSuccess: (response) => {
@@ -406,18 +351,11 @@ function applySettings() {
   } else if (!titleEnabled) {
     restoreTitle();
   }
-
-  const fullscreenEnabled = getStoreValue(FULLSCREEN_KEY, false);
-  if (fullscreenEnabled) {
-    installFullscreenListener();
-  } else {
-    uninstallFullscreenListener();
-  }
 }
 
 // The League client's LayerWindowController observes /lol-settings/v1/local/video
 // for ZoomScale changes via the WS dispatcher. When it fires (e.g. user opens video
-// settings, or client startup reads settings), it resets the CSS zoom applied by
+// settings, or client startup reads settings), it resets the CSS zoom applied by our
 // applyZoom() call. We intercept both the inbound WS push and outbound XHR PUT to
 // keep our zoom value in place while the module is enabled.
 function getCurrentTargetZoom() {
@@ -567,18 +505,9 @@ function renderSettings(container, showMasterToggle = true) {
     }
   });
 
-  const fullscreenToggle = Utils.Settings.createToggleRow('Enable Fullscreen (F11)', getStoreValue(FULLSCREEN_KEY, false), (next) => {
-    setStoreValue(FULLSCREEN_KEY, next);
-    if (isEnabled) {
-      if (next) installFullscreenListener();
-      else uninstallFullscreenListener();
-    }
-  });
-
   sectionToggleRow.appendChild(resolutionToggle);
   sectionToggleRow.appendChild(titleToggle);
   sectionToggleRow.appendChild(dragToggle);
-  sectionToggleRow.appendChild(fullscreenToggle);
   container.appendChild(sectionToggleRow);
 
   const presetRow = document.createElement('div');
@@ -685,7 +614,12 @@ function renderSettings(container, showMasterToggle = true) {
 
   container.appendChild(createLabeledInput('Drag bar height (%)', dragInputContainer));
 
-  container.appendChild(Utils.Settings.createInfoBox('Settings are applied when enabled and when values change.'));
+  const note = document.createElement('div');
+  note.textContent = 'Settings are applied when enabled and when values change.';
+  note.style.color = '#8a9aaa';
+  note.style.fontSize = '12px';
+  note.style.lineHeight = '1.4';
+  container.appendChild(note);
 }
 
 export function init(context) {
@@ -712,6 +646,7 @@ export function init(context) {
           type: 'toggle',
           id: SETTINGS_KEY,
           label: 'Enable Client Window Tweaks',
+          description: 'Applies your custom resolution, title, and drag-area settings to the client',
           value: isEnabled,
           onChange: (val) => {
             isEnabled = val;

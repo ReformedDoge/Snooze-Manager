@@ -10,7 +10,6 @@ import Utils from './generalUtils.js';
 let isEnabled = false;
 let autoLockSessionUnsub = null;
 let lastAutoLockKeys = new Map();
-let actionActiveStartTimes = new Map(); // actionId -> timestamp when it first became isInProgress
 let lastBanDebugKey = '';
 
 let currentSummonerId = null;
@@ -25,10 +24,8 @@ const MAX_PRIORITY_CHAMPS = 3;
 const PICK_PRIORITY_KEY = 'pickIds';
 const BAN_PRIORITY_KEY = 'banIds';
 const LOCK_BEFORE_END_KEY = 'lockBeforeEnd';
-const HOVER_DELAY_KEY = 'hoverDelay';
 const LOCK_BEFORE_END_MIN = 0;
 const LOCK_BEFORE_END_MAX = 60;
-const HOVER_DELAY_DEFAULT = 5;
 
 function fetchCurrentSummoner() {
     if (currentSummonerId && currentPuuid) return;
@@ -47,14 +44,6 @@ function getLockBeforeEndMs() {
     const n = Number(v);
     if (!isFinite(n)) return 0;
     return Math.min(LOCK_BEFORE_END_MAX, Math.max(LOCK_BEFORE_END_MIN, n)) * 1000;
-}
-
-function getHoverDelayMs() {
-    const v = Utils.Store.get('autoLockChampion', HOVER_DELAY_KEY);
-    if (v === undefined || v === null) return HOVER_DELAY_DEFAULT * 1000;
-    const n = Number(v);
-    if (!isFinite(n) || n < 0) return 0;
-    return n * 1000;
 }
 
 function toggleFeature(enabled) {
@@ -329,13 +318,44 @@ function renderExtraSettings(container) {
         updatePickers();
     });
 
-    container.appendChild(Utils.Settings.createNumberInputRow('Lock in X seconds before turn ends (0 = instant)', getLockBeforeEndMs() / 1000, LOCK_BEFORE_END_MIN, LOCK_BEFORE_END_MAX, 0.5, (v) => {
-        Utils.Store.set('autoLockChampion', LOCK_BEFORE_END_KEY, v);
-    }));
+    // Lock Before End Input Row
+    const lockRow = document.createElement('div');
+    Object.assign(lockRow.style, { display: 'flex', alignItems: 'center', gap: '10px', marginTop: '5px' });
 
-    container.appendChild(Utils.Settings.createNumberInputRow('Hover after X seconds (0 = instant, default 3)', getHoverDelayMs() / 1000, 0, 30, 0.5, (v) => {
-        Utils.Store.set('autoLockChampion', HOVER_DELAY_KEY, v);
-    }));
+    const lockLabel = document.createElement('span');
+    lockLabel.textContent = 'Lock in X seconds before turn ends (0 = instant)';
+    Object.assign(lockLabel.style, { color: '#a09b8c', fontSize: '12px', whiteSpace: 'nowrap' });
+
+    const lockInput = document.createElement('input');
+    lockInput.type = 'number';
+    lockInput.min = String(LOCK_BEFORE_END_MIN);
+    lockInput.max = String(LOCK_BEFORE_END_MAX);
+    lockInput.step = '0.5';
+    lockInput.value = String(getLockBeforeEndMs() / 1000);
+    Object.assign(lockInput.style, {
+        background: '#111',
+        border: '1px solid #3e2e13',
+        color: '#f0e6d2',
+        padding: '5px 8px',
+        borderRadius: '2px',
+        outline: 'none',
+        width: '70px',
+        fontSize: '13px'
+    });
+
+    lockInput.addEventListener('click', (e) => e.stopPropagation());
+    lockInput.addEventListener('change', () => {
+        let v = parseFloat(lockInput.value);
+        if (!isFinite(v)) v = 0;
+        v = Math.min(LOCK_BEFORE_END_MAX, Math.max(LOCK_BEFORE_END_MIN, v));
+        v = Math.round(v * 10) / 10;
+        lockInput.value = String(v);
+        Utils.Store.set('autoLockChampion', LOCK_BEFORE_END_KEY, v);
+    });
+
+    lockRow.appendChild(lockLabel);
+    lockRow.appendChild(lockInput);
+    container.appendChild(lockRow);
 
     if (Utils.LCU) {
         Utils.LCU.get('/lol-game-data/assets/v1/champion-summary.json').then(champs => {
@@ -360,14 +380,12 @@ function renderExtraSettings(container) {
     }));
     container.appendChild(banToggleRow);
 
-    // Panic Key Hotkey
-    const currentPanicKey = Utils.Store.get('global', 'panicKey') || 'F2';
-    container.appendChild(Utils.Settings.createHotkeyRow(
-        'Panic Key (Cancel Auto Lock)',
-        currentPanicKey,
-        (newKey) => Utils.Store.set('global', 'panicKey', newKey),
-        'Press the panic key at any point during champion select to cancel auto-lock for the current champion select only. Next champ select will re-enable automatically.'
-    ));
+    // Panic key lives in the Settings tab (shared with the menu shortcut); note it here
+    const panicNote = document.createElement('div');
+    Object.assign(panicNote.style, { color: '#8a9aaa', fontSize: '12px', marginTop: '12px', lineHeight: '1.4' });
+    const panicKey = Utils.Store.get('global', 'panicKey') || 'F2';
+    panicNote.textContent = `Panic Key (${panicKey}): press it during champion select to cancel auto-lock for that champ select only. Set the key in the Settings tab.`;
+    container.appendChild(panicNote);
 
 }
 
@@ -403,39 +421,38 @@ function installEmberTimerHook() {
     Utils.Hooks.Ember.registerRule({
         name: 'sm-auto-lock-timer',
         matcher: 'champion-select',
-        hookMethods: [{
-            name: 'didInsertElement',
-            callback(Ember, original, ...args) {
-                original(...args);
-                const t = this.get('session.timer.timeRemainingInMs');
-                Utils.Debug.log('[AutoSelect] EmberHook didInsertElement: timer=', t, 'session=', this.get('session'));
-                emberTimerMs = t;
-                this._smUpdateTimer = () => {
-                    const v = this.get('session.timer.timeRemainingInMs');
-                    emberTimerMs = v;
-                    if (isEnabled && !panicActive) {
-                        const lockMs = getLockBeforeEndMs();
-                        if (lockMs > 0 && v !== null && v !== undefined) {
-                            if (v <= lockMs && !emberTimerCrossed) {
-                                emberTimerCrossed = true;
-                                Utils.Debug.log('[AutoSelect] Ember timer crossed threshold, triggering lock');
-                                completePendingActions();
-                            } else if (v > lockMs) {
-                                emberTimerCrossed = false;
+        mixin() {
+            return {
+                didInsertElement() {
+                    this._super(...arguments);
+                    const t = this.get('session.timer.timeRemainingInMs');
+                    Utils.Debug.log('[AutoSelect] EmberHook didInsertElement: timer=', t, 'session=', this.get('session'));
+                    emberTimerMs = t;
+                    this._smUpdateTimer = () => {
+                        const v = this.get('session.timer.timeRemainingInMs');
+                        emberTimerMs = v;
+                        if (isEnabled && !panicActive) {
+                            const lockMs = getLockBeforeEndMs();
+                            if (lockMs > 0 && v !== null && v !== undefined) {
+                                if (v <= lockMs && !emberTimerCrossed) {
+                                    emberTimerCrossed = true;
+                                    Utils.Debug.log('[AutoSelect] Ember timer crossed threshold, triggering lock');
+                                    completePendingActions();
+                                } else if (v > lockMs) {
+                                    emberTimerCrossed = false;
+                                }
                             }
                         }
-                    }
-                };
-                this.addObserver('session.timer.timeRemainingInMs', this, '_smUpdateTimer');
-            }
-        }, {
-            name: 'willDestroyElement',
-            callback(Ember, original, ...args) {
-                Utils.Debug.log('[AutoSelect] EmberHook willDestroyElement');
-                this.removeObserver('session.timer.timeRemainingInMs', this, '_smUpdateTimer');
-                original(...args);
-            }
-        }]
+                    };
+                    this.addObserver('session.timer.timeRemainingInMs', this, '_smUpdateTimer');
+                },
+                willDestroyElement() {
+                    Utils.Debug.log('[AutoSelect] EmberHook willDestroyElement');
+                    this.removeObserver('session.timer.timeRemainingInMs', this, '_smUpdateTimer');
+                    this._super(...arguments);
+                }
+            };
+        }
     });
 }
 
@@ -475,6 +492,7 @@ export function init(context) {
                     type: 'toggle',
                     id: 'sm:autoLockChampion',
                     label: 'Enable Auto Select Champion',
+                    description: 'Runs the pick and ban automation during champion select',
                     value: isEnabled,
                     onChange: (val) => toggleFeature(val)
                 },
@@ -546,58 +564,24 @@ async function processChampSelectSession(s) {
 
     if (myActions.length === 0) {
       lastAutoLockKeys.clear();
-      actionActiveStartTimes.clear();
       return;
     }
 
     const instantPick = Utils.Store.get('autoLockChampion', 'instantPick') !== false;
     const instantBan = Utils.Store.get('autoLockChampion', 'instantBan') !== false;
     const lockBeforeEndMs = getLockBeforeEndMs();
-    const hoverDelayMs = getHoverDelayMs();
-    const now = Date.now();
 
     for (const action of myActions) {
-      const phase = getChampSelectPhase(s);
-      const isReadyForHover = 
-          (action.type === 'pick' && (action.isInProgress || phase === 'PLANNING')) ||
-          (action.type === 'ban' && action.isInProgress && phase === 'BAN_PICK');
-
-      if (isReadyForHover && !actionActiveStartTimes.has(action.id)) {
-        actionActiveStartTimes.set(action.id, now);
-        
-        // Schedule a re-evaluation when the hover delay expires
-        if (hoverDelayMs > 0) {
-            setTimeout(() => {
-                if (!isEnabled || panicActive) return;
-                Utils.LCU.get('/lol-champ-select/v1/session').then(s => {
-                    if (s) processChampSelectSession(s);
-                }).catch(() => {});
-            }, hoverDelayMs + 50);
-        }
-      }
-
-      if (!actionActiveStartTimes.has(action.id)) {
-          continue;
-      }
-
       const champId = chooseChampionForAction(s, action, myPosition);
       if (!champId) continue;
 
       const shouldComplete = shouldCompleteAction(s, action, instantPick, instantBan, lockBeforeEndMs);
 
-      // Hover delay: wait if not locking and delay hasn't elapsed
-      if (!shouldComplete && hoverDelayMs > 0) {
-        const elapsed = now - actionActiveStartTimes.get(action.id);
-        if (elapsed < hoverDelayMs) {
-          Utils.Debug.log(`[AutoSelect] Hover delay: ${elapsed}ms elapsed, waiting ${hoverDelayMs}ms before hovering action ${action.id}`);
-          continue;
-        }
-      }
-
       if (action.championId === champId && action.completed === shouldComplete) {
           continue;
       }
 
+      const now = Date.now();
       const lastPatchTime = lastAutoLockKeys.get(action.id + '_time') || 0;
       const cooldownMs = 1500;
 
@@ -770,9 +754,9 @@ function panic() {
     panicActive = true;
     emberTimerCrossed = false;
     lastAutoLockKeys.clear();
-    actionActiveStartTimes.clear();
-    
-    Utils.Toast.info('Auto Lock Override — Next champ select will re-enable');
+    if (window.Toast && typeof window.Toast.success === 'function') {
+        window.Toast.success('Auto Lock Override — Next champ select will re-enable');
+    }
 }
 
 function mountAutoLockChampion() {
@@ -797,7 +781,6 @@ function unmountAutoLockChampion() {
         autoLockSessionUnsub = null;
     }
     lastAutoLockKeys.clear();
-    actionActiveStartTimes.clear();
     lastBanDebugKey = '';
 }
 

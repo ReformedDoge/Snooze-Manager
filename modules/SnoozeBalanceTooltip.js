@@ -341,26 +341,29 @@ export function init(context) {
         Utils.Hooks.Ember.registerRule({
             name: `balance-tooltip-${r.name}-hook`,
             matcher: r.name,
-            hookMethods: [{
-                name: 'didInsertElement',
-                callback(Ember, original, ...args) {
-                    original(...args);
-                    if (!this.element) return;
-                    
-                    this.element.addEventListener('mouseenter', () => {
-                        showBalanceTooltip(this, r.pos);
-                    });
-                    this.element.addEventListener('mouseleave', () => {
+            mixin() {
+                return {
+                    didInsertElement() {
+                        if (typeof this._super === 'function') {
+                            this._super(...arguments);
+                        }
+                        if (!this.element) return;
+                        
+                        this.element.addEventListener('mouseenter', () => {
+                            showBalanceTooltip(this, r.pos);
+                        });
+                        this.element.addEventListener('mouseleave', () => {
+                            hideTT();
+                        });
+                    },
+                    willDestroyElement() {
                         hideTT();
-                    });
-                }
-            }, {
-                name: 'willDestroyElement',
-                callback(Ember, original, ...args) {
-                    hideTT();
-                    original(...args);
-                }
-            }]
+                        if (typeof this._super === 'function') {
+                            this._super(...arguments);
+                        }
+                    }
+                };
+            }
         });
     });
 
@@ -374,6 +377,7 @@ export function init(context) {
                     type: 'toggle',
                     id: 'sm:SnoozeBalanceTooltip',
                     label: 'Enable Balance Tooltip',
+                    description: 'Shows per-mode stat buffs and nerfs when you hover a champion in champ select',
                     value: isEnabled,
                     onChange: (val) => toggleFeature(val)
                 }
