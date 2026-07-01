@@ -1587,7 +1587,7 @@ export function init(context) {
                 {
                     type: 'toggle',
                     id: 'sm:whaleHelper',
-                    label: 'Enable Rerollable Pool Button (Loot Page)',
+                    label: 'Enable Rerollable Pool Button',
                     description: 'Adds a loot page button listing rerollable skins you don\'t own yet',
                     value: isLootEnabled,
                     onChange: (val) => {
@@ -1604,7 +1604,7 @@ export function init(context) {
                     type: 'toggle',
                     id: 'sm:lootDropOdds',
                     label: 'Enable Loot Drop Odds Previewer',
-                    description: 'Shows the drop-rate odds for loot chests and capsules before opening',
+                    description: 'Adds a "View Drop Rates" entry to the right-click menu of loot chests and capsules so you can preview odds before opening',
                     value: isDropOddsEnabled,
                     onChange: (val) => {
                         isDropOddsEnabled = val;
@@ -1623,7 +1623,7 @@ export function init(context) {
                 {
                     type: 'toggle',
                     id: 'sm:skinTierDisplay',
-                    label: 'Enable Skin Tier Badges (Champ Select)',
+                    label: 'Enable Skin Tier Badges',
                     description: 'Tags each skin in the carousel with its tier badge',
                     value: isSkinTierEnabled,
                     onChange: (val) => {
@@ -1640,7 +1640,7 @@ export function init(context) {
                 {
                     type: 'toggle',
                     id: 'sm:hideUnownedSkins',
-                    label: 'Hide Unowned Skins & Chromas (Champ Select)',
+                    label: 'Hide Unowned Skins & Chromas',
                     description: 'Removes skins and chromas you don\'t own from the carousel',
                     value: isHideUnownedEnabled,
                     onChange: (val) => {

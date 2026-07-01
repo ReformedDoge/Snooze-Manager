@@ -473,7 +473,7 @@ export function init(context) {
                 type: 'toggle',
                 id: 'sm:modeSelectorTweaks',
                 label: 'Enable Mode Selector Tweaks',
-                description: 'Hides your chosen tabs, modes, and queues and adds a gear to configure them',
+                description: 'Hides your chosen tabs, modes, and queues; adds a gear icon on the mode-select screen to configure them',
                 value: isEnabled,
                 onChange: (val) => toggleFeature(val)
             }]
