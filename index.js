@@ -145,8 +145,11 @@ const Modal = (function() {
       .pm-merged-module { margin: 18px 0 8px; }
       .pm-merged-module-title { color: #f0e6d2; font-size: 15px; font-weight: 700; }
       .pm-merged-module-desc { color: #a09b8c; font-size: 12px; line-height: 1.4; margin-top: 2px; }
-      .pm-info { display: inline-flex; align-items: center; margin-left: 6px; color: #5a7080; vertical-align: middle; }
+      .pm-info { display: inline-flex; align-items: center; margin-left: 6px; color: #5a7080; vertical-align: middle; pointer-events: auto; cursor: help; transition: color 0.15s; }
+      .pm-info:hover { color: #c8aa6e; }
       .pm-info svg { display: block; }
+      .pm-tooltip { position: fixed; z-index: 2147483647; max-width: 260px; padding: 10px 12px; background: rgba(1, 10, 19, 0.95); border: 1px solid rgba(200, 170, 110, 0.35); border-radius: 8px; color: #f0e6d2; font-size: 12px; line-height: 1.4; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6); backdrop-filter: blur(25px) saturate(140%); pointer-events: none; opacity: 0; transition: opacity 0.15s ease; }
+      .pm-tooltip.pm-show { opacity: 1; }
       .pm-content { flex: 1; padding: 24px; overflow-y: auto; position: relative; }
       .pm-tab-content { display: none; animation: fadeIn 0.2s ease-in-out; }
       .pm-tab-content.active { display: block; }
@@ -382,6 +385,33 @@ const Modal = (function() {
     const categorySlug = (name) =>
       name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
+    // custom hover tooltip that matches the menu styling; only fires on the "i" icon
+    function attachInfoTooltip(infoEl, text) {
+      infoEl.addEventListener('mouseenter', () => {
+        let tip = document.getElementById('pm-tooltip-el');
+        if (!tip) {
+          tip = document.createElement('div');
+          tip.id = 'pm-tooltip-el';
+          tip.className = 'pm-tooltip';
+          (_root || document.body).appendChild(tip);
+        }
+        tip.textContent = text;
+        tip.classList.add('pm-show');
+        const r = infoEl.getBoundingClientRect();
+        const tw = tip.offsetWidth;
+        const th = tip.offsetHeight;
+        let left = r.left + r.width / 2 - tw / 2;
+        let top = r.top - th - 8;
+        if (top < 8) top = r.bottom + 8;
+        left = Math.max(8, Math.min(left, window.innerWidth - tw - 8));
+        tip.style.left = left + 'px';
+        tip.style.top = top + 'px';
+      });
+      infoEl.addEventListener('mouseleave', () => {
+        document.getElementById('pm-tooltip-el')?.classList.remove('pm-show');
+      });
+    }
+
     // renders one setting (toggle/select/textarea/custom) into a tab page
     function appendSettingRow(tabContent, mod, setting) {
         if (setting.type === 'toggle') {
@@ -397,9 +427,8 @@ const Modal = (function() {
             const info = document.createElement('span');
             info.className = 'pm-info';
             info.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>';
-            info.title = setting.description;
+            attachInfoTooltip(info, setting.description);
             lblTitle.appendChild(info);
-            row.title = setting.description;
           }
           lblWrapper.appendChild(lblTitle);
 
