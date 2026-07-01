@@ -93,6 +93,7 @@ const DEFAULT_CATEGORY = 'Other';
 const MODULE_CATEGORY = {
   autoLockChampion: 'Champion Select',
   champSelectQuitButton: 'Champion Select',
+  skinRandomizer: 'Champion Select',
   aramNocd: 'Champion Select',
   SnoozeBalanceTooltip: 'Champion Select',
   arenaGod: 'Champion Select',
@@ -1063,6 +1064,7 @@ import * as socialPanelTweaksModule from './modules/socialPanelTweaks.js';
 import * as lowPrioWarningSuppressModule from './modules/LowPrioWarningSuppress.js';
 import * as autoQueueModule from './modules/autoQueue.js';
 import * as modeSelectorTweaksModule from './modules/modeSelectorTweaks.js';
+import * as skinRandomizerModule from './modules/skinRandomizer.js';
 
 const registeredModules = [];
 
@@ -1136,6 +1138,7 @@ export async function init(ctx) {
   lowPrioWarningSuppressModule.init(ctx);
   autoQueueModule.init(ctx);
   modeSelectorTweaksModule.init(ctx);
+  skinRandomizerModule.init(ctx);
 }
 
 export async function load(context) {
@@ -1165,6 +1168,7 @@ export async function load(context) {
   lowPrioWarningSuppressModule.load();
   autoQueueModule.load();
   modeSelectorTweaksModule.load();
+  skinRandomizerModule.load();
 }
 
 const LEGACY_MIGRATION_MAP = {
