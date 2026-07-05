@@ -121,7 +121,7 @@ const Modal = (function() {
       .pm-tab { padding: 14px 20px; cursor: pointer; color: #a09b8c; font-size: 14px; font-weight: 600; border-bottom: 1px solid rgba(255, 255, 255, 0.02); transition: all 0.2s ease; border-left: 3px solid transparent; }
       .pm-tab:hover { background: rgba(200, 170, 110, 0.08); color: #f0e6d2; }
       .pm-tab.active { background: rgba(200, 170, 110, 0.15); color: #c8aa6e; border-left-color: #c8aa6e; }
-      .pm-content { flex: 1; padding: 24px; overflow-y: auto; position: relative; }
+      .pm-content { flex: 1; padding: 18px; overflow-y: auto; position: relative; }
       .pm-tab-content { display: none; animation: fadeIn 0.2s ease-in-out; }
       .pm-tab-content.active { display: block; }
       @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
@@ -129,7 +129,7 @@ const Modal = (function() {
       .pm-search { display: flex; gap: 8px; margin-bottom: 12px; }
       .pm-input { flex: 1; background: #111; border: 1px solid #3e2e13; color: #f0e6d2; padding: 8px 14px; border-radius: 2px; outline: none; font-size: 13px; transition: border-color 0.2s, background-color 0.2s; }
       .pm-input:focus { border-color: #c8aa6e; background: rgba(0, 0, 0, 0.5); }
-      .pm-btn { background: rgba(200, 170, 110, 0.08); border: 1px solid rgba(200, 170, 110, 0.25); color: #c8aa6e; padding: 8px 20px; cursor: pointer; border-radius: 2px; font-weight: bold; transition: all 0.2s ease; font-size: 13px; }
+      .pm-btn { background: rgba(200, 170, 110, 0.08); border: 1px solid rgba(200, 170, 110, 0.25); color: #c8aa6e; padding: 8px 10px; cursor: pointer; border-radius: 2px; font-weight: bold; transition: all 0.2s ease; font-size: 13px; }
       .pm-btn:hover { background: rgba(200, 170, 110, 0.16); color: #f0e6d2; border-color: #c8aa6e; }
       .pm-row { display: flex; justify-content: space-between; align-items: center; padding: 16px; background: rgba(255, 255, 255, 0.015); border: 1px solid rgba(255, 255, 255, 0.03); margin-bottom: 10px; border-radius: 8px; transition: all 0.2s ease; }
       .pm-row:hover { background: rgba(255, 255, 255, 0.04); border-color: rgba(200, 170, 110, 0.15); }
@@ -269,6 +269,11 @@ const Modal = (function() {
     searchBtn.className = 'pm-btn';
     searchBtn.textContent = 'Search';
     
+    const meBtn = document.createElement('button');
+    meBtn.className = 'pm-btn';
+    meBtn.textContent = 'Me';
+    meBtn.title = 'Look up your own match history';
+    
     const resultDiv = document.createElement('div');
     resultDiv.style.marginTop = '16px';
     resultDiv.style.fontSize = '14px';
@@ -277,6 +282,29 @@ const Modal = (function() {
       if (e.key === 'Enter') {
         e.preventDefault();
         searchBtn.click();
+      }
+    });
+
+    meBtn.addEventListener('click', async () => {
+      resultDiv.innerHTML = '<div style="color:#c8aa6e">Looking up your account...</div>';
+      try {
+        const me = await Utils.LCU.get('/lol-summoner/v1/current-summoner').catch(() => null);
+        if (!me || !me.puuid) {
+          resultDiv.innerHTML = '<div style="color:#d92323">Could not find your account? RIOT!</div>';
+          return;
+        }
+        const gameName = me.gameName || me.displayName || '';
+        const tagLine = me.tagLine || '';
+        const full = await Utils.LCU.get('/lol-summoner/v2/summoners/puuid/' + me.puuid).catch(() => null);
+        const finalPlayer = { ...me, ...(full || {}), gameName, tagLine };
+
+        resultDiv.innerHTML = '<div style="color:#0ac8b9">Loading Match History...</div>';
+        import('./modules/gameAnalysisPopup.js').then(mod => {
+          mod.MatchHistoryModal.show(finalPlayer, '');
+        });
+        setTimeout(() => { resultDiv.innerHTML = ''; }, 1000);
+      } catch (e) {
+        resultDiv.innerHTML = '<div style="color:#d92323">Error looking up your account</div>';
       }
     });
 
@@ -338,6 +366,7 @@ const Modal = (function() {
     searchRow.appendChild(regionSelect);
     searchRow.appendChild(searchInput);
     searchRow.appendChild(searchBtn);
+    searchRow.appendChild(meBtn);
     lookupContent.appendChild(searchRow);
     lookupContent.appendChild(resultDiv);
     content.appendChild(lookupContent);
