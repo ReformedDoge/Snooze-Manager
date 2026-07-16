@@ -1611,6 +1611,7 @@ import * as lowPrioWarningSuppressModule from './modules/LowPrioWarningSuppress.
 import * as autoQueueModule from './modules/autoQueue.js';
 import * as modeSelectorTweaksModule from './modules/modeSelectorTweaks.js';
 import * as nameSpooferModule from './modules/nameSpoofer.js';
+import * as useClientDuringGameModule from './modules/useClientDuringGame.js';
 
 const registeredModules = [];
 
@@ -1746,6 +1747,7 @@ export async function init(ctx) {
     if (!_initDisabledIds.has('autoQueue')) autoQueueModule.init(ctx);
     if (!_initDisabledIds.has('modeSelectorTweaks')) modeSelectorTweaksModule.init(ctx);
     if (!_initDisabledIds.has('nameSpoofer')) nameSpooferModule.init(ctx);
+    if (!_initDisabledIds.has('useClientDuringGame')) useClientDuringGameModule.init(ctx);
 }
 
 export async function load(context) {
@@ -1783,6 +1785,7 @@ export async function load(context) {
     if (!_disabledIds.has('autoQueue')) autoQueueModule.load();
     if (!_disabledIds.has('modeSelectorTweaks')) modeSelectorTweaksModule.load();
     if (!_disabledIds.has('nameSpoofer')) nameSpooferModule.load();
+    if (!_disabledIds.has('useClientDuringGame')) useClientDuringGameModule.load();
 }
 
 const LEGACY_MIGRATION_MAP = {
