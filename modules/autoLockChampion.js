@@ -659,6 +659,10 @@ async function processChampSelectSession(s) {
     const allActions = s.actions ? s.actions.flat(2) : [];
     logBanSessionState(s, allActions, myPosition);
 
+    Utils.Debug.log('[AutoSelect] all my actions:', allActions.filter(a => a.actorCellId === s.localPlayerCellId).map(a => ({
+        id: a.id, type: a.type, completed: a.completed, isInProgress: a.isInProgress, championId: a.championId
+    })));
+
     const myActions = allActions.filter(a => {
         if (a.actorCellId !== s.localPlayerCellId || a.completed) return false;
         if (a.type !== 'pick' && a.type !== 'ban') return false;
@@ -670,10 +674,15 @@ async function processChampSelectSession(s) {
     });
 
     if (myActions.length === 0) {
+        Utils.Debug.log('[AutoSelect] no myActions — clearing start times (phase:', getChampSelectPhase(s), ')');
         lastAutoLockKeys.clear();
         actionActiveStartTimes.clear();
         return;
     }
+
+    Utils.Debug.log('[AutoSelect] processing actions:', myActions.map(a => ({
+        id: a.id, type: a.type, completed: a.completed, isInProgress: a.isInProgress, championId: a.championId
+    })));
 
     const instantPick = Utils.Store.get('autoLockChampion', 'instantPick') !== false;
     const instantBan = Utils.Store.get('autoLockChampion', 'instantBan') !== false;
@@ -746,25 +755,21 @@ async function processChampSelectSession(s) {
         };
 
         try {
-            if (action.type === 'ban') {
-                Utils.Debug.log('[AutoSelect] ban patch', {
-                    actionId: action.id,
-                    phase: getChampSelectPhase(s),
-                    isInProgress: !!action.isInProgress,
-                    payload
-                });
-            }
+            Utils.Debug.log(`[AutoSelect] ${action.type} patch`, {
+                actionId: action.id,
+                phase: getChampSelectPhase(s),
+                isInProgress: !!action.isInProgress,
+                payload
+            });
 
             await Utils.LCU.patch(`/lol-champ-select/v1/session/actions/${action.id}`, payload);
         } catch (err) {
-            if (action.type === 'ban') {
-                Utils.Debug.warn('[AutoSelect] ban patch failed', {
-                    actionId: action.id,
-                    phase: getChampSelectPhase(s),
-                    payload,
-                    err
-                });
-            }
+            Utils.Debug.warn(`[AutoSelect] ${action.type} patch failed`, {
+                actionId: action.id,
+                phase: getChampSelectPhase(s),
+                payload,
+                err
+            });
         }
     }
 }
@@ -851,19 +856,10 @@ function logBanSessionState(session, allActions, myPosition) {
 
 function getBannedChampionIds(session) {
     const bans = new Set();
-    const sessionBans = session?.bans || {};
-
-    [
-        ...(sessionBans.myTeamBans || []),
-        ...(sessionBans.theirTeamBans || []),
-        ...(sessionBans.ourTeamBans || [])
-    ].forEach(id => {
-        if (id) bans.add(Number(id));
-    });
 
     if (session?.actions) {
         session.actions.flat(2).forEach(action => {
-            if (action.type === 'ban' && action.championId) {
+            if (action.type === 'ban' && action.championId && action.completed) {
                 bans.add(Number(action.championId));
             }
         });
@@ -888,23 +884,32 @@ function chooseChampionForAction(session, action, role) {
         priorities = getPriorityList(actionType === 'ban' ? BAN_PRIORITY_KEY : PICK_PRIORITY_KEY, 'default');
     }
 
-    if (priorities.length === 0) return null;
+    if (priorities.length === 0) {
+        Utils.Debug.log(`[AutoSelect] chooseForAction(${actionType}): no priorities for role="${role}"`);
+        return null;
+    }
 
     const bannedIds = getBannedChampionIds(session);
     const pickedIds = getPickedChampionIds(session);
     const currentChampionId = Number(action.championId || 0);
 
     if (currentChampionId && priorities.includes(currentChampionId)) {
-        if (!bannedIds.has(currentChampionId) && (actionType !== 'pick' || !pickedIds.has(currentChampionId))) {
+        const banned = bannedIds.has(currentChampionId);
+        const picked = actionType === 'pick' && pickedIds.has(currentChampionId);
+        if (!banned && !picked) {
             return currentChampionId;
         }
+        Utils.Debug.log(`[AutoSelect] chooseForAction(${actionType}): skipping current ${currentChampionId} (banned=${banned} picked=${picked})`);
     }
 
-    return priorities.find((championId) => {
+    const chosen = priorities.find((championId) => {
         if (bannedIds.has(championId)) return false;
         if (actionType === 'pick' && pickedIds.has(championId)) return false;
         return true;
     }) || null;
+
+    Utils.Debug.log(`[AutoSelect] chooseForAction(${actionType}): priorities=[${priorities}] banned=[${[...bannedIds]}] picked=[${[...pickedIds]}] => chosen=${chosen}`);
+    return chosen;
 }
 
 function panic() {
