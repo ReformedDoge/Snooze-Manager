@@ -13,29 +13,43 @@ let _armed = false;
 let _queuing = false;
 
 let _availableQueues = []; // [{ id, name }] from Utils.GameData.Assets
+let _queuesLoadPromise = null;
 
 // Queue list 
 
 async function fetchQueues() {
-    Utils.Debug.log('[AutoQueue]', 'Loading queues...');
+    if (_availableQueues.length > 0) return _availableQueues;
+    if (_queuesLoadPromise) return _queuesLoadPromise;
+
+    _queuesLoadPromise = (async () => {
+        Utils.Debug.log('[AutoQueue]', 'Loading queues...');
+        try {
+            if (!Utils.GameData.Assets._initialized) {
+                await Utils.GameData.Assets.init();
+            }
+            const queues = Utils.GameData.Assets.queues;
+            if (!Array.isArray(queues) || queues.length === 0) {
+                Utils.Debug.log('[AutoQueue]', 'No queues available from Assets.');
+                return [];
+            }
+            _availableQueues = queues
+                .filter(q => q.queueAvailability === 'Available' && q.isVisible)
+                .map(q => ({
+                    id: q.id,
+                    name: q.name || q.description || String(q.id)
+                }));
+            Utils.Debug.log('[AutoQueue]', `Loaded ${_availableQueues.length} queues:`, _availableQueues.map(q => `${q.name}(${q.id})`).join(', '));
+            return _availableQueues;
+        } catch (e) {
+            Utils.Debug.warn('[AutoQueue] Failed to load queues from Assets:', e);
+            return [];
+        }
+    })();
+
     try {
-        if (!Utils.GameData.Assets._initialized) {
-            await Utils.GameData.Assets.init();
-        }
-        const queues = Utils.GameData.Assets.queues;
-        if (!Array.isArray(queues) || queues.length === 0) {
-            Utils.Debug.log('[AutoQueue]', 'No queues available from Assets.');
-            return;
-        }
-        _availableQueues = queues
-            .filter(q => q.queueAvailability === 'Available' && q.isVisible)
-            .map(q => ({
-                id: q.id,
-                name: q.name || q.description || String(q.id)
-            }));
-        Utils.Debug.log('[AutoQueue]', `Loaded ${_availableQueues.length} queues:`, _availableQueues.map(q => `${q.name}(${q.id})`).join(', '));
-    } catch (e) {
-        Utils.Debug.warn('[AutoQueue] Failed to load queues from Assets:', e);
+        return await _queuesLoadPromise;
+    } finally {
+        _queuesLoadPromise = null;
     }
 }
 
@@ -154,15 +168,19 @@ function renderSettings(container) {
         fontSize: '13px'
     });
 
-    function populateQueueSelect() {
+    async function populateQueueSelect() {
         queueSelect.innerHTML = '';
         const savedId = Utils.Store.get('autoQueue', 'queueId');
+        Utils.Debug.log('[AutoQueue]', `Populating queue select — savedId=${savedId}, availableQueues=${_availableQueues}`);
         if (_availableQueues.length === 0) {
+            Utils.Debug.log('[AutoQueue]', 'No available queues yet; waiting for queue load.');
             const opt = document.createElement('option');
             opt.value = '';
             opt.textContent = 'Loading queues...';
             queueSelect.appendChild(opt);
-            return;
+            await fetchQueues();
+            if (_availableQueues.length === 0) return;
+            queueSelect.innerHTML = '';
         }
         _availableQueues.forEach(q => {
             const opt = document.createElement('option');
@@ -177,7 +195,7 @@ function renderSettings(container) {
         }
     }
 
-    populateQueueSelect();
+    void populateQueueSelect();
 
     queueSelect.addEventListener('click', (e) => e.stopPropagation());
     queueSelect.addEventListener('change', (e) => {
