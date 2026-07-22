@@ -1607,7 +1607,7 @@ import * as autoHonorModule from './modules/autoHonor.js';
 import * as arenaGodModule from './modules/arenaGod.js';
 import * as whaleHelperModule from './modules/whaleHelper.js';
 import * as socialPanelTweaksModule from './modules/socialPanelTweaks.js';
-import * as lowPrioWarningSuppressModule from './modules/LowPrioWarningSuppress.js';
+import * as penaltyUISuppressModule from './modules/PenaltyUISuppress.js';
 import * as autoQueueModule from './modules/autoQueue.js';
 import * as modeSelectorTweaksModule from './modules/modeSelectorTweaks.js';
 import * as nameSpooferModule from './modules/nameSpoofer.js';
@@ -1743,7 +1743,7 @@ export async function init(ctx) {
     if (!_initDisabledIds.has('arenaGod')) arenaGodModule.init(ctx);
     if (!_initDisabledIds.has('socialPanelTweaks')) socialPanelTweaksModule.init(ctx);
     if (!_initDisabledIds.has('whaleHelper')) whaleHelperModule.init(ctx);
-    if (!_initDisabledIds.has('lowPrioWarningSuppress')) lowPrioWarningSuppressModule.init(ctx);
+    if (!_initDisabledIds.has('lowPrioWarningSuppress')) penaltyUISuppressModule.init(ctx);
     if (!_initDisabledIds.has('autoQueue')) autoQueueModule.init(ctx);
     if (!_initDisabledIds.has('modeSelectorTweaks')) modeSelectorTweaksModule.init(ctx);
     if (!_initDisabledIds.has('nameSpoofer')) nameSpooferModule.init(ctx);
@@ -1781,7 +1781,7 @@ export async function load(context) {
     if (!_disabledIds.has('arenaGod')) arenaGodModule.load();
     if (!_disabledIds.has('socialPanelTweaks')) socialPanelTweaksModule.load();
     if (!_disabledIds.has('whaleHelper')) whaleHelperModule.load();
-    if (!_disabledIds.has('lowPrioWarningSuppress')) lowPrioWarningSuppressModule.load();
+    if (!_disabledIds.has('lowPrioWarningSuppress')) penaltyUISuppressModule.load();
     if (!_disabledIds.has('autoQueue')) autoQueueModule.load();
     if (!_disabledIds.has('modeSelectorTweaks')) modeSelectorTweaksModule.load();
     if (!_disabledIds.has('nameSpoofer')) nameSpooferModule.load();
