@@ -11,6 +11,7 @@ const SETTINGS_KEY = 'enabled';
 const DELAY_KEY = 'delay';
 const EXIT_ON_DECLINE_KEY = 'exitOnDecline';
 const EXIT_ON_DODGE_KEY = 'exitOnDodge';
+const HIDE_READY_CHECK_KEY = 'hideReadyCheck';
 const DELAY_MIN = 0;
 const DELAY_MAX = 10;
 
@@ -70,6 +71,12 @@ function renderExtraSettings(container, native = false) {
         Utils.Store.set('autoAccept', EXIT_ON_DODGE_KEY, next);
     }));
 
+    // Hide Ready Check Modal
+    const hideReadyCheckEnabled = Utils.Store.get('autoAccept', HIDE_READY_CHECK_KEY) || false;
+    container.appendChild(Utils.Settings.createToggleRow('Hide queue pop', hideReadyCheckEnabled, (next) => {
+        Utils.Store.set('autoAccept', HIDE_READY_CHECK_KEY, next);
+    }));
+
     // Panic Key Hotkey
     const currentPanicKey = Utils.Store.get('global', 'panicKey') || 'F2';
     container.appendChild(Utils.Settings.createHotkeyRow(
@@ -99,11 +106,12 @@ export function init(context) {
     }
 
     installExitOnDodgeEmberHook();
+    installHideReadyCheckEmberHook();
 
     if (window.SnoozeManager && window.SnoozeManager.registerModule) {
         window.SnoozeManager.registerModule({
             id: 'autoAccept',
-            name: 'Auto Accept Match',
+            name: 'Auto Accept',
             description: 'Automatically accepts matchmaking ready checks with optional delay and queue exit on decline.',
             settings: [{
                     type: 'toggle',
@@ -197,6 +205,31 @@ export function load() {
         });
 
     }
+}
+
+function installHideReadyCheckEmberHook() {
+    if (!Utils.Hooks?.Ember?.registerRule) return;
+    Utils.Hooks.Ember.registerRule({
+        name: 'autoAccept-hideReadyCheck',
+        matcher: 'ready-check-root-element',
+        hookMethods: [{
+            name: 'didInsertElement',
+            callback(Ember, original, ...args) {
+                const enabled = Utils.Store.get('autoAccept', SETTINGS_KEY) && Utils.Store.get('autoAccept', HIDE_READY_CHECK_KEY);
+                if (!enabled) {
+                    original(...args);
+                    return;
+                }
+                this._super(...arguments);
+                this.registerStateMachineElement();
+                this.setUpAudioListeners();
+                const e = this.element?.parentElement?.parentElement;
+                if (e && e.parentElement) {
+                    e.parentElement.removeChild(e);
+                }
+            }
+        }]
+    });
 }
 
 function installExitOnDodgeEmberHook() {

@@ -1,8 +1,8 @@
 /**
- * @name Snooze-LowPrioWarningSuppress
- * @version 1.0.0
+ * @name Snooze-PenaltyUISuppress
+ * @version 1.1.0
  * @author SnoozeFest - github@ReformedDoge
- * @description Suppresses low priority queue / leaverbuster warnings  the Ember layer.
+ * @description Suppresses low priority queue / leaverbuster warnings and player restriction info tooltips in the Ember layer.
  * @link https://github.com/ReformedDoge
  */
 import Utils from './generalUtils.js';
@@ -21,9 +21,21 @@ function migrateSettings() {
 
 let enabled;
 
+let restrictionInfoEnabled;
+
 let snoozeContext = null;
 let modalManager = null;
 let bypassModalHook = false;
+
+function setRestrictionInfoEnabled(v) {
+    restrictionInfoEnabled = v;
+    Utils.Store.set(MODULE_KEY, 'restrictionInfoEnabled', v);
+    Utils.Debug.log('[LowPrioWarningSuppress] restriction info suppression enabled state updated to:', v);
+
+    if (v) {
+        suppressRestrictionInfo();
+    }
+}
 
 function setEnabled(v) {
     enabled = v;
@@ -90,6 +102,13 @@ function suppress() {
             Utils.Debug.log('[LowPrioWarningSuppress] suppress() removing stray penalty modal');
             modal.remove();
         }
+    });
+}
+
+function suppressRestrictionInfo() {
+    Utils.Debug.log('[LowPrioWarningSuppress] suppressRestrictionInfo() invoked.');
+    document.querySelectorAll('.player-restriction-info-component, .player-restriction-warning-icon').forEach(el => {
+        el.remove();
     });
 }
 
@@ -214,7 +233,9 @@ function triggerNativeLeaverBusterLockout() {
 if (typeof window !== 'undefined') {
     window.SnoozeLowPrioWarningSuppress = window.SnoozeLowPrioWarningSuppress || {
         suppress,
+        suppressRestrictionInfo,
         setEnabled,
+        setRestrictionInfoEnabled,
         triggerNativeLeaverBusterWarning: () => triggerNativeError('LEAVER_BUSTER_QUEUE_DELAY'),
         triggerNativeLowPriorityModal,
         triggerNativeQueueDodge,
@@ -223,6 +244,9 @@ if (typeof window !== 'undefined') {
         triggerNativeLeaverBusterLockout,
         get enabled() {
             return enabled;
+        },
+        get restrictionInfoEnabled() {
+            return restrictionInfoEnabled;
         }
     };
 }
@@ -232,13 +256,14 @@ export function init(context) {
     Utils.Debug.log('[LowPrioWarningSuppress] Initializing module...');
     migrateSettings();
     enabled = Utils.Store.get(MODULE_KEY, 'enabled') ?? true;
+    restrictionInfoEnabled = Utils.Store.get(MODULE_KEY, 'restrictionInfoEnabled') ?? true;
 
     Utils.Settings.inject(context, {
         name: 'low-prio-warning-suppress-settings',
-        titleKey: 'snooze_low-prio-warning-suppress',
-        titleName: 'Low Priority Warning Suppress',
-        capitalTitleKey: 'snooze_low-prio-warning-suppress_capital',
-        capitalTitleName: 'LOW PRIORITY WARNING SUPPRESS',
+        titleKey: 'snooze_penalty-ui-suppress',
+        titleName: 'Penalty UI Suppression',
+        capitalTitleKey: 'snooze_penalty-ui-suppress_capital',
+        capitalTitleName: 'PENALTY UI SUPPRESSION',
         class: 'low-prio-warning-suppress-settings'
     });
 
@@ -369,26 +394,74 @@ export function init(context) {
                 })
             });
         });
+
+        // Suppress player restriction info component (warning icon + tooltip)
+        Utils.Debug.log('[LowPrioWarningSuppress] Registering Ember Rule for player-restriction-info-component');
+        Utils.Hooks.Ember.registerRule({
+            name: 'player-restriction-info-suppress',
+            matcher: 'player-restriction-info-component',
+            mixin: (Ember) => ({
+                isWarningShown: Ember.computed(
+                    'isSocialPanelRestrictionEnabled',
+                    'isProfileRestrictionsIntegrationEnabled',
+                    'hasChatRestriction',
+                    'hasRankedRestriction',
+                    'hasRedemptionGamesRemaining',
+                    'hasRestrictions',
+                    function() {
+                        if (!restrictionInfoEnabled) {
+                            return !this.get('isSocialPanelRestrictionEnabled') && (
+                                this.get('isProfileRestrictionsIntegrationEnabled')
+                                    ? this.get('hasRestrictions')
+                                    : this.get('hasChatRestriction') || this.get('hasRankedRestriction') || this.get('hasRedemptionGamesRemaining')
+                            );
+                        }
+                        Utils.Debug.log('[LowPrioWarningSuppress] [Ember] player-restriction-info-component isWarningShown overridden to false');
+                        return false;
+                    }
+                ),
+
+                didInsertElement() {
+                    this._super(...arguments);
+                    if (!restrictionInfoEnabled) return;
+                    Utils.Debug.log('[LowPrioWarningSuppress] [Ember] player-restriction-info-component didInsertElement hiding element');
+                    const el = this.$();
+                    if (el && el.length) {
+                        el.hide();
+                        el.remove();
+                    }
+                }
+            })
+        });
     }
 
     if (window.SnoozeManager && window.SnoozeManager.registerModule) {
         window.SnoozeManager.registerModule({
             id: MODULE_KEY,
-            name: 'Low Priority Warning Suppress',
-            description: 'Suppresses low priority queue, leaverbuster, queue dodge, and ready-check-failer warning dialogs.',
+            name: 'Penalty UI Suppression',
+            description: 'Suppresses low priority queue, leaverbuster, queue dodge, ready-check-failer warning dialogs, and player restriction info tooltips.',
             settings: [{
                 type: 'toggle',
                 id: 'sm:lowPrioWarningSuppress',
-                label: 'Enable Warning Suppression',
+                label: 'Low Priority Warning Suppression',
                 value: enabled,
                 onChange: (v) => setEnabled(v)
+            }, {
+                type: 'toggle',
+                id: 'sm:restrictionInfoSuppress',
+                label: 'Restriction Info Tooltip Suppression',
+                value: restrictionInfoEnabled,
+                onChange: (v) => setRestrictionInfoEnabled(v)
             }]
         });
     } else {
         Utils.DOM.observer.observe('lol-uikit-scrollable.low-prio-warning-suppress-settings', (plugin) => {
             plugin.innerHTML = '';
-            plugin.appendChild(Utils.Settings.createToggleRow('Enable Warning Suppression', enabled, (next) => {
+            plugin.appendChild(Utils.Settings.createToggleRow('Low Priority Warning Suppression', enabled, (next) => {
                 setEnabled(next);
+            }));
+            plugin.appendChild(Utils.Settings.createToggleRow('Restriction Info Tooltip Suppression', restrictionInfoEnabled, (next) => {
+                setRestrictionInfoEnabled(next);
             }));
         });
     }
@@ -396,4 +469,7 @@ export function init(context) {
 
 export function load() {
     suppress();
+    if (restrictionInfoEnabled) {
+        suppressRestrictionInfo();
+    }
 }

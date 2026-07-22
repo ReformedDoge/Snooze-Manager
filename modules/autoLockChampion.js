@@ -11,6 +11,7 @@ let isEnabled = false;
 let autoLockSessionUnsub = null;
 let lastAutoLockKeys = new Map();
 let actionActiveStartTimes = new Map(); // actionId -> timestamp when it first became active
+let actionHoverStartTimes = new Map(); // actionId -> timestamp when first seen (includes PLANNING), for hover delay only
 let lastBanDebugKey = '';
 let bannableChampionSet = null;
 let bannableChampUnsub = null;
@@ -23,11 +24,17 @@ let emberTimerMs = null;
 let lastSessionData = null;
 let lastSeenActionChampionIds = null; // Map<actionId, {championId, phase}> for change detection
 let lastSeenPhase = undefined;
+let lastActiveActionIds = new Set(); // action IDs that were active in the last processChampSelectSession call
+let actionInitialTimers = new Map(); // actionId -> emberTimerMs value when action first became active (for ceremony-agnostic elapsed measurement)
 let emberTimerCrossed = false;
+let inSetTimeout = false; // true when processChampSelectSession was triggered by setTimeout, not a WS push
+let lastTotalTimeInPhase = null; // previous totalTimeInPhase for detecting ceremony padding
+let lastProcessPhase = null; // phase from the previous processChampSelectSession call
+let ceremonyPadding = 0; // extra ms added to totalTimeInPhase mid-phase (e.g. ban→pick ceremony)
 let unregisterPanic = null;
 let panicActive = false;
 let teammateIntents = new Set(); // championPickIntent > 0 from teammates
-let pluginPickSelectionId = null; // championId we last selected via PATCH (manual pick detection)
+const pluginSetChampionIds = new Map(); // actionId → championId we last set via PATCH (manual pick detection)
 let manuallyOverriddenActionIds = new Set(); // action IDs the user manually changed (per-action override tracking)
 
 const MAX_PRIORITY_CHAMPS = 3;
@@ -504,7 +511,7 @@ function renderExtraSettings(container) {
         cursor: 'pointer',
         marginTop: '10px'
     });
-    manualPickRow.appendChild(Utils.Settings.createToggleRow('Allow Manual Pick', Utils.Store.get('autoLockChampion', 'respectManualPick') !== false, (next) => {
+    manualPickRow.appendChild(Utils.Settings.createToggleRow('Allow Manual Pick', Utils.Store.get('autoLockChampion', 'respectManualPick') === true, (next) => {
         Utils.Store.set('autoLockChampion', 'respectManualPick', next);
     }));
     container.appendChild(manualPickRow);
@@ -542,9 +549,9 @@ async function completePendingActions() {
         if (!shouldComplete) continue;
         if (action.type === 'ban' && getChampSelectPhase(s) !== 'BAN_PICK') continue;
         const now = Date.now();
-        const lastPatchTime = lastAutoLockKeys.get(action.id + '_time') || 0;
+        const lastPatchTime = lastAutoLockKeys.get(action.id + '_lock_time') || 0;
         if (now - lastPatchTime < 1500) continue;
-        lastAutoLockKeys.set(action.id + '_time', now);
+        lastAutoLockKeys.set(action.id + '_lock_time', now);
         Utils.Debug.log(`[AutoSelect] Ember timer triggered lock for action ${action.id}`);
         Utils.LCU.patch(`/lol-champ-select/v1/session/actions/${action.id}`, {
             championId: champId,
@@ -621,9 +628,9 @@ export function init(context) {
     Utils.Settings.inject(context, {
         name: "autolock-settings",
         titleKey: "snooze_autolock",
-        titleName: "Auto Select Champ",
+        titleName: "Auto Select",
         capitalTitleKey: "snooze_autolock_capital",
-        capitalTitleName: "AUTO SELECT CHAMP",
+        capitalTitleName: "AUTO SELECT",
         class: "autolock-settings"
     });
 
@@ -632,7 +639,7 @@ export function init(context) {
     if (window.SnoozeManager && window.SnoozeManager.registerModule) {
         window.SnoozeManager.registerModule({
             id: 'autoLockChampion',
-            name: 'Auto Select Champion',
+            name: 'Auto Select',
             description: 'Automatically hovers, locks, or bans champions by priority & role in champion select, with separate top-3 priority lists per role.',
             settings: [{
                     type: 'toggle',
@@ -665,6 +672,7 @@ export function init(context) {
     }
 }
 
+
 async function processChampSelectSession(s) {
     if (!isEnabled || !s) return;
 
@@ -674,10 +682,13 @@ async function processChampSelectSession(s) {
         Utils.Debug.log('[AutoSelect] New champ select session, auto-lock re-enabled');
     }
 
-    if (manuallyOverriddenActionIds.size > 0 && lastSessionData && s.gameId !== lastSessionData.gameId) {
+    if (lastSessionData && s.gameId !== lastSessionData.gameId) {
         manuallyOverriddenActionIds.clear();
-        pluginPickSelectionId = null;
-        Utils.Debug.log('[AutoSelect] New champ select session, manual override reset');
+        pluginSetChampionIds.clear();
+        ceremonyPadding = 0;
+        lastTotalTimeInPhase = null;
+        lastProcessPhase = null;
+        Utils.Debug.log('[AutoSelect] New champ select session, plugin tracking reset');
     }
 
     lastSessionData = s;
@@ -715,14 +726,14 @@ async function processChampSelectSession(s) {
     }
 
     // Check for manual user override (per-action: user changed a champion the plugin set)
-    if (Utils.Store.get('autoLockChampion', 'respectManualPick') !== false) {
+    if (Utils.Store.get('autoLockChampion', 'respectManualPick') === true) {
         const allActions = s.actions ? s.actions.flat(2) : [];
         for (const action of allActions) {
             if (action.actorCellId === s.localPlayerCellId && !action.completed && (action.type === 'pick' || action.type === 'ban')) {
                 const currentId = Number(action.championId || 0);
-                if (currentId && pluginPickSelectionId !== null && currentId !== pluginPickSelectionId) {
+                if (currentId && pluginSetChampionIds.has(action.id) && currentId !== pluginSetChampionIds.get(action.id)) {
                     manuallyOverriddenActionIds.add(action.id);
-                    Utils.Debug.log(`[AutoSelect] Manual override detected: action ${action.id} (${action.type}) championId=${currentId} !== plugin=${pluginPickSelectionId}, backing off`);
+                    Utils.Debug.log(`[AutoSelect] Manual override detected: action ${action.id} (${action.type}) championId=${currentId} !== plugin=${pluginSetChampionIds.get(action.id)}, backing off`);
                 }
             }
         }
@@ -749,6 +760,13 @@ async function processChampSelectSession(s) {
         Utils.Debug.log('[AutoSelect] no myActions — clearing start times (phase:', getChampSelectPhase(s), ')');
         lastAutoLockKeys.clear();
         actionActiveStartTimes.clear();
+        actionHoverStartTimes.clear();
+        actionInitialTimers.clear();
+        lastActiveActionIds = new Set(
+            (s?.actions ? s.actions.flat(2) : [])
+                .filter(a => isActionActive(a, s))
+                .map(a => a.id)
+        );
         return;
     }
 
@@ -757,9 +775,22 @@ async function processChampSelectSession(s) {
         Utils.Debug.log(`[AutoSelect] manually overridden action ids: ${ids}`);
     }
 
-    Utils.Debug.log('[AutoSelect] processing actions:', myActions.map(a => ({
-        id: a.id, type: a.type, completed: a.completed, active: isActionActive(a, s), championId: a.championId
-    })));
+    // Update emberTimerMs from current session data (handles both fresh WS pushes and stale lastSessionData from setTimeout)
+    if (s?.timer && s.timer.adjustedTimeLeftInPhase !== undefined && s.timer.internalNowInEpochMs !== undefined) {
+        emberTimerMs = Math.max(s.timer.adjustedTimeLeftInPhase - (Date.now() - s.timer.internalNowInEpochMs), 0);
+    }
+
+    // Detect ceremony padding: when totalTimeInPhase increases mid-phase (e.g. ban→pick adds ceremony time)
+    const currentPhase = getChampSelectPhase(s);
+    const newTotal = s?.timer?.totalTimeInPhase;
+    if (lastTotalTimeInPhase !== null && lastProcessPhase === currentPhase && newTotal > lastTotalTimeInPhase && newTotal !== undefined) {
+        ceremonyPadding = newTotal - lastTotalTimeInPhase;
+        Utils.Debug.log(`[AutoSelect] ceremony padding: ${ceremonyPadding}ms (total ${lastTotalTimeInPhase}→${newTotal})`);
+    } else if (currentPhase !== lastProcessPhase) {
+        ceremonyPadding = 0;
+    }
+    lastTotalTimeInPhase = newTotal;
+    lastProcessPhase = currentPhase;
 
     const instantPick = Utils.Store.get('autoLockChampion', 'instantPick') !== false;
     const instantBan = Utils.Store.get('autoLockChampion', 'instantBan') !== false;
@@ -767,36 +798,135 @@ async function processChampSelectSession(s) {
     const hoverDelayMs = getHoverDelayMs();
     const now = Date.now();
 
+    const totalTime = s?.timer?.totalTimeInPhase ?? 0;
+    const phaseElapsed = totalTime && emberTimerMs !== null ? totalTime - emberTimerMs : null;
+    const actionTimingInfo = myActions.map(a => ({
+        id: a.id,
+        type: a.type,
+        initTmr: actionInitialTimers.get(a.id),
+        active: isActionActive(a, s),
+        initElapsed: (actionInitialTimers.has(a.id) && emberTimerMs !== null) ? actionInitialTimers.get(a.id) - emberTimerMs : null
+    }));
+    Utils.Debug.log(`[AutoSelect] [TIMING] phase=${getChampSelectPhase(s)} total=${totalTime}ms ember=${emberTimerMs}ms phaseElapsed=${phaseElapsed}ms ceremonyPad=${ceremonyPadding}ms mode=${lockSettings.mode} timeMs=${lockSettings.timeMs} actions=${JSON.stringify(actionTimingInfo)}`);
+
+    Utils.Debug.log('[AutoSelect] processing actions:', myActions.map(a => ({
+        id: a.id, type: a.type, completed: a.completed, active: isActionActive(a, s), championId: a.championId
+    })));
+    Utils.Debug.log(`[AutoSelect] [DEBUG-pick-lock] actionActiveStartTimes state: ${JSON.stringify([...actionActiveStartTimes.entries()].map(([k,v]) => `${k}:${v}`))}`);
+    Utils.Debug.log(`[AutoSelect] [DEBUG-pick-lock] lastActiveActionIds: [${[...lastActiveActionIds].join(',')}]`);
+
     for (const action of myActions) {
         if (manuallyOverriddenActionIds.has(action.id)) {
             Utils.Debug.log(`[AutoSelect] manually overridden: skipping action ${action.id} (${action.type})`);
             continue;
         }
+
+        // If champion was previously set by us and then cleared by the server (banned/timer expired), reset start times and clear plugin tracking to prevent re-trigger on subsequent pushes
+        // Only apply on real WS pushes (not setTimeout callbacks) to avoid stale-lastSessionData race conditions
+        if (!inSetTimeout && action.championId === 0 && (actionActiveStartTimes.has(action.id) || actionHoverStartTimes.has(action.id)) && pluginSetChampionIds.has(action.id)) {
+            Utils.Debug.log(`[AutoSelect] action loop: action ${action.id} (${action.type}) champion cleared, resetting start time`);
+            actionActiveStartTimes.delete(action.id);
+            actionHoverStartTimes.delete(action.id);
+            pluginSetChampionIds.delete(action.id);
+        }
+
         const phase = getChampSelectPhase(s);
+        const isActionTrulyActive = isActionActive(action, s);
+
+        // === HOVER HANDLING ===
+        // Independent from lock timing. Works during PLANNING for pre-hover (picks only).
         const isReadyForHover =
-            (action.type === 'pick' && (isActionActive(action, s) || phase === 'PLANNING')) ||
-            (action.type === 'ban' && isActionActive(action, s) && phase === 'BAN_PICK');
+            (action.type === 'pick' && (isActionTrulyActive || phase === 'PLANNING')) ||
+            (action.type === 'ban' && isActionTrulyActive && phase === 'BAN_PICK');
 
-        if (isReadyForHover && !actionActiveStartTimes.has(action.id)) {
-            actionActiveStartTimes.set(action.id, now);
-
-            // Re-evaluate when the hover delay expires (uses cached session, no HTTP GET)
-            if (hoverDelayMs > 0) {
-                setTimeout(() => {
+        if (isReadyForHover && hoverDelayMs > 0) {
+            if (!actionHoverStartTimes.has(action.id)) {
+                actionHoverStartTimes.set(action.id, now);
+                const hoverTimer = setTimeout(async () => {
                     if (!isEnabled || panicActive || !lastSessionData) return;
-                    processChampSelectSession(lastSessionData);
+                    inSetTimeout = true;
+                    try { await processChampSelectSession(lastSessionData); }
+                    finally { inSetTimeout = false; }
                 }, hoverDelayMs + 50);
             }
-            if (lockSettings.mode === 'after' && lockSettings.timeMs > 0) {
-                setTimeout(() => {
-                    if (!isEnabled || panicActive || !lastSessionData) return;
-                    processChampSelectSession(lastSessionData);
-                }, lockSettings.timeMs + 50);
+            const hoverElapsed = now - actionHoverStartTimes.get(action.id);
+            if (hoverElapsed >= hoverDelayMs) {
+                const champId = chooseChampionForAction(s, action, myPosition);
+                if (champId && action.championId !== champId) {
+                    const lastHoverPatchTime = lastAutoLockKeys.get(action.id + '_hover_time') || 0;
+                    if (now - lastHoverPatchTime >= 1500) {
+                        lastAutoLockKeys.set(action.id + '_hover_time', now);
+                        const payload = { championId: champId, completed: false };
+                        Utils.Debug.log(`[AutoSelect] ${action.type} hover patch`, {
+                            actionId: action.id, phase, payload, actionChampionId: action.championId,
+                            hoverDelaySetting: hoverDelayMs, hoverElapsedMs: hoverElapsed
+                        });
+                        try {
+                            await Utils.LCU.patch(`/lol-champ-select/v1/session/actions/${action.id}`, payload);
+                            Utils.Debug.log(`[AutoSelect] ${action.type} hover patch sent for action=${action.id}`);
+                            pluginSetChampionIds.set(action.id, champId);
+                        } catch (err) {
+                            Utils.Debug.warn(`[AutoSelect] ${action.type} hover patch failed`, {
+                                actionId: action.id, err: err?.message ?? err
+                            });
+                        }
+                    }
+                }
+            }
+        }
+
+        // === LOCK HANDLING ===
+        // Only processes when the action is truly active and NOT during PLANNING.
+        // isActionActive returns true for the first pending action even during PLANNING,
+        // so we must explicitly exclude PLANNING here.
+        if (!isActionTrulyActive || phase === 'PLANNING') {
+            continue;
+        }
+
+        // ----- DEBUG: trace pick lock timing when it becomes active -----
+        if (action.type === 'pick') {
+            const existingStart = actionActiveStartTimes.get(action.id);
+            const wasInLastActive = lastActiveActionIds.has(action.id);
+            Utils.Debug.log(`[AutoSelect] [DEBUG-pick-lock] action ${action.id}: isActionTrulyActive=${isActionTrulyActive} phase=${phase} inSetTimeout=${inSetTimeout} existingStart=${existingStart} wasInLastActive=${wasInLastActive}`);
+        }
+
+        // Detect newly-active transition: action was not active in the previous call
+        // but is active now. Reset lock timer to start counting from when the action
+        // truly becomes active. Hover timer is NOT reset — it carries over from
+        // PLANNING pre-hover or the hover section's previous push.
+        if (!inSetTimeout && !lastActiveActionIds.has(action.id)) {
+            if (actionActiveStartTimes.has(action.id)) {
+                const existingStart = actionActiveStartTimes.get(action.id);
+                Utils.Debug.log(`[AutoSelect] action loop: action ${action.id} (${action.type}) newly active — resetting lock timer (existingStart=${existingStart})`);
+                actionActiveStartTimes.delete(action.id);
             }
         }
 
         if (!actionActiveStartTimes.has(action.id)) {
-            continue;
+            actionActiveStartTimes.set(action.id, now);
+            if (emberTimerMs !== null && emberTimerMs !== undefined) {
+                actionInitialTimers.set(action.id, emberTimerMs - ceremonyPadding);
+            }
+            Utils.Debug.log(`[AutoSelect] [DEBUG-pick-lock] action ${action.id}: setting actionActiveStartTimes=${now} initialTimer=${actionInitialTimers.get(action.id) ?? 'N/A'} ceremonyPadding=${ceremonyPadding} mode=${lockSettings.mode} timeMs=${lockSettings.timeMs}`);
+            
+            const timerActionId = action.id;
+            const lockDelay = ceremonyPadding + lockSettings.timeMs;
+            if (lockSettings.mode === 'after' && lockSettings.timeMs > 0) {
+                setTimeout(async () => {
+                    Utils.Debug.log(`[AutoSelect] [DEBUG-pick-lock] setTimeout callback firing for action ${timerActionId}, inSetTimeout=${inSetTimeout} lastSessionData exists=${!!lastSessionData}`);
+                    if (!isEnabled || panicActive || !lastSessionData) return;
+                    inSetTimeout = true;
+                    try { await processChampSelectSession(lastSessionData); }
+                    finally { inSetTimeout = false; }
+                }, lockDelay + 50);
+            }
+        } else {
+            if (action.type === 'pick') {
+                const existingStart = actionActiveStartTimes.get(action.id);
+                const initTimer = actionInitialTimers.get(action.id);
+                const timerElapsed = (initTimer !== undefined && emberTimerMs !== null) ? initTimer - emberTimerMs : null;
+                Utils.Debug.log(`[AutoSelect] [DEBUG-pick-lock] action ${action.id}: actionActiveStartTimes ALREADY SET (existing=${existingStart} timerElapsed=${timerElapsed}ms)`);
+            }
         }
 
         const champId = chooseChampionForAction(s, action, myPosition);
@@ -807,13 +937,13 @@ async function processChampSelectSession(s) {
 
         const shouldComplete = shouldCompleteAction(s, action, instantPick, instantBan, lockSettings);
 
-        // Hover delay: wait if not locking and delay hasn't elapsed
-        if (!shouldComplete && hoverDelayMs > 0) {
-            const elapsed = now - actionActiveStartTimes.get(action.id);
-            if (elapsed < hoverDelayMs) {
-                Utils.Debug.log(`[AutoSelect] action loop: action ${action.id} (${action.type}) hover delay — ${elapsed}ms elapsed < ${hoverDelayMs}ms threshold, waiting`);
-                continue;
+        // Wait for lock timer to elapse before completing
+        if (!shouldComplete) {
+            if (action.type === 'pick') {
+                const startTs = actionActiveStartTimes.get(action.id);
+                Utils.Debug.log(`[AutoSelect] [DEBUG-pick-lock] action ${action.id}: shouldComplete=false startTs=${startTs} elapsed=${startTs ? Date.now() - startTs : 'N/A'}ms threshold=${lockSettings.timeMs}ms`);
             }
+            continue;
         }
 
         if (action.championId === champId && action.completed === shouldComplete) {
@@ -821,37 +951,44 @@ async function processChampSelectSession(s) {
             continue;
         }
 
-        const lastPatchTime = lastAutoLockKeys.get(action.id + '_time') || 0;
+        const lockNow = Date.now();
+        const lastLockPatchTime = lastAutoLockKeys.get(action.id + '_lock_time') || 0;
         const cooldownMs = 1500;
 
-        if (now - lastPatchTime < cooldownMs) {
-            Utils.Debug.log(`[AutoSelect] action loop: action ${action.id} (${action.type}) — ${now - lastPatchTime}ms since last patch < ${cooldownMs}ms cooldown, skipping`);
+        if (lockNow - lastLockPatchTime < cooldownMs) {
+            Utils.Debug.log(`[AutoSelect] action loop: action ${action.id} (${action.type}) — ${lockNow - lastLockPatchTime}ms since last lock patch < ${cooldownMs}ms cooldown, skipping`);
             continue;
         }
 
-        lastAutoLockKeys.set(action.id + '_time', now);
+        if (action.type === 'pick') {
+            Utils.Debug.log(`[AutoSelect] [DEBUG-pick-lock] action ${action.id}: about to LOCK — shouldComplete=${shouldComplete} lockNow=${lockNow} lastLockPatchTime=${lastLockPatchTime} lockElapsedMs=${lockNow - lastLockPatchTime}`);
+        }
+
+        lastAutoLockKeys.set(action.id + '_lock_time', lockNow);
 
         const payload = {
             championId: champId,
             completed: shouldComplete
         };
 
+        const lockStartTs = actionActiveStartTimes.get(action.id);
+        const lockElapsedMs = lockStartTs ? Date.now() - lockStartTs : 0;
         try {
-            const bannedNow = [...getBannedChampionIds(s)];
-            Utils.Debug.log(`[AutoSelect] ${action.type} patch`, {
+            Utils.Debug.log(`[AutoSelect] ${action.type} lock patch`, {
                 actionId: action.id,
                 phase: getChampSelectPhase(s),
-                active: isActionActive(action, s),
+                active: isActionTrulyActive,
                 payload,
-                bannedChampionIds: bannedNow,
-                actionChampionId: action.championId
+                actionChampionId: action.championId,
+                lockElapsedMs,
+                lockTimeSetting: lockSettings.timeMs
             });
 
             await Utils.LCU.patch(`/lol-champ-select/v1/session/actions/${action.id}`, payload);
-            Utils.Debug.log(`[AutoSelect] ${action.type} patch sent for action=${action.id}`);
-            pluginPickSelectionId = champId;
+            Utils.Debug.log(`[AutoSelect] ${action.type} lock patch sent for action=${action.id}`);
+            pluginSetChampionIds.set(action.id, champId);
         } catch (err) {
-            Utils.Debug.warn(`[AutoSelect] ${action.type} patch failed`, {
+            Utils.Debug.warn(`[AutoSelect] ${action.type} lock patch failed`, {
                 actionId: action.id,
                 phase: getChampSelectPhase(s),
                 payload,
@@ -859,21 +996,36 @@ async function processChampSelectSession(s) {
             });
         }
     }
+
+    // Track which action IDs were active for newly-active detection next call
+    const activeIds = new Set(
+        (s?.actions ? s.actions.flat(2) : [])
+            .filter(a => isActionActive(a, s))
+            .map(a => a.id)
+    );
+    Utils.Debug.log(`[AutoSelect] [DEBUG-pick-lock] lastActiveActionIds updated: phase=${getChampSelectPhase(s)} ids=[${[...activeIds].join(',')}]`);
+    lastActiveActionIds = activeIds;
 }
 
 /**
  * Returns the set of active (in-progress, non-completed) actions from the session.
- * finds the first action set where not all actions are completed,
+ * Finds the first action set where not all actions are completed,
  * then returns only the non-completed actions within it.
+ * During PLANNING and GAME_STARTING, no actions are active (matches the
+ * Ember model's currentPhaseHasActions gate).
  */
 function getCurrentActiveActions(session) {
+    const phase = getChampSelectPhase(session);
+    if (phase === 'PLANNING' || phase === 'GAME_STARTING') return [];
     const actions = session?.actions;
     if (!Array.isArray(actions)) return [];
     for (const actionSet of actions) {
         if (Array.isArray(actionSet) && actionSet.length > 0) {
-            const allCompleted = actionSet.every(a => a.completed);
+            const playerActions = actionSet.filter(a => a.actorCellId >= 0);
+            if (playerActions.length === 0) continue;
+            const allCompleted = playerActions.every(a => a.completed);
             if (!allCompleted) {
-                return actionSet.filter(a => !a.completed);
+                return actionSet.filter(a => !a.completed && a.actorCellId >= 0);
             }
         }
     }
@@ -881,21 +1033,15 @@ function getCurrentActiveActions(session) {
 }
 
 /**
- * Checks if an action is "active" aka the player can act on it. (find first incomplete set, then non-completed actions within it).
- * Fallback: the raw API's `isInProgress` field
+ * Checks if an action is "active" (the player can act on it).
+ * Finds the first incomplete action set within BAN_PICK/FINALIZATION phase
+ * and checks if the action is among the non-completed actions in that set.
+ * During PLANNING and GAME_STARTING, no actions are ever active.
  */
 function isActionActive(action, session) {
     if (!action || action.completed) return false;
     const active = getCurrentActiveActions(session);
-    const viaSet = active.some(a => a.id === action.id);
-    if (!viaSet) {
-        const viaRaw = !!action.isInProgress;
-        if (viaRaw) {
-            Utils.Debug.log(`[AutoSelect] isActionActive(action ${action.id}): set-based check failed, fallback to action.isInProgress=true`);
-        }
-        return viaRaw;
-    }
-    return true;
+    return active.some(a => a.id === action.id);
 }
 
 function getChampSelectPhase(session) {
@@ -908,30 +1054,29 @@ function shouldCompleteAction(session, action, instantPick, instantBan, lockSett
     const phase = getChampSelectPhase(session);
     
     if (action.type === 'ban') {
-        if (!instantBan) {
-            Utils.Debug.log(`[AutoSelect] shouldComplete: ban ${action.id} not completing (instantBan disabled)`);
-            return false;
-        }
         if (phase !== 'BAN_PICK') {
             Utils.Debug.log(`[AutoSelect] shouldComplete: ban ${action.id} not completing (phase=${phase})`);
             return false;
         }
     }
-    if (action.type === 'pick' && !instantPick) {
-        Utils.Debug.log(`[AutoSelect] shouldComplete: pick ${action.id} not completing (instantPick disabled)`);
-        return false;
-    }
 
     if (lockSettings.timeMs > 0) {
         if (lockSettings.mode === 'after') {
-            const startTs = actionActiveStartTimes.get(action.id);
-            if (startTs) {
-                const elapsed = Date.now() - startTs;
+            let elapsed = null;
+            const initialTimer = actionInitialTimers.get(action.id);
+            if (initialTimer !== undefined && emberTimerMs !== null && emberTimerMs !== undefined) {
+                elapsed = initialTimer - emberTimerMs;
+            }
+            if (elapsed === null) {
+                const startTs = actionActiveStartTimes.get(action.id);
+                if (startTs) elapsed = Date.now() - startTs;
+            }
+            if (elapsed !== null) {
                 const complete = elapsed >= lockSettings.timeMs;
-                Utils.Debug.log(`[AutoSelect] shouldComplete: action ${action.id} mode=after elapsed=${elapsed}ms threshold=${lockSettings.timeMs}ms complete=${complete}`);
+                Utils.Debug.log(`[AutoSelect] shouldComplete: action ${action.id} mode=after elapsed=${elapsed}ms threshold=${lockSettings.timeMs}ms complete=${complete} initTmr=${initialTimer} ember=${emberTimerMs} cerPad=${ceremonyPadding}`);
                 return complete;
             }
-            Utils.Debug.log(`[AutoSelect] shouldComplete: action ${action.id} mode=after but no startTs, not completing`);
+            Utils.Debug.log(`[AutoSelect] shouldComplete: action ${action.id} mode=after but no elapsed measure, not completing`);
             return false;
         } else {
             let timerSrc = 'none';
@@ -965,7 +1110,9 @@ function shouldCompleteAction(session, action, instantPick, instantBan, lockSett
         }
     }
 
-    return true;
+    if (action.type === 'ban') return instantBan;
+    if (action.type === 'pick') return instantPick;
+    return false;
 }
 
 function logBanSessionState(session, allActions, myPosition) {
@@ -1138,6 +1285,7 @@ function panic() {
     emberTimerCrossed = false;
     lastAutoLockKeys.clear();
     actionActiveStartTimes.clear();
+    actionHoverStartTimes.clear();
 
     Utils.Toast.info('Auto Lock Override — Next champ select will re-enable');
 }
@@ -1239,6 +1387,7 @@ function unmountAutoLockChampion() {
     pickableChampionSet = null;
     lastAutoLockKeys.clear();
     actionActiveStartTimes.clear();
+    actionHoverStartTimes.clear();
     lastBanDebugKey = '';
     lastSeenActionChampionIds = null;
     lastSeenPhase = undefined;
