@@ -1435,16 +1435,6 @@ function parseQueryToFriendlyLabel(raw, quantity) {
                 675: t('1350 BE'),
                 225: t('450 BE')
             };
-    } else if (types.includes('CHAMPION_RENTAL')) {
-        if (values.length > 0) {
-            const beLabels = {
-                3900: t('7800 BE'),
-                3150: t('6300 BE'),
-                2400: t('4800 BE'),
-                1575: t('3150 BE'),
-                675: t('1350 BE'),
-                225: t('450 BE')
-            };
             const matchedVals = values.filter(v => beLabels[v]).sort((a, b) => a - b);
             if (matchedVals.length > 2) {
                 suffix = ` (${beLabels[matchedVals[0]]} - ${beLabels[matchedVals[matchedVals.length-1]]})`;
@@ -1471,7 +1461,7 @@ function parseQueryToFriendlyLabel(raw, quantity) {
     }
 
     return label;
-}}
+}
 
 function parseOddsList(list) {
     const map = new Map();
@@ -1512,6 +1502,10 @@ function formatOddsList(parsedList) {
 }
 
 function colorizeRPAndTiers(text) {
+    if (typeof text !== 'string') {
+        Utils.Debug.warn('[WhaleHelper] colorizeRPAndTiers received non-string:', typeof text, text);
+        return t('Unknown Item');
+    }
     const colors = {
         ultimate: '#ffa500',
         legendary: '#e84057',
