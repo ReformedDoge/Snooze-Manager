@@ -54,7 +54,7 @@ function getModeKey(gameMode) {
     return null;
 }
 
-const LABELS = {
+const getLabels = () => ({
     dmg_dealt: t('Damage Dealt'),
     dmg_taken: t('Damage Taken'),
     healing: t('Healing'),
@@ -69,7 +69,7 @@ const LABELS = {
     movement_speed: t('Movement Speed'),
     tenacity: t('Tenacity'),
     crit_mod: t('Critical Damage')
-};
+});
 
 // Custom SVGs
 const ICONS = {
@@ -109,7 +109,7 @@ function buildStatsHtml(stats) {
     }
 
     return entries.map(([key, value]) => {
-        const label = LABELS[key] ?? key;
+        const label = getLabels()[key] ?? key;
         const iconSvg = ICONS[key] || ICONS['dmg_dealt'];
 
         let isBuff = false;
