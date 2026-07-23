@@ -13,19 +13,97 @@ let honorAttemptedForCurrentGame = false;
 let eogStatsCache = null;
 let friendPuuidsCache = null;
 let scoresMapCache = null;
+let pendingScoreCards = [];
 let hookCleanups = [];
+let statsUnsub = null;
+let gameflowUnsub = null;
+let friendsPromise = null;
+let _observersActive = false;
 
 function loadScoresMap() {
     if (eogStatsCache?.teams?.length) {
         scoresMapCache = Utils.Scoring.computeScores(Utils.Scoring.normalizeEogStats(eogStatsCache));
+        // Drain any pending card injections that were waiting for data
+        const queue = pendingScoreCards;
+        pendingScoreCards = [];
+        for (const { element, puuid } of queue) {
+            injectScoreOnHonorCard(element, puuid);
+        }
     } else {
         scoresMapCache = null;
     }
 }
 
+function setupObservers() {
+    if (_observersActive) return;
+    if (!Utils.LCU?.observe) return;
+    _observersActive = true;
+
+    statsUnsub = Utils.LCU.observe('/lol-end-of-game/v1/eog-stats-block', (event) => {
+        if (event.data?.teams?.length) {
+            eogStatsCache = event.data;
+            loadScoresMap();
+            Utils.Debug.log('[AutoHonor] eogStatsBlock cached via WS push.');
+            statsUnsub();
+        }
+    });
+
+    gameflowUnsub = Utils.LCU.observe('/lol-gameflow/v1/gameflow-phase', e => {
+        const currentEnabled = Utils.Store.get('autoHonor', 'enabled');
+        const scoreCardEnabled = Utils.Store.get('autoHonor', 'showScoreOnCard');
+        const isActive = currentEnabled || scoreCardEnabled;
+        const isHonorPhase = e.data === 'PreEndOfGame' || e.data === 'EndOfGame';
+
+        if (!isHonorPhase && e.data !== 'WaitingForStats') {
+            honorAttemptedForCurrentGame = false;
+            eogStatsCache = null;
+            friendPuuidsCache = null;
+            scoresMapCache = null;
+            pendingScoreCards = [];
+            return;
+        }
+
+        if (isActive && ['PreEndOfGame', 'WaitingForStats', 'EndOfGame'].includes(e.data) && !eogStatsCache) {
+            const retryFetch = (attempt = 0) => {
+                if (eogStatsCache) return;
+                Utils.LCU.get('/lol-end-of-game/v1/eog-stats-block').then(data => {
+                    if (data?.teams?.length) {
+                        eogStatsCache = data;
+                        loadScoresMap();
+                    } else if (attempt < 5) {
+                        setTimeout(() => retryFetch(attempt + 1), 1000 * (attempt + 1));
+                    }
+                }).catch(() => {
+                    if (attempt < 5) setTimeout(() => retryFetch(attempt + 1), 1000 * (attempt + 1));
+                });
+            };
+            retryFetch();
+        }
+
+        if (isActive && isHonorPhase && !honorAttemptedForCurrentGame) {
+            Utils.Debug.log('[AutoHonor] Gameflow phase trigger:', e.data);
+            triggerAutoHonorIfReady();
+        }
+    });
+    Utils.Debug.log('[AutoHonor] Gameflow observer registered.');
+}
+
+function teardownObservers() {
+    if (!_observersActive) return;
+    if (statsUnsub) { statsUnsub(); statsUnsub = null; }
+    if (gameflowUnsub) { gameflowUnsub(); gameflowUnsub = null; }
+    _observersActive = false;
+    Utils.Debug.log('[AutoHonor] Observers torn down.');
+}
+
 function toggleFeature(enabled) {
     isEnabled = enabled;
     Utils.Store.set('autoHonor', 'enabled', enabled);
+    if (enabled) {
+        setupObservers();
+    } else if (!Utils.Store.get('autoHonor', 'showScoreOnCard')) {
+        teardownObservers();
+    }
 }
 
 function getDelay() {
@@ -159,7 +237,14 @@ export function init(context) {
                     id: 'sm:showScoreOnCard',
                     label: t('Show KDA & Score on Honor Card'),
                     value: showScoreOnCard,
-                    onChange: (val) => Utils.Store.set('autoHonor', 'showScoreOnCard', val)
+                    onChange: (val) => {
+                        Utils.Store.set('autoHonor', 'showScoreOnCard', val);
+                        if (val) {
+                            setupObservers();
+                        } else if (!Utils.Store.get('autoHonor', 'enabled')) {
+                            teardownObservers();
+                        }
+                    }
                 }
             ]
         });
@@ -180,6 +265,11 @@ export function init(context) {
 
             const scoreRow = Utils.Settings.createToggleRow(t('Show KDA & Score on Honor Card'), showScoreOnCard, (next) => {
                 Utils.Store.set('autoHonor', 'showScoreOnCard', next);
+                if (next) {
+                    setupObservers();
+                } else if (!Utils.Store.get('autoHonor', 'enabled')) {
+                    teardownObservers();
+                }
             });
             scoreRow.classList.add('plugins-settings-row');
             scoreRow.style.marginTop = '10px';
@@ -239,15 +329,19 @@ async function triggerAutoHonorIfReady() {
 
 async function getFriendPuuids() {
     if (friendPuuidsCache) return friendPuuidsCache;
-    const friends = await Utils.LCU.get('/lol-chat/v1/friends').catch(() => null);
-    const set = new Set();
-    if (Array.isArray(friends)) {
-        for (const f of friends) {
-            if (f?.puuid) set.add(f.puuid);
+    if (friendsPromise) return friendsPromise;
+    friendsPromise = Utils.LCU.get('/lol-chat/v1/friends').catch(() => null).then(friends => {
+        const set = new Set();
+        if (Array.isArray(friends)) {
+            for (const f of friends) {
+                if (f?.puuid) set.add(f.puuid);
+            }
         }
-    }
-    friendPuuidsCache = set;
-    return set;
+        friendPuuidsCache = set;
+        friendsPromise = null;
+        return set;
+    });
+    return friendsPromise;
 }
 
 async function getEogStatsBlock() {
@@ -312,10 +406,11 @@ async function autoHonorTeammate() {
             await Utils.LCU.post('/lol-honor-v2/v1/honor-player', {
                 honorCategory: '',
                 summonerId: 0
+            }).then(() => {
+                didVote = true;
             }).catch(err => {
                 Utils.Debug.error('[AutoHonor] Skip request rejected by LCU:', err);
             });
-            didVote = true;
         } else {
             const mode = Utils.Store.get('autoHonor', 'mode') || 'allies';
             let candidates = [];
@@ -392,7 +487,9 @@ async function autoHonorTeammate() {
                         Utils.Debug.error(`[AutoHonor] Vote staging failed for: ${targetName}`, err);
                     });
 
-                    await new Promise(r => setTimeout(r, getDelay()));
+                    if (i < Math.min(voteCount, selectedCandidates.length) - 1) {
+                        await new Promise(r => setTimeout(r, getDelay()));
+                    }
                 }
                 didVote = true;
             } else {
@@ -432,13 +529,9 @@ function scoreColor(ratio) {
 function injectScoreOnHonorCard(element, puuid) {
     if (!element || !element.isConnected) return;
     if (element.querySelector('.ah-score-badge')) return;
-
     if (!scoresMapCache) return;
     const rating = scoresMapCache.get(puuid);
     if (!rating) return;
-
-    if (!element || !element.isConnected) return;
-    if (element.querySelector('.ah-score-badge')) return;
 
     const wrapper = element.querySelector('.vote-ceremony-candidate-champ-image-wrapper');
     if (!wrapper) return;
@@ -466,8 +559,6 @@ function injectFriendBadge(element, puuid) {
     if (element.querySelector('.ah-friend-badge')) return;
     if (!friendPuuidsCache) return;
     if (!friendPuuidsCache.has(puuid)) return;
-    if (!element || !element.isConnected) return;
-    if (element.querySelector('.ah-friend-badge')) return;
 
     const wrapper = element.querySelector('.vote-ceremony-candidate-champ-image-wrapper');
     if (!wrapper) return;
@@ -520,51 +611,13 @@ export function load() {
         }).catch(() => {});
     }
 
-    // Pre-populate eogStatsBlock cache via WS observation (fast path)
-    if (Utils.LCU?.observe && (Utils.Store.get('autoHonor', 'enabled') || scoreOnCard())) {
-        const statsUnsub = Utils.LCU.observe('/lol-end-of-game/v1/eog-stats-block', (event) => {
-            if (event.data?.teams?.length) {
-                eogStatsCache = event.data;
-                loadScoresMap();
-                Utils.Debug.log('[AutoHonor] eogStatsBlock cached via WS push.');
-                statsUnsub();
-            }
-        });
-    }
-
-    // Gameflow phase observer — only when auto-honor is enabled
-    if (Utils.LCU?.observe && Utils.Store.get('autoHonor', 'enabled')) {
-        Utils.LCU.observe('/lol-gameflow/v1/gameflow-phase', e => {
-            const isHonorPhase = e.data === 'PreEndOfGame' || e.data === 'EndOfGame';
-
-            if (!isHonorPhase && e.data !== 'WaitingForStats') {
-                honorAttemptedForCurrentGame = false;
-                eogStatsCache = null;
-                friendPuuidsCache = null;
-                scoresMapCache = null;
-                return;
-            }
-
-            // Try to eagerly cache eogStatsBlock when phase changes
-            if (['PreEndOfGame', 'WaitingForStats', 'EndOfGame'].includes(e.data) && !eogStatsCache) {
-                Utils.LCU.get('/lol-end-of-game/v1/eog-stats-block').then(data => {
-                    if (data?.teams?.length) {
-                        eogStatsCache = data;
-                        loadScoresMap();
-                    }
-                }).catch(() => {});
-            }
-
-            if (isHonorPhase && !honorAttemptedForCurrentGame) {
-                Utils.Debug.log('[AutoHonor] Gameflow phase trigger:', e.data);
-                triggerAutoHonorIfReady();
-            }
-        });
-        Utils.Debug.log('[AutoHonor] Gameflow observer registered.');
+    // Set up observers if any feature is active at load time
+    if (Utils.Store.get('autoHonor', 'enabled') || scoreOnCard()) {
+        setupObservers();
     }
 
     // Register Ember hook for honor-card badges — score and/or friend marker
-    if (Utils.Hooks?.Ember?.registerRule && (scoreOnCard() || preferFriends())) {
+    if (Utils.Hooks?.Ember?.registerRule) {
         const cleanup = Utils.Hooks.Ember.registerRule({
             name: 'ah-honor-card-badges',
             matcher: (args) => {
@@ -586,12 +639,28 @@ export function load() {
                     if (!candidate?.puuid) return;
 
                     if (scoreOnCard() && !this.element.querySelector('.ah-score-badge')) {
-                        Utils.Debug.log('[AutoHonor] Injecting score badge for', candidate.puuid);
-                        injectScoreOnHonorCard(this.element, candidate.puuid);
+                        if (scoresMapCache && scoresMapCache.has(candidate.puuid)) {
+                            Utils.Debug.log('[AutoHonor] Injecting score badge for', candidate.puuid);
+                            injectScoreOnHonorCard(this.element, candidate.puuid);
+                        } else {
+                            Utils.Debug.log('[AutoHonor] Deferring score badge for', candidate.puuid, '(data not ready)');
+                            if (!pendingScoreCards.some(p => p.puuid === candidate.puuid)) {
+                                pendingScoreCards.push({ element: this.element, puuid: candidate.puuid });
+                            }
+                        }
                     }
                     if (preferFriends() && !this.element.querySelector('.ah-friend-badge')) {
-                        Utils.Debug.log('[AutoHonor] Injecting friend badge for', candidate.puuid);
-                        injectFriendBadge(this.element, candidate.puuid);
+                        if (friendPuuidsCache && friendPuuidsCache.has(candidate.puuid)) {
+                            Utils.Debug.log('[AutoHonor] Injecting friend badge for', candidate.puuid);
+                            injectFriendBadge(this.element, candidate.puuid);
+                        } else if (!friendPuuidsCache) {
+                            Utils.Debug.log('[AutoHonor] Lazy-fetching friend list for badge of', candidate.puuid);
+                            getFriendPuuids().then(() => {
+                                if (this.element?.isConnected && !this.element.querySelector('.ah-friend-badge')) {
+                                    injectFriendBadge(this.element, candidate.puuid);
+                                }
+                            });
+                        }
                     }
                 }
             }]
@@ -599,4 +668,21 @@ export function load() {
         hookCleanups.push(cleanup);
         Utils.Debug.log('[AutoHonor] Honor card badge hook registered.');
     }
+}
+
+export function unload() {
+    Utils.Debug.log('[AutoHonor] Unloading module, cleaning up observers and hooks.');
+    teardownObservers();
+    for (const cleanup of hookCleanups) {
+        try { cleanup(); } catch (e) { Utils.Debug.error('[AutoHonor] Hook cleanup error:', e); }
+    }
+    hookCleanups = [];
+    honorAttemptedForCurrentGame = false;
+    eogStatsCache = null;
+    friendPuuidsCache = null;
+    scoresMapCache = null;
+    pendingScoreCards = [];
+    friendsPromise = null;
+    const badgeFont = document.getElementById('ah-badge-font');
+    if (badgeFont) badgeFont.remove();
 }
