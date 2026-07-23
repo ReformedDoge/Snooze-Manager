@@ -18,7 +18,7 @@ const RANDOMIZER_BTN_ATTR = 'data-sm-randomizer-btn';
 // Skin Tier Config
 const HIDE_CLASSIC = true;
 const BADGE_ATTR = 'data-sm-tier-badge';
-const CLASSIC_RARITIES = new Set(['kNoRarity', 'kDefault', '']);
+let CLASSIC_RARITIES = new Set(['kNoRarity', 'kDefault', 'kRare', 'kLegacy', '']);
 
 // State
 let isLootEnabled = true;
@@ -263,8 +263,13 @@ function injectStyles() {
         .sm-tier-badge[data-rarity="kMythic"], .sm-tier-badge[data-rarity="kExclusive"] { box-shadow: 0 0 6px 1px rgba(200,150,232,0.4); }
         .sm-tier-badge[data-rarity="kLegendary"] { box-shadow: 0 0 5px 1px rgba(232,160,64,0.3); }
         
-        .champion-skin-name { display: flex !important; flex-direction: column !important; align-items: center !important; }
-        .skin-name-text { display: block !important; }
+        /* Non-Tencent: flex badge above text */
+        [data-sm-region="global"] .champion-skin-name { display: flex !important; flex-direction: column !important; align-items: center !important; }
+        [data-sm-region="global"] .sm-tier-badge { order: -1 !important; }
+        /* Tencent: absolute badge, no flex — keeps native chroma overlay undisturbed */
+        [data-sm-region="tencent"] .champion-skin-name { position: relative; }
+        [data-sm-region="tencent"] .champion-skin-name.sm-has-tier-badge { padding-top: 24px !important; }
+        [data-sm-region="tencent"] .sm-tier-badge { position: absolute !important; top: 2px !important; left: 50% !important; transform: translateX(-50%) !important; z-index: 2 !important; margin: 0 auto !important; }
 
         /* SKIN RANDOMIZER BUTTON */
         .skin-select { position: relative; }
@@ -290,8 +295,10 @@ function injectStyles() {
     document.head.appendChild(style);
 }
 
+let isTencentRegion = false;
+
 // Metadata
-const RARITY_META = {
+let RARITY_META = {
     kTranscendent: {
         label: t('Transcendent'),
         color: '#f0e6d2',
@@ -353,10 +360,75 @@ const RARITY_META = {
         icon: ''
     },
 };
-const RARITY_ORDER = ['kTranscendent', 'kExalted', 'kUltimate', 'kMythic', 'kExclusive', 'kLegendary', 'kEpic', 'kDefault', 'kNoRarity', ''];
+let RARITY_ORDER = ['kTranscendent', 'kExalted', 'kUltimate', 'kMythic', 'kExclusive', 'kLegendary', 'kEpic', 'kDefault', 'kNoRarity', ''];
+
+const TENCENT_RARITY_CONFIG = {
+    0: { order: 0, label: '无稀有度', color: '#a09b8c', bg: '#111', icon: '', borderRarity: 'normal' },
+    1: { order: 1, label: '典藏', color: '#9090f4', bg: '#0a0018', icon: '/lol-game-data/assets/v1/rarity-gem-icons/cn-gem-1.png', borderRarity: 'epic' },
+    2: { order: 2, label: '勇士', color: '#9090f4', bg: '#0a0018', icon: '/lol-game-data/assets/v1/rarity-gem-icons/cn-gem-2.png', borderRarity: 'epic' },
+    3: { order: 3, label: '王者', color: '#9090f4', bg: '#0a0018', icon: '/lol-game-data/assets/v1/rarity-gem-icons/cn-gem-3.png', borderRarity: 'epic' },
+    4: { order: 4, label: '史诗', color: '#e8a040', bg: '#1e1000', icon: '/lol-game-data/assets/v1/rarity-gem-icons/cn-gem-4.png', borderRarity: 'legendary' },
+    5: { order: 5, label: '传说', color: '#e8a040', bg: '#1e1000', icon: '/lol-game-data/assets/v1/rarity-gem-icons/cn-gem-5.png', borderRarity: 'legendary' },
+    7: { order: 7, label: '限定', color: '#c896e8', bg: '#1a0028', icon: '/lol-game-data/assets/v1/rarity-gem-icons/cn-gem-7.png', borderRarity: 'mythic' },
+    8: { order: 8, label: '神话', color: '#c896e8', bg: '#1a0028', icon: '/lol-game-data/assets/v1/rarity-gem-icons/cn-gem-8.png', borderRarity: 'mythic' },
+    9: { order: 9, label: '终极', color: '#f0a030', bg: '#2a1500', icon: '/lol-game-data/assets/v1/rarity-gem-icons/cn-gem-9.png', borderRarity: 'ultimate' },
+    10: { order: 10, label: '圣堂', color: '#f0e6d2', bg: '#3a1500', icon: '/lol-game-data/assets/v1/rarity-gem-icons/cn-gem-10.png', borderRarity: 'exalted' },
+    11: { order: 11, label: '卓越', color: '#f0e6d2', bg: '#3a1500', icon: '/lol-game-data/assets/v1/rarity-gem-icons/cn-gem-11.png', borderRarity: 'transcendent' },
+};
 
 function getRarityMeta(rarity) {
-    return RARITY_META[rarity] ?? RARITY_META[''];
+    if (!rarity) return RARITY_META[''];
+    if (RARITY_META[rarity]) return RARITY_META[rarity];
+    if (isTencentRegion && typeof rarity === 'string') {
+        const num = rarity.match(/(\d+)$/);
+        if (num && RARITY_META[num[1]]) return RARITY_META[num[1]];
+    }
+    return RARITY_META[''];
+}
+
+function getRarityOrderIndex(rarity) {
+    const r = rarity || '';
+    let idx = RARITY_ORDER.indexOf(r);
+    if (idx !== -1) return idx;
+    if (isTencentRegion && r && RARITY_META[r]) {
+        // k-prefix alias — find its numeric sibling by object reference
+        const meta = RARITY_META[r];
+        for (let i = 0; i < RARITY_ORDER.length; i++) {
+            if (RARITY_META[RARITY_ORDER[i]] === meta) return i;
+        }
+    }
+    return RARITY_ORDER.indexOf('');
+}
+
+async function detectAndConfigureRarity() {
+    try {
+        const locale = await Utils.LCU.get('/riotclient/region-locale');
+        if (locale && locale.region === 'TENCENT') {
+            isTencentRegion = true;
+            document.documentElement.dataset.smRegion = 'tencent';
+            const newMeta = {};
+            const ids = Object.keys(TENCENT_RARITY_CONFIG).sort((a, b) => (TENCENT_RARITY_CONFIG[b].order || 0) - (TENCENT_RARITY_CONFIG[a].order || 0));
+            for (const id of ids) {
+                const t = TENCENT_RARITY_CONFIG[id];
+                if (t && t.label) {
+                    newMeta[id] = { label: t.label, color: t.color || '#a09b8c', bg: t.bg || '#111', icon: t.icon || '' };
+                }
+            }
+            const kMap = { kTranscendent: '11', kExalted: '10', kUltimate: '9', kMythic: '8', kRare: '7', kExclusive: '7', kLegendary: '5', kEpic: '4', kDefault: '0', kNoRarity: '0' };
+            for (const [k, v] of Object.entries(kMap)) {
+                if (newMeta[v]) newMeta[k] = newMeta[v];
+            }
+            newMeta[''] = { label: '', color: '#a09b8c', bg: '#111', icon: '' };
+            RARITY_META = newMeta;
+            RARITY_ORDER = ids.concat(['']);
+            CLASSIC_RARITIES = new Set(['0', '', 'kDefault', 'kNoRarity']);
+            Utils.Debug.log(`[WhaleHelper] Tencent region, ${ids.length} rarity tiers loaded.`);
+        } else {
+            document.documentElement.dataset.smRegion = 'global';
+        }
+    } catch (e) {
+        Utils.Debug.warn('[WhaleHelper] Region detection failed:', e);
+    }
 }
 
 // Shared Cache Initialization
@@ -367,6 +439,10 @@ async function loadSkinsCache() {
 
         const processSkin = (skin) => {
             if (skin?.id === undefined) return;
+            // On Tencent, regionRarityId > 0 = override with numeric tier; 0 = use default k-prefix
+            if (isTencentRegion && skin.regionRarityId > 0) {
+                skin.rarity = String(skin.regionRarityId);
+            }
             skinsCache.set(Number(skin.id), skin);
         };
 
@@ -443,15 +519,21 @@ function updateBadge(nameContainer, skinId) {
 
     if (!skinId || !skinsCache.has(skinId)) {
         if (existingBadges.length > 0) existingBadges.forEach(el => el.remove());
+        root.classList.remove('sm-has-tier-badge');
         return;
     }
 
     const skinObj = skinsCache.get(skinId);
-    const rarity = skinObj.rarity ?? '';
+    let rarity = skinObj.rarity ?? '';
+    // On non-Tencent, show "Legacy" for legacy skins without a premium rarity tier
+    if (!isTencentRegion && skinObj.isLegacy && (!rarity || rarity === 'kNoRarity' || rarity === 'kDefault' || rarity === 'kLegacy')) {
+        rarity = 'kLegacy';
+    }
     const targetRarityAttr = rarity || 'kDefault';
 
     if (HIDE_CLASSIC && CLASSIC_RARITIES.has(rarity)) {
         if (existingBadges.length > 0) existingBadges.forEach(el => el.remove());
+        root.classList.remove('sm-has-tier-badge');
         return;
     }
 
@@ -462,10 +544,10 @@ function updateBadge(nameContainer, skinId) {
     existingBadges.forEach(el => el.remove());
     const badge = buildBadge(rarity);
     if (!badge) return;
+    root.classList.add('sm-has-tier-badge');
 
-    const textEl = root.querySelector('.skin-name-text');
-    if (textEl) root.insertBefore(badge, textEl);
-    else root.appendChild(badge);
+    // Append to end so native DOM order (text overlay) is undisturbed
+    root.appendChild(badge);
 }
 
 function getComponentFromElement(element) {
@@ -548,16 +630,39 @@ async function evaluateSgpQuery(commonBase, sessionToken, query) {
     return res.json();
 }
 
+function lootRarityToKey(rarity) {
+    if (!rarity) return '';
+    const r = String(rarity).toLowerCase();
+    if (r === 'limited') return 'kRare';
+    if (r === 'epic') return 'kEpic';
+    if (r === 'legendary') return 'kLegendary';
+    if (r === 'mythic') return 'kMythic';
+    if (r === 'ultimate') return 'kUltimate';
+    if (r === 'exalted') return 'kExalted';
+    if (r === 'transcendent') return 'kTranscendent';
+    if (r === 'classic' || r === '') return 'kNoRarity';
+    const cap = r.charAt(0).toUpperCase() + r.slice(1);
+    return `k${cap}`;
+}
+
 async function fetchUnownedSkins() {
     const {
         commonBase
     } = await Utils.GameData.getSgpContext();
     const sessionToken = await getSessionToken();
 
-    const [resNonExclusive, resExclusive] = await Promise.all([
+    const [resNonExclusive, resExclusive, playerLoot] = await Promise.all([
         evaluateSgpQuery(commonBase, sessionToken, '!hasTag("exclusive") && ((type == SKIN_RENTAL && ((value == 1820) || (value == 1350) || (value == 975) || (value == 750) || (value == 520))) || (type == SKIN && value == 3250))'),
-        evaluateSgpQuery(commonBase, sessionToken, 'hasTag("exclusive") && (type==SKIN)')
+        evaluateSgpQuery(commonBase, sessionToken, 'hasTag("exclusive") && (type==SKIN)'),
+        Utils.LCU.get('/lol-loot/v1/player-loot').catch(() => [])
     ]);
+
+    const lootMap = new Map();
+    if (Array.isArray(playerLoot)) {
+        for (const loot of playerLoot) {
+            lootMap.set(loot.lootName, loot);
+        }
+    }
 
     const exclusiveSet = new Set(resExclusive.lootItemNames || []);
     const combined = [...new Set([...(resNonExclusive.lootItemNames || []), ...exclusiveSet])];
@@ -572,23 +677,37 @@ async function fetchUnownedSkins() {
         const skinId = match ? parseInt(match[0], 10) : null;
         if (!skinId || ownedSkinIds.has(skinId)) continue;
 
+        const lootItem = lootMap.get(item);
         const skin = skinsCache.get(skinId);
         const name = skin?.name ?? t("Unknown Skin ({{id}})", { id: skinId });
+
+        // Use loot system's rarity (LIMITED, EPIC, etc.) for accurate display
+        // Fall back to skins.json rarity as a secondary source
+        let rarity = '';
+        if (lootItem && lootItem.rarity) {
+            rarity = lootRarityToKey(lootItem.rarity);
+        } else {
+            rarity = skin?.rarity ?? '';
+        }
+        // Check loot tags for legacy flag
+        const isLegacyLoot = lootItem && Array.isArray(lootItem.tags) && lootItem.tags.some(t => String(t).toLowerCase() === 'legacy');
+
         results.push({
             id: skinId,
             originalName: item,
             name: name,
             lowerName: name.toLowerCase(),
-            rarity: skin?.rarity ?? '',
+            rarity: rarity,
             tilePath: skin?.tilePath ?? '',
             isRental: item.includes('SKIN_RENTAL'),
             isExclusive: exclusiveSet.has(item) && !item.includes('SKIN_RENTAL'),
+            isLegacy: isLegacyLoot,
         });
     }
 
     results.sort((a, b) => {
-        const ri = RARITY_ORDER.indexOf(a.rarity || '');
-        const rj = RARITY_ORDER.indexOf(b.rarity || '');
+        const ri = getRarityOrderIndex(a.rarity);
+        const rj = getRarityOrderIndex(b.rarity);
         if (ri !== rj) return ri - rj;
         return a.name.localeCompare(b.name);
     });
@@ -725,8 +844,17 @@ function closePanel(e) {
     if (panelEl) panelEl.classList.remove('sm-show');
 }
 
+function resolveDisplayRarity(item) {
+    let r = item.rarity || '';
+    if (!isTencentRegion && item.isLegacy && (!r || r === 'kNoRarity' || r === 'kDefault')) {
+        r = 'kLegacy';
+    }
+    return r;
+}
+
 function buildCard(item) {
-    const meta = getRarityMeta(item.rarity);
+    const resolvedRarity = resolveDisplayRarity(item);
+    const meta = getRarityMeta(resolvedRarity);
     const card = document.createElement('div');
     card.className = 'sm-whale-card';
     card.title = item.name;
@@ -749,7 +877,7 @@ function buildCard(item) {
     nameEl.textContent = item.name;
     info.appendChild(nameEl);
 
-    if (item.rarity) {
+    if (resolvedRarity && !CLASSIC_RARITIES.has(resolvedRarity)) {
         const rarityEl = document.createElement('div');
         rarityEl.className = 'sm-whale-card-rarity';
         rarityEl.style.color = meta.color;
@@ -775,9 +903,9 @@ function applyFilter(filter) {
         let matchesChip = false;
         if (filter === 'all') matchesChip = true;
         else if (filter === 'rental') matchesChip = item.isRental;
-        else if (filter === 'others') matchesChip = (item.rarity === 'kDefault' || item.rarity === 'kNoRarity' || item.rarity === '');
+        else if (filter === 'others') matchesChip = (item.rarity === 'kDefault' || item.rarity === 'kNoRarity' || item.rarity === '' || (!isTencentRegion && (item.rarity === 'kRare' || item.rarity === '0')));
         else if (filter === 'kMythic' || filter === 'kExclusive') matchesChip = (item.rarity === 'kMythic' || item.rarity === 'kExclusive');
-        else matchesChip = (item.rarity === filter);
+        else matchesChip = (item.rarity === filter || (isTencentRegion && getRarityMeta(item.rarity).label === getRarityMeta(filter).label));
 
         let isVisible = matchesChip && (searchQuery === '' || item.lowerName.includes(searchQuery));
 
@@ -813,7 +941,7 @@ function rebuildFilterChips() {
 
     const data = tabData[currentTab];
     const rarityGroups = new Set(data.items.map(s => s.rarity));
-    const hasOthers = data.items.some(s => s.rarity === 'kDefault' || s.rarity === 'kNoRarity' || s.rarity === '');
+    const hasOthers = data.items.some(s => s.rarity === 'kDefault' || s.rarity === 'kNoRarity' || s.rarity === '' || (!isTencentRegion && (s.rarity === 'kRare' || s.rarity === '0')));
 
     const chipDefs = [{
         key: 'all',
@@ -976,8 +1104,8 @@ async function backgroundSyncData() {
 
         if (changed) {
             data.items.sort((a, b) => {
-                const ri = RARITY_ORDER.indexOf(a.rarity || '');
-                const rj = RARITY_ORDER.indexOf(b.rarity || '');
+                const ri = getRarityOrderIndex(a.rarity);
+                const rj = getRarityOrderIndex(b.rarity);
                 if (ri !== rj) return ri - rj;
                 return a.name.localeCompare(b.name);
             });
@@ -1523,6 +1651,10 @@ function colorizeRPAndTiers(text) {
         return str.replace(regex, `<span style="color:${color}; font-weight:bold;">$&</span>`);
     }
 
+    function esc(s) {
+        return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }
+
     result = safeReplace(result, '\\b(Ultimate|3250\\s*RP|3250|2775\\s*RP|2775)\\b', colors.ultimate);
     result = safeReplace(result, '\\b(Legendary|1820\\s*RP|1820|1850\\s*RP|1850)\\b', colors.legendary);
     result = safeReplace(result, '\\b(Epic|1350\\s*RP|1350)\\b', colors.epic);
@@ -1530,6 +1662,31 @@ function colorizeRPAndTiers(text) {
     result = safeReplace(result, '\\b(Mythic|Exclusive|Transcendent|Exalted)\\b', colors.mythic);
     result = safeReplace(result, '\\b(Blue Essence)\\b', colors.essence);
     result = safeReplace(result, '\\b(Orange Essence)\\b', colors.orange);
+
+    // Translated term coloring (only when a non-English locale is active)
+    if (t('Mythic') !== 'Mythic') {
+        function uni(arr) {
+            return [...new Set(arr.filter(Boolean).map(esc))].sort((a, b) => b.length - a.length).join('|');
+        }
+        const mythic = uni([t('Mythic/Exclusive'), t('Mythic'), t('Transcendent'), t('Exalted')]);
+        if (mythic) result = safeReplace(result, '(' + mythic + ')', colors.mythic);
+        const epic = esc(t('Epic'));
+        if (epic) result = safeReplace(result, '(' + epic + ')', colors.epic);
+        const classic = esc(t('Classic'));
+        if (classic) result = safeReplace(result, '(' + classic + ')', colors.classic);
+        const blue = esc(t('Blue Essence'));
+        if (blue) result = safeReplace(result, '(' + blue + ')', colors.essence);
+        const orange = esc(t('Orange Essence'));
+        if (orange) result = safeReplace(result, '(' + orange + ')', colors.orange);
+        const ult = t('Ultimate');
+        const leg = t('Legendary');
+        if (ult !== leg && ult) {
+            result = safeReplace(result, '(' + esc(ult) + ')', colors.ultimate);
+            if (leg) result = safeReplace(result, '(' + esc(leg) + ')', colors.legendary);
+        } else if (ult) {
+            result = safeReplace(result, '(' + esc(ult) + ')', colors.ultimate);
+        }
+    }
 
     return result;
 }
@@ -2591,9 +2748,10 @@ export function init(context) {
 }
 
 
-export function load() {
+export async function load() {
+    await detectAndConfigureRarity().catch(() => {});
     injectStyles();
-    loadSkinsCache().catch(() => {});
+    await loadSkinsCache().catch(() => {});
     loadSkinBlacklist();
     if (isSkinTierEnabled) mountSessionObserver();
     installContextMenuInterceptors();
