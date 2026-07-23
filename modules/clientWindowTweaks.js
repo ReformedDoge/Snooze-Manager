@@ -5,6 +5,7 @@
  * @description Client window tweaks: custom resolution, title, and dynamic drag bar height.
  * @link https://github.com/ReformedDoge
  */
+import { t } from './i18n.js';
 import Utils from './generalUtils.js';
 
 const MODULE_KEY = 'clientWindowTweaks';
@@ -19,96 +20,96 @@ const TITLE_KEY = 'title';
 const DRAGBAR_KEY = 'dragBarPercentage';
 const DRAGBAR_DEFAULT = 7;
 const NATIVE_STATE_KEY = 'nativeWindowState';
-const TITLE_DEFAULT = 'League of Legends';
+const TITLE_DEFAULT = t('League of Legends');
 const FULLSCREEN_KEY = 'fullscreenEnabled';
 
 const PRESETS = [{
         id: 'native-426x240',
-        label: '426 x 240',
+        label: t('426 x 240'),
         width: 426,
         height: 240
     },
     {
         id: 'native-640x360',
-        label: '640 x 360',
+        label: t('640 x 360'),
         width: 640,
         height: 360
     },
     {
         id: 'native-854x480',
-        label: '854 x 480',
+        label: t('854 x 480'),
         width: 854,
         height: 480
     },
     {
         id: 'native-960x540',
-        label: '960 x 540',
+        label: t('960 x 540'),
         width: 960,
         height: 540
     },
     {
         id: 'native-1024x576',
-        label: '1024 x 576',
+        label: t('1024 x 576'),
         width: 1024,
         height: 576
     },
     {
         id: 'native-1152x648',
-        label: '1152 x 648',
+        label: t('1152 x 648'),
         width: 1152,
         height: 648
     },
     {
         id: 'native-1280x720',
-        label: '1280 x 720',
+        label: t('1280 x 720'),
         width: 1280,
         height: 720
     },
     {
         id: 'native-1366x768',
-        label: '1366 x 768',
+        label: t('1366 x 768'),
         width: 1366,
         height: 768
     },
     {
         id: 'native-1600x900',
-        label: '1600 x 900',
+        label: t('1600 x 900'),
         width: 1600,
         height: 900
     },
     {
         id: 'native-1920x1080',
-        label: '1920 x 1080',
+        label: t('1920 x 1080'),
         width: 1920,
         height: 1080
     },
     {
         id: 'native-2560x1440',
-        label: '2560 x 1440',
+        label: t('2560 x 1440'),
         width: 2560,
         height: 1440
     },
     {
         id: 'native-3200x1800',
-        label: '3200 x 1800',
+        label: t('3200 x 1800'),
         width: 3200,
         height: 1800
     },
     {
         id: 'native-3840x2160',
-        label: '3840 x 2160',
+        label: t('3840 x 2160'),
         width: 3840,
         height: 2160
     },
     {
         id: 'native-5120x2880',
-        label: '5120 x 2880',
+        label: t('5120 x 2880'),
         width: 5120,
         height: 2880
     },
     {
         id: 'native-7680x4320',
-        label: '7680 x 4320',
+        label: t('7680 x 4320'),
         width: 7680,
         height: 4320
     }
@@ -608,7 +609,7 @@ function renderSettings(container, showMasterToggle = true) {
     const dragBarPct = parseNumber(getStoreValue(DRAGBAR_KEY, DRAGBAR_DEFAULT));
 
     if (showMasterToggle) {
-        container.appendChild(Utils.Settings.createToggleRow('Enable Client Window Tweaks', settingsEnabled, (next) => {
+        container.appendChild(Utils.Settings.createToggleRow(t('Enable Client Window Tweaks'), settingsEnabled, (next) => {
             setStoreValue(SETTINGS_KEY, next);
             isEnabled = next;
             if (next) {
@@ -624,7 +625,7 @@ function renderSettings(container, showMasterToggle = true) {
     sectionToggleRow.style.gridTemplateColumns = '1fr 1fr';
     sectionToggleRow.style.gap = '10px';
 
-    const resolutionToggle = Utils.Settings.createToggleRow('Apply Resolution', resizeEnabled, (next) => {
+    const resolutionToggle = Utils.Settings.createToggleRow(t('Apply Resolution'), resizeEnabled, (next) => {
         setStoreValue(RESIZE_KEY, next);
         if (isEnabled) {
             if (next) {
@@ -635,7 +636,7 @@ function renderSettings(container, showMasterToggle = true) {
         }
     });
 
-    const titleToggle = Utils.Settings.createToggleRow('Apply Title', titleEnabled, (next) => {
+    const titleToggle = Utils.Settings.createToggleRow(t('Apply Title'), titleEnabled, (next) => {
         setStoreValue(TITLE_ENABLED_KEY, next);
         if (isEnabled) {
             if (next) {
@@ -646,7 +647,7 @@ function renderSettings(container, showMasterToggle = true) {
         }
     });
 
-    const dragToggle = Utils.Settings.createToggleRow('Apply Drag Bar', dragEnabled, (next) => {
+    const dragToggle = Utils.Settings.createToggleRow(t('Apply Drag Bar'), dragEnabled, (next) => {
         setStoreValue(DRAG_ENABLED_KEY, next);
         if (isEnabled) {
             if (next) {
@@ -657,7 +658,7 @@ function renderSettings(container, showMasterToggle = true) {
         }
     });
 
-    const fullscreenToggle = Utils.Settings.createToggleRow('Enable Fullscreen (F11)', getStoreValue(FULLSCREEN_KEY, false), (next) => {
+    const fullscreenToggle = Utils.Settings.createToggleRow(t('Enable Fullscreen (F11)'), getStoreValue(FULLSCREEN_KEY, false), (next) => {
         setStoreValue(FULLSCREEN_KEY, next);
         if (isEnabled) {
             if (next) installFullscreenListener();
@@ -679,7 +680,7 @@ function renderSettings(container, showMasterToggle = true) {
     });
 
     const presetLabel = document.createElement('span');
-    presetLabel.textContent = 'Resolution Preset';
+    presetLabel.textContent = t('Resolution Preset');
     Object.assign(presetLabel.style, {
         color: '#a09b8c',
         fontSize: '12px',
@@ -756,8 +757,8 @@ function renderSettings(container, showMasterToggle = true) {
     sizeRow.style.display = 'flex';
     sizeRow.style.alignItems = 'center';
     sizeRow.style.gap = '10px';
-    sizeRow.appendChild(createLabeledInput('Width', widthInput));
-    sizeRow.appendChild(createLabeledInput('Height', heightInput));
+    sizeRow.appendChild(createLabeledInput(t('Width'), widthInput));
+    sizeRow.appendChild(createLabeledInput(t('Height'), heightInput));
     container.appendChild(sizeRow);
 
     const titleInput = document.createElement('input');
@@ -776,7 +777,7 @@ function renderSettings(container, showMasterToggle = true) {
         setStoreValue(TITLE_KEY, titleInput.value.trim());
         if (Utils.Store.get(MODULE_KEY, SETTINGS_KEY) && getStoreValue(TITLE_ENABLED_KEY, true)) applySettings();
     });
-    container.appendChild(createLabeledInput('Client title', titleInput));
+    container.appendChild(createLabeledInput(t('Client title'), titleInput));
 
     const dragInputContainer = document.createElement('div');
     dragInputContainer.style.display = 'flex';
@@ -811,9 +812,9 @@ function renderSettings(container, showMasterToggle = true) {
     dragInputContainer.appendChild(dragInput);
     dragInputContainer.appendChild(dragValueDisplay);
 
-    container.appendChild(createLabeledInput('Drag bar height (%)', dragInputContainer));
+    container.appendChild(createLabeledInput(t('Drag bar height (%)'), dragInputContainer));
 
-    container.appendChild(Utils.Settings.createInfoBox('Settings are applied when enabled and when values change.'));
+    container.appendChild(Utils.Settings.createInfoBox(t('Settings are applied when enabled and when values change.')));
 }
 
 export function init(context) {
@@ -822,9 +823,9 @@ export function init(context) {
     Utils.Settings.inject(context, {
         name: 'client-window-tweaks-settings',
         titleKey: 'snooze_client-window-tweaks',
-        titleName: 'Client Window Tweaks',
+        titleName: t('Client Window Tweaks'),
         capitalTitleKey: 'snooze_client-window-tweaks_capital',
-        capitalTitleName: 'CLIENT WINDOW TWEAKS',
+        capitalTitleName: t('CLIENT WINDOW TWEAKS'),
         class: 'client-window-tweaks-settings'
     });
 
@@ -833,12 +834,12 @@ export function init(context) {
     if (window.SnoozeManager && window.SnoozeManager.registerModule) {
         window.SnoozeManager.registerModule({
             id: 'clientWindowTweaks',
-            name: 'Client Window Tweaks',
-            description: 'Apply custom client resolution presets, title, and drag-area height on startup or any time.',
+            name: t('Client Window Tweaks'),
+            description: t('Apply custom client resolution presets, title, and drag-area height on startup or any time.'),
             settings: [{
                     type: 'toggle',
                     id: SETTINGS_KEY,
-                    label: 'Enable Client Window Tweaks',
+                    label: t('Enable Client Window Tweaks'),
                     value: isEnabled,
                     onChange: (val) => {
                         isEnabled = val;

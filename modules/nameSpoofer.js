@@ -5,6 +5,7 @@
  * @description Locally spoofs your displayed Riot ID by rewriting the identity fields. Cosmetic only: others still see your real name.
  * @link https://github.com/iIlusion
  */
+import { t } from './i18n.js';
 import Utils from './generalUtils.js';
 
 const MODULE = 'nameSpoofer';
@@ -16,11 +17,11 @@ let _hasSpoofedAnything = false;
 const cfg = {
     enabled: false, // global master switch (turns ALL spoofing on/off)
     spoofSelf: true, // spoof my own name
-    gameName: 'Name Spoofer',
-    tagLine: 'Pengu',
-    friendName: 'Friend',
+    gameName: t('Name Spoofer'),
+    tagLine: t('Pengu'),
+    friendName: t('Friend'),
     friendNumbers: true,
-    globalName: 'Player',
+    globalName: t('Player'),
     globalNumbers: true,
     spoofFriends: false,
     spoofLobby: false,
@@ -352,10 +353,10 @@ const ME_WS = [
 function loadConfig() {
     cfg.enabled = Utils.Store.get(MODULE, 'enabled') || false;
     cfg.spoofSelf = Utils.Store.get(MODULE, 'spoofSelf', true);
-    cfg.gameName = Utils.Store.get(MODULE, 'gameName', 'Name Spoofer');
-    cfg.tagLine = Utils.Store.get(MODULE, 'tagLine', 'Pengu');
-    cfg.friendName = Utils.Store.get(MODULE, 'friendName', 'Friend') || 'Friend';
-    cfg.globalName = Utils.Store.get(MODULE, 'globalName', 'Player') || 'Player';
+    cfg.gameName = Utils.Store.get(MODULE, 'gameName', t('Name Spoofer'));
+    cfg.tagLine = Utils.Store.get(MODULE, 'tagLine', t('Pengu'));
+    cfg.friendName = Utils.Store.get(MODULE, 'friendName', t('Friend')) || t('Friend');
+    cfg.globalName = Utils.Store.get(MODULE, 'globalName', t('Player')) || t('Player');
     cfg.friendNumbers = Utils.Store.get(MODULE, 'friendNumbers', true);
     cfg.globalNumbers = Utils.Store.get(MODULE, 'globalNumbers', true);
     cfg.spoofFriends = Utils.Store.get(MODULE, 'spoofFriends') || false;
@@ -2531,14 +2532,14 @@ export function init(context) {
     setupSettings(context);
 }
 
-const DESCRIPTION = 'Locally replaces your displayed Riot ID and optionally aliases other players (Friend / Player) in the friends list, lobby, non-ranked champ select, and match history / post-game. Client-side Only.';
+const DESCRIPTION = t('Locally replaces your displayed Riot ID and optionally aliases other players (Friend / Player) in the friends list, lobby, non-ranked champ select, and match history / post-game. Client-side Only.');
 
 const PLUGIN_CFG = {
     name: 'name-spoofer-settings',
     titleKey: 'lx_name-spoofer',
-    titleName: 'Name Spoofer',
+    titleName: t('Name Spoofer'),
     capitalTitleKey: 'lx_name-spoofer_capital',
-    capitalTitleName: 'NAME SPOOFER',
+    capitalTitleName: t('NAME SPOOFER'),
     class: 'name-spoofer-settings'
 };
 
@@ -2547,12 +2548,12 @@ function setupSettings(context) {
     if (window.SnoozeManager && window.SnoozeManager.registerModule) {
         window.SnoozeManager.registerModule({
             id: MODULE,
-            name: 'Name Spoofer',
+            name: t('Name Spoofer'),
             description: DESCRIPTION,
             settings: [{
                     type: 'toggle',
                     id: 'enabled',
-                    label: 'Enable Name Spoofer (master)',
+                    label: t('Enable Name Spoofer (master)'),
                     value: cfg.enabled,
                     onChange: (v) => saveCfg('enabled', v)
                 },
@@ -2652,7 +2653,7 @@ function nameRow(label, nameKey, dflt, opts = {}) {
         cb.addEventListener('click', (e) => e.stopPropagation());
         cb.addEventListener('change', () => saveCfg(numKey, cb.checked));
         wrap.appendChild(cb);
-        wrap.appendChild(document.createTextNode('Numbers'));
+        wrap.appendChild(document.createTextNode(t('Numbers')));
         row.appendChild(wrap);
     }
     return row;
@@ -2669,27 +2670,27 @@ function buildSettings(c) {
     c.style.marginTop = '0';
     c.style.borderLeft = '2px solid #3e2e13';
 
-    c.appendChild(sectionTitle('My Name'));
-    c.appendChild(Utils.Settings.createToggleRow('Spoof My Name', cfg.spoofSelf, (v) => saveCfg('spoofSelf', v)));
-    c.appendChild(nameRow('Game Name', 'gameName', real.gameName || 'Name Spoofer', {
+    c.appendChild(sectionTitle(t('My Name')));
+    c.appendChild(Utils.Settings.createToggleRow(t('Spoof My Name'), cfg.spoofSelf, (v) => saveCfg('spoofSelf', v)));
+    c.appendChild(nameRow(t('Game Name'), 'gameName', real.gameName || t('Name Spoofer'), {
         width: '180px'
     }));
-    c.appendChild(nameRow('Tagline', 'tagLine', real.tagLine || 'Pengu', {
+    c.appendChild(nameRow(t('Tagline'), 'tagLine', real.tagLine || t('Pengu'), {
         width: '90px'
     }));
 
-    c.appendChild(sectionTitle('Where to Spoof'));
-    c.appendChild(Utils.Settings.createToggleRow('Friends list / social / invite panel', cfg.spoofFriends, (v) => saveCfg('spoofFriends', v)));
-    c.appendChild(Utils.Settings.createToggleRow('Lobby', cfg.spoofLobby, (v) => saveCfg('spoofLobby', v)));
-    c.appendChild(Utils.Settings.createToggleRow('Champ Select (non-ranked)', cfg.spoofChampSelect, (v) => saveCfg('spoofChampSelect', v)));
-    c.appendChild(Utils.Settings.createToggleRow('Match History & Post-Game', cfg.spoofMatchHistory, (v) => saveCfg('spoofMatchHistory', v)));
+    c.appendChild(sectionTitle(t('Where to Spoof')));
+    c.appendChild(Utils.Settings.createToggleRow(t('Friends list / social / invite panel'), cfg.spoofFriends, (v) => saveCfg('spoofFriends', v)));
+    c.appendChild(Utils.Settings.createToggleRow(t('Lobby'), cfg.spoofLobby, (v) => saveCfg('spoofLobby', v)));
+    c.appendChild(Utils.Settings.createToggleRow(t('Champ Select (non-ranked)'), cfg.spoofChampSelect, (v) => saveCfg('spoofChampSelect', v)));
+    c.appendChild(Utils.Settings.createToggleRow(t('Match History & Post-Game'), cfg.spoofMatchHistory, (v) => saveCfg('spoofMatchHistory', v)));
 
-    c.appendChild(sectionTitle('Names for Other Players'));
-    c.appendChild(nameRow('Friend', 'friendName', 'Friend', {
+    c.appendChild(sectionTitle(t('Names for Other Players')));
+    c.appendChild(nameRow(t('Friend'), 'friendName', t('Friend'), {
         numKey: 'friendNumbers',
         fixedDefault: true
     }));
-    c.appendChild(nameRow('Other', 'globalName', 'Player', {
+    c.appendChild(nameRow(t('Other'), 'globalName', t('Player'), {
         numKey: 'globalNumbers',
         fixedDefault: true
     }));
@@ -2702,7 +2703,7 @@ function buildSettings(c) {
         color: '#5a7080',
         paddingTop: '12px'
     });
-    credit.textContent = 'by Lx @iIlusion';
+    credit.textContent = t('by Lx @iIlusion');
     c.appendChild(credit);
 }
 

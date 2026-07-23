@@ -5,6 +5,7 @@
  * @description Whale Helper: Rerollable Pool Button (Loot page), Drop Chance viewer (Loot page), Skin Tier Badges (Champ Select), Hide Unowned Skins/Chromas (Champion Select), Skin Randomizer (Champ Select).
  * @link https://github.com/ReformedDoge/Snooze-Manager
  */
+import { t } from './i18n.js';
 import Utils from './generalUtils.js';
 
 // Config
@@ -51,7 +52,7 @@ function syncTogglesUI() {
     // Update Snooze-Manager modal toggle
     document.querySelectorAll('.pm-row').forEach(row => {
         const titleEl = row.querySelector('.pm-label-title');
-        if (titleEl && titleEl.textContent === 'Hide Unowned Skins & Chromas (Champ Select)') {
+        if (titleEl && titleEl.textContent === t('Hide Unowned Skins & Chromas (Champ Select)')) {
             const btn = row.querySelector('.pm-toggle-btn');
             if (btn) btn.className = 'pm-toggle-btn ' + (isHideUnownedEnabled ? 'on' : 'off');
         }
@@ -60,7 +61,7 @@ function syncTogglesUI() {
     // Update legacy native settings toggle
     document.querySelectorAll('.whale-helper-settings lol-uikit-flat-checkbox').forEach(cb => {
         const labelEl = cb.querySelector('[slot="label"]');
-        if (labelEl && labelEl.textContent === 'Hide Unowned Skins & Chromas (Champ Select)') {
+        if (labelEl && labelEl.textContent === t('Hide Unowned Skins & Chromas (Champ Select)')) {
             const input = cb.querySelector('input');
             if (input) {
                 input.checked = isHideUnownedEnabled;
@@ -101,7 +102,7 @@ const tabData = {
         cardMap: new Map(),
         activeFilter: 'all',
         fetcher: fetchUnownedSkins,
-        subtitle: "Rerollable Skins you don't own yet"
+        subtitle: t("Rerollable Skins you don't own yet")
     },
     icons: {
         loaded: false,
@@ -109,7 +110,7 @@ const tabData = {
         cardMap: new Map(),
         activeFilter: 'all',
         fetcher: fetchUnownedIcons,
-        subtitle: "Rerollable Icons you don't own yet"
+        subtitle: t("Rerollable Icons you don't own yet")
     },
     wards: {
         loaded: false,
@@ -117,7 +118,7 @@ const tabData = {
         cardMap: new Map(),
         activeFilter: 'all',
         fetcher: fetchUnownedWards,
-        subtitle: "Rerollable Wards you don't own yet"
+        subtitle: t("Rerollable Wards you don't own yet")
     },
     emotes: {
         loaded: false,
@@ -125,7 +126,7 @@ const tabData = {
         cardMap: new Map(),
         activeFilter: 'all',
         fetcher: fetchUnownedEmotes,
-        subtitle: "Rerollable Emotes you don't own yet"
+        subtitle: t("Rerollable Emotes you don't own yet")
     }
 };
 let sessionUnsub = null;
@@ -292,61 +293,61 @@ function injectStyles() {
 // Metadata
 const RARITY_META = {
     kTranscendent: {
-        label: 'Transcendent',
+        label: t('Transcendent'),
         color: '#f0e6d2',
         bg: '#3a1500',
         icon: '/lol-game-data/assets/v1/rarity-gem-icons/transcendent.png'
     },
     kExalted: {
-        label: 'Exalted',
+        label: t('Exalted'),
         color: '#f0e6d2',
         bg: '#3a1500',
         icon: '/lol-game-data/assets/v1/rarity-gem-icons/exalted.png'
     },
     kUltimate: {
-        label: 'Ultimate',
+        label: t('Ultimate'),
         color: '#f0c070',
         bg: '#2a1500',
         icon: '/lol-game-data/assets/v1/rarity-gem-icons/ultimate.png'
     },
     kMythic: {
-        label: 'Mythic',
+        label: t('Mythic'),
         color: '#c896e8',
         bg: '#1a0028',
         icon: '/lol-game-data/assets/v1/rarity-gem-icons/mythic.png'
     },
     kLegendary: {
-        label: 'Legendary',
+        label: t('Legendary'),
         color: '#e8a040',
         bg: '#1e1000',
         icon: '/lol-game-data/assets/v1/rarity-gem-icons/legendary.png'
     },
     kEpic: {
-        label: 'Epic',
+        label: t('Epic'),
         color: '#9090f4',
         bg: '#0a0018',
         icon: '/lol-game-data/assets/v1/rarity-gem-icons/epic.png'
     },
     kExclusive: {
-        label: 'Mythic',
+        label: t('Mythic'),
         color: '#c896e8',
         bg: '#1a0028',
         icon: '/lol-game-data/assets/v1/rarity-gem-icons/mythic.png'
     },
     kDefault: {
-        label: 'Classic',
+        label: t('Classic'),
         color: '#a09b8c',
         bg: '#111',
         icon: ''
     },
     kNoRarity: {
-        label: 'Classic',
+        label: t('Classic'),
         color: '#a09b8c',
         bg: '#111',
         icon: ''
     },
     '': {
-        label: 'Classic',
+        label: t('Classic'),
         color: '#a09b8c',
         bg: '#111',
         icon: ''
@@ -572,7 +573,7 @@ async function fetchUnownedSkins() {
         if (!skinId || ownedSkinIds.has(skinId)) continue;
 
         const skin = skinsCache.get(skinId);
-        const name = skin?.name ?? `Unknown Skin (${skinId})`;
+        const name = skin?.name ?? t("Unknown Skin ({{id}})", { id: skinId });
         results.push({
             id: skinId,
             originalName: item,
@@ -617,7 +618,7 @@ async function fetchUnownedIcons() {
         if (!id || ownedIds.has(id)) continue;
 
         const d = dataMap.get(id);
-        const name = d?.title || d?.name || `Unknown Icon (${id})`;
+        const name = d?.title || d?.name || t("Unknown Icon ({{id}})", { id: id });
         results.push({
             id: id,
             originalName: item,
@@ -656,7 +657,7 @@ async function fetchUnownedWards() {
         if (!id || ownedIds.has(id)) continue;
 
         const d = dataMap.get(id);
-        const name = d?.name || `Unknown Ward (${id})`;
+        const name = d?.name || t("Unknown Ward ({{id}})", { id: id });
         results.push({
             id: id,
             originalName: item,
@@ -696,7 +697,7 @@ async function fetchUnownedEmotes() {
         if (!id || !unownedMap.has(id)) continue;
 
         const c = unownedMap.get(id);
-        const name = c.name || `Unknown Emote (${id})`;
+        const name = c.name || t("Unknown Emote ({{id}})", { id: id });
         results.push({
             id: id,
             originalName: item,
@@ -789,7 +790,7 @@ function applyFilter(filter) {
     }
 
     const countEl = document.getElementById('sm-whale-count');
-    if (countEl) countEl.textContent = `${visibleCount} item${visibleCount !== 1 ? 's' : ''}`;
+    if (countEl) countEl.textContent = t("{{count}} items", { count: visibleCount });
 
     const grid = document.getElementById('sm-whale-grid');
     const emptyState = document.getElementById('sm-whale-empty-state');
@@ -816,7 +817,7 @@ function rebuildFilterChips() {
 
     const chipDefs = [{
         key: 'all',
-        label: 'All'
+        label: t('All')
     }];
 
     if (currentTab === 'skins') {
@@ -829,7 +830,7 @@ function rebuildFilterChips() {
         });
         if (hasOthers) chipDefs.push({
             key: 'others',
-            label: 'Others'
+            label: t('Others')
         });
     }
 
@@ -880,7 +881,7 @@ function switchTab(tabId) {
 
     if (!data.loaded) {
         document.getElementById('sm-whale-toolbar').classList.add('hidden');
-        grid.innerHTML = '<div class="sm-whale-status">Fetching data...</div>';
+        grid.innerHTML = '<div class="sm-whale-status">' + t('Fetching data...') + '</div>';
         loadTabData(tabId);
     } else {
         document.getElementById('sm-whale-toolbar').classList.remove('hidden');
@@ -925,8 +926,8 @@ async function loadTabData(tabId) {
     } catch (err) {
         Utils.Debug.error(`[WhaleHelper] Fetch failed for ${tabId}:`, err);
         if (currentTab === tabId) {
-            subtitle.textContent = 'Error loading data';
-            grid.innerHTML = `<div class="sm-whale-status error">Failed to load data.<br><span style="font-size:11px;">${err.message}</span></div>`;
+            subtitle.textContent = t('Error loading data');
+            grid.innerHTML = `<div class="sm-whale-status error">${t('Failed to load data.')}<br><span style="font-size:11px;">${err.message}</span></div>`;
         }
     }
 }
@@ -936,7 +937,7 @@ async function backgroundSyncData() {
     if (!data.loaded) return;
 
     const subtitle = document.getElementById('sm-whale-subtitle');
-    if (subtitle) subtitle.textContent = 'Syncing...';
+    if (subtitle) subtitle.textContent = t('Syncing...');
 
     try {
         const newItems = await data.fetcher();
@@ -993,7 +994,7 @@ async function backgroundSyncData() {
         }
         if (subtitle && activeTabWhenStarted === currentTab) subtitle.textContent = data.subtitle;
     } catch (err) {
-        if (subtitle) subtitle.textContent = `Offline (Sync failed)`;
+        if (subtitle) subtitle.textContent = t('Offline (Sync failed)');
     }
 }
 
@@ -1028,7 +1029,7 @@ function createPanel() {
 
     const titleWrap = document.createElement('div');
     const title = document.createElement('h2');
-    title.textContent = 'Whale Helper';
+    title.textContent = t('Whale Helper');
     const subtitle = document.createElement('div');
     subtitle.id = 'sm-whale-subtitle';
     subtitle.textContent = 'Loading...';
@@ -1040,7 +1041,7 @@ function createPanel() {
 
     const refreshBtn = document.createElement('button');
     refreshBtn.innerHTML = '&#x21bb;';
-    refreshBtn.title = "Refresh Data";
+    refreshBtn.title = t("Refresh Data");
     refreshBtn.style.cssText = 'background:none;border:none;color:#a09b8c;font-size:20px;cursor:pointer;padding:0;line-height:1;transition:color 0.15s;';
     refreshBtn.onmouseover = () => refreshBtn.style.color = '#0ac8b9';
     refreshBtn.onmouseout = () => refreshBtn.style.color = '#a09b8c';
@@ -1068,7 +1069,7 @@ function createPanel() {
     const searchInput = document.createElement('input');
     searchInput.type = 'text';
     searchInput.className = 'sm-whale-search';
-    searchInput.placeholder = 'Search items...';
+    searchInput.placeholder = t('Search items...');
     searchInput.spellcheck = false;
 
     searchInput.addEventListener('input', (e) => {
@@ -1088,7 +1089,7 @@ function createPanel() {
     emptyState.id = 'sm-whale-empty-state';
     emptyState.className = 'sm-whale-status empty';
     emptyState.style.display = 'none';
-    emptyState.textContent = 'No items match this filter.';
+    emptyState.textContent = t('No items match this filter.');
 
     body.appendChild(toolbar);
     body.appendChild(grid);
@@ -1101,22 +1102,22 @@ function createPanel() {
     const tabs = [{
             id: 'skins',
             icon: '/fe/lol-loot/assets/category_icons/skin.png',
-            title: 'Skins'
+            title: t('Skins')
         },
         {
             id: 'icons',
             icon: '/fe/lol-loot/assets/category_icons/summonericon.png',
-            title: 'Icons'
+            title: t('Icons')
         },
         {
             id: 'wards',
             icon: '/fe/lol-loot/assets/category_icons/wardskin.png',
-            title: 'Wards'
+            title: t('Wards')
         },
         {
             id: 'emotes',
             icon: '/fe/lol-loot/assets/category_icons/emote.png',
-            title: 'Emotes'
+            title: t('Emotes')
         }
     ];
 
@@ -1150,7 +1151,7 @@ function injectButton(actionTabsContainer) {
     const btn = document.createElement('div');
     btn.id = BTN_ID;
     btn.setAttribute(BTN_ATTR, 'true');
-    btn.title = 'Whale Helper — skins you don\'t own yet';
+    btn.title = t("Whale Helper — skins you don't own yet");
 
     btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="-5.0 -10.0 110.0 135.0">
      <path d="m93.117 34.301c-0.14453-0.89453-0.85547-1.5859-1.7539-1.7031-0.89844-0.11719-1.7617 0.37109-2.1289 1.1992-0.82422 1.8594-2.5234 2.2031-5.4492 2.6602-2.7617 0.14453-5.3984 1.2148-7.4805 3.0391-1.6914-1.9023-3.8398-3.3438-6.2461-4.1875-2.2305-0.69531-4.1367-2.1758-5.3633-4.1641-0.54297-0.83203-1.5234-1.2578-2.5-1.0898-0.99609 0.16797-1.7891 0.91406-2.0234 1.8906-1.0391 4.3945-1.5508 9.5117 2.5469 14.152v0.003906c2.0859 2.2344 4.6094 4.0156 7.4141 5.2383 0.21094 0.085937 0.32813 0.32031 0.26953 0.54297-0.066406 0.28125-0.17969 0.54688-0.33594 0.79297-1.1797 1.4453-3 2.207-4.8594 2.0352-1.9336-0.17578-3.0977-1.7109-5.1562-4.6445-0.76562-1.0898-1.6328-2.3281-2.6641-3.5742-4.3789-5.2969-10.156-9.2617-16.676-11.445-2.4922-0.77344-15.43-4.1992-25.336 4.4336-6.1797 5.5586-9.4023 13.691-8.6992 21.973 0.10547 1.1562 0.29688 2.3047 0.57031 3.4336 0.015625 0.074219 0.03125 0.14844 0.054687 0.21875 0.98047 4.6328 3.7695 8.6797 7.75 11.246 4.0352 2.2773 8.4141 3.875 12.965 4.7305 3.0273 3.7695 7.6445 5.9141 12.477 5.7852h0.023437c1.0469 0.007812 2-0.61328 2.4141-1.5781 0.41406-0.96484 0.20703-2.082-0.51953-2.8359 1.3945-0.019531 2.7852-0.082031 4.1602-0.19922 3.6641 1.7031 7.668 2.5469 11.703 2.4688h0.10937c1.0273 0 1.9453-0.63672 2.3086-1.5938 0.37891-0.97656 0.11328-2.082-0.66406-2.7812-0.26172-0.23828-0.49219-0.47656-0.71094-0.71484 5.7383-1.8398 10.832-5.2852 14.672-9.9297 1.543-1.9609 2.8164-4.1211 3.7852-6.418 0.011718-0.019531 0.015624-0.039062 0.027343-0.058594h-0.003906c1.4297-3.4297 2.293-7.0664 2.5586-10.77 0.03125-0.37109 0.29688-0.67969 0.66016-0.75781 3.3359-0.61328 6.4688-2.0508 9.1055-4.1836 3.8086-3.7539 3.5117-9.8906 2.9961-13.215zm-59.426 47.715c1.5781 0.18359 3.1758 0.30469 4.7812 0.375 0.25781 0.45312 0.54688 0.89062 0.86719 1.3008-1.9805-0.14062-3.9102-0.71094-5.6484-1.6758zm-4.4883-3.8516-0.011719-0.003906c-4.3945-0.77734-8.6289-2.2891-12.52-4.4766v-0.003906c-2.5273-1.5938-4.4688-3.9609-5.5352-6.75 2.7344 0.79297 5.5703 1.1914 8.4219 1.1875 3.3477-0.011719 6.6719-0.53516 9.8594-1.5625 0.70703 0.12109 1.4062 0.28125 2.0977 0.47656 2.0625 0.60938 4 1.582 5.7148 2.875 0.52734 3.6328 2.3008 6.9648 5.0156 9.4336-4.3789 0.0625-8.75-0.33203-13.043-1.1758zm28.324-1.2305c-0.26172-0.53125-0.50781-1.082-0.76953-1.6758-0.22656-0.50781-0.46094-1.0352-0.71875-1.5742 0.57813-0.125 1.168-0.25781 1.7852-0.39453 4.8281-1.0977 9.4531-2.957 13.699-5.5078-3.6641 4.3633-8.5312 7.5469-13.996 9.1523zm30.398-31.645c-2.2266 1.7148-4.8359 2.8672-7.6016 3.3633-1.7031 0.37891-2.957 1.8281-3.082 3.5703-0.22656 3.1953-0.94141 6.3359-2.1172 9.3125-5.2734 4.2148-11.422 7.1914-18 8.7109-0.94141 0.21094-1.8242 0.40234-2.6797 0.58203-1.0508-1.5898-2.2969-3.043-3.707-4.3281-0.30078-0.28125-0.70703-0.42969-1.1211-0.41406-0.41406 0.015624-0.80469 0.19531-1.0859 0.5-0.28125 0.30078-0.42969 0.70703-0.41406 1.1211 0.015624 0.41406 0.19531 0.80469 0.5 1.0859 2.3359 2.1328 4.1445 4.7773 5.2812 7.7305 0.46875 1.1133 1.7461 2.2852 2.5156 3.3828 2.1289 3.0312 3.9648 5.6484 7.4375 5.9609 2.9883 0.29297 5.9102-0.98828 7.7148-3.3867 0.36328-0.53906 0.625-1.1406 0.78125-1.7695 0.45312-1.7148-0.42188-3.5039-2.0547-4.1992-2.3828-1.0352-4.5312-2.543-6.3125-4.4375-2.3125-2.6172-2.9648-5.5781-2.1406-10h0.003906c1.543 1.9258 3.6055 3.3711 5.9414 4.1641 2.5391 0.85547 4.7227 2.5352 6.2031 4.7734 0.3125 0.43359 0.82422 0.68359 1.3633 0.66016 0.53516-0.03125 1.0195-0.33594 1.2812-0.80859 1.3633-2.4727 3.7656-2.8438 6.5508-3.2773v0.003906c2.1602-0.14062 4.2383-0.85547 6.0273-2.0664 0.085938 2.6328-0.32422 5.8008-2.3633 7.8086z"/>
@@ -1198,13 +1199,13 @@ async function showOddsModal(item, recipeName) {
             renderOddsModal(item, odds);
         } else {
             renderOddsModal(item, {
-                message: "Drop rates are currently unavailable for this item."
+                message: t("Drop rates are currently unavailable for this item.")
             });
         }
     } catch (e) {
         Utils.Debug.error("[WhaleHelper] Failed to fetch SGP odds:", e);
         renderOddsModal(item, {
-            message: "Drop rates are not published for this item."
+            message: t("Drop rates are not published for this item.")
         });
     }
 }
@@ -1262,27 +1263,27 @@ function flattenOddsTree(node, currentRate = 1) {
 
 function parseQueryToFriendlyLabel(raw, quantity) {
     raw = String(raw || '').trim();
-    if (!raw) return 'Unknown Item';
+    if (!raw) return t('Unknown Item');
 
     let isSpecific = false;
 
     if (raw.includes("lootName == 'CURRENCY_mythic'") || raw.includes("CURRENCY_mythic")) {
-        return quantity > 1 ? quantity + " Mythic Essence" : "Mythic Essence";
+        return quantity > 1 ? t("{{qty}} Mythic Essence", { qty: quantity }) : t("Mythic Essence");
     }
     if (raw.includes("lootName == 'CURRENCY_cosmetic'") || raw.includes("CURRENCY_cosmetic")) {
-        return quantity > 1 ? quantity + " Orange Essence" : "Orange Essence";
+        return quantity > 1 ? t("{{qty}} Orange Essence", { qty: quantity }) : t("Orange Essence");
     }
     if (raw.includes("lootName == 'CURRENCY_champion'") || raw.includes("CURRENCY_champion")) {
-        return quantity > 1 ? quantity + " Blue Essence" : "Blue Essence";
+        return quantity > 1 ? t("{{qty}} Blue Essence", { qty: quantity }) : t("Blue Essence");
     }
     if (raw.includes("lootName == 'MATERIAL_key'") || raw.includes("MATERIAL_key")) {
-        return quantity > 1 ? quantity + " Key Shards" : "Key Shard";
+        return quantity > 1 ? t("{{qty}} Key Shards", { qty: quantity }) : t("Key Shard");
     }
     if (raw.includes("lootName == 'CHEST_generic'") || raw.includes("CHEST_generic")) {
-        return quantity > 1 ? quantity + " Hextech Chests" : "Hextech Chest";
+        return quantity > 1 ? t("{{qty}} Hextech Chests", { qty: quantity }) : t("Hextech Chest");
     }
     if (raw.includes("CHEST_798")) {
-        return quantity > 1 ? quantity + " Masterwork Chests" : "Masterwork Chest";
+        return quantity > 1 ? t("{{qty}} Masterwork Chests", { qty: quantity }) : t("Masterwork Chest");
     }
     if (raw.includes("lootName == 'CHAMPION_SKIN_") || raw.startsWith("CHAMPION_SKIN_")) {
         isSpecific = true;
@@ -1331,25 +1332,25 @@ function parseQueryToFriendlyLabel(raw, quantity) {
         const regionTag = posTags.find(t => t !== 'champie' && t !== 'exclusive');
         if (regionTag) {
             const capitalized = regionTag.charAt(0).toUpperCase() + regionTag.slice(1);
-            return prefix + capitalized + " Champie Icon";
+            return prefix + t("{{region}} Champie Icon", { region: capitalized });
         }
-        return prefix + "Champie Icon";
+        return prefix + t("Champie Icon");
     }
 
     if (isSpecific && types.length === 0) {
-        return prefix + "Specific Champion Skin";
+        return prefix + t("Specific Champion Skin");
     }
 
     const typeMap = {
-        'SKIN': 'Skin',
-        'SKIN_RENTAL': 'Skin Shard',
-        'WARDSKIN': 'Ward Skin',
-        'WARDSKIN_RENTAL': 'Ward Skin Shard',
-        'CHAMPION': 'Champion',
-        'CHAMPION_RENTAL': 'Champion Shard',
-        'SUMMONERICON': 'Summoner Icon',
-        'EMOTE': 'Emote',
-        'CHROMA': 'Chroma'
+        'SKIN': t('Skin'),
+        'SKIN_RENTAL': t('Skin Shard'),
+        'WARDSKIN': t('Ward Skin'),
+        'WARDSKIN_RENTAL': t('Ward Skin Shard'),
+        'CHAMPION': t('Champion'),
+        'CHAMPION_RENTAL': t('Champion Shard'),
+        'SUMMONERICON': t('Summoner Icon'),
+        'EMOTE': t('Emote'),
+        'CHROMA': t('Chroma')
     };
 
     const sortedTypes = ['SKIN', 'SKIN_RENTAL', 'WARDSKIN', 'WARDSKIN_RENTAL', 'CHAMPION', 'CHAMPION_RENTAL', 'EMOTE', 'SUMMONERICON', 'CHROMA'];
@@ -1368,13 +1369,13 @@ function parseQueryToFriendlyLabel(raw, quantity) {
         }
     }
 
-    let baseType = 'Loot Item';
+    let baseType = t('Loot Item');
     if (cleanedTypes.length === 1) {
         baseType = cleanedTypes[0];
     } else if (cleanedTypes.length === 2) {
-        baseType = cleanedTypes[0] + " or " + cleanedTypes[1];
+        baseType = cleanedTypes[0] + ' ' + t('or') + ' ' + cleanedTypes[1];
     } else if (cleanedTypes.length > 2) {
-        baseType = cleanedTypes.slice(0, -1).join(', ') + ' or ' + cleanedTypes[cleanedTypes.length - 1];
+        baseType = cleanedTypes.slice(0, -1).join(', ') + ' ' + t('or') + ' ' + cleanedTypes[cleanedTypes.length - 1];
     }
 
     const hasSkinRental = types.includes('SKIN_RENTAL');
@@ -1382,42 +1383,42 @@ function parseQueryToFriendlyLabel(raw, quantity) {
 
     if (hasSkinRental && hasSkinPermanent && values.includes(3250) && !isExclusive && !isMythic && !isExalted && !isTranscendent) {
         if (values.includes(520) && values.includes(1350) && values.includes(1820)) {
-            return prefix + "Skin Shard (520-1820 RP) or Ultimate Skin";
+            return prefix + t("Skin Shard (520-1820 RP) or Ultimate Skin");
         }
         if (values.includes(975) && values.includes(1350) && values.includes(1820) && !values.includes(520)) {
-            return prefix + "Skin Shard (975+ RP) or Ultimate Skin";
+            return prefix + t("Skin Shard (975+ RP) or Ultimate Skin");
         }
-        return prefix + "Skin Shard or Ultimate Skin";
+        return prefix + t("Skin Shard or Ultimate Skin");
     }
 
     let exclusivity = '';
-    if (isTranscendent) exclusivity = 'Transcendent ';
-    else if (isExalted) exclusivity = 'Exalted ';
-    else if (isMythic) exclusivity = 'Mythic ';
-    else if (isExclusive) exclusivity = 'Mythic/Exclusive ';
+    if (isTranscendent) exclusivity = t('Transcendent') + ' ';
+    else if (isExalted) exclusivity = t('Exalted') + ' ';
+    else if (isMythic) exclusivity = t('Mythic') + ' ';
+    else if (isExclusive) exclusivity = t('Mythic/Exclusive') + ' ';
 
     let suffix = '';
     if ((types.includes('SKIN') || types.includes('SKIN_RENTAL')) && values.length > 0 && !hasSkinPermanent) {
         const rpLabels = {
-            3250: 'Ultimate',
-            2775: 'Ultimate',
-            1820: 'Legendary',
-            1350: 'Epic',
-            975: '975 RP',
-            750: '750 RP',
-            520: '520 RP',
-            390: '390 RP'
+            3250: t('Ultimate'),
+            2775: t('Ultimate'),
+            1820: t('Legendary'),
+            1350: t('Epic'),
+            975: t('975 RP'),
+            750: t('750 RP'),
+            520: t('520 RP'),
+            390: t('390 RP')
         };
         const matchedVals = values.filter(v => rpLabels[v]).sort((a, b) => a - b);
         if (matchedVals.length > 2) {
-            let minLabel = matchedVals[0] + " RP";
-            if (matchedVals[0] === 1350) minLabel = "Epic";
-            else if (matchedVals[0] === 1820) minLabel = "Legendary";
+            let minLabel = t("{{val}} RP", { val: matchedVals[0] });
+            if (matchedVals[0] === 1350) minLabel = t("Epic");
+            else if (matchedVals[0] === 1820) minLabel = t("Legendary");
 
-            let maxLabel = matchedVals[matchedVals.length - 1] + " RP";
-            if (matchedVals[matchedVals.length - 1] === 1350) maxLabel = "Epic";
-            else if (matchedVals[matchedVals.length - 1] === 1820) maxLabel = "Legendary";
-            else if (matchedVals[matchedVals.length - 1] === 3250 || matchedVals[matchedVals.length - 1] === 2775) maxLabel = "Ultimate";
+            let maxLabel = t("{{val}} RP", { val: matchedVals[matchedVals.length - 1] });
+            if (matchedVals[matchedVals.length - 1] === 1350) maxLabel = t("Epic");
+            else if (matchedVals[matchedVals.length - 1] === 1820) maxLabel = t("Legendary");
+            else if (matchedVals[matchedVals.length - 1] === 3250 || matchedVals[matchedVals.length - 1] === 2775) maxLabel = t("Ultimate");
 
             if (minLabel === maxLabel) suffix = " (" + minLabel + ")";
             else suffix = " (" + minLabel + " - " + maxLabel + ")";
@@ -1427,12 +1428,22 @@ function parseQueryToFriendlyLabel(raw, quantity) {
     } else if (types.includes('CHAMPION_RENTAL')) {
         if (values.length > 0) {
             const beLabels = {
-                3900: '7800 BE',
-                3150: '6300 BE',
-                2400: '4800 BE',
-                1575: '3150 BE',
-                675: '1350 BE',
-                225: '450 BE'
+                3900: t('7800 BE'),
+                3150: t('6300 BE'),
+                2400: t('4800 BE'),
+                1575: t('3150 BE'),
+                675: t('1350 BE'),
+                225: t('450 BE')
+            };
+    } else if (types.includes('CHAMPION_RENTAL')) {
+        if (values.length > 0) {
+            const beLabels = {
+                3900: t('7800 BE'),
+                3150: t('6300 BE'),
+                2400: t('4800 BE'),
+                1575: t('3150 BE'),
+                675: t('1350 BE'),
+                225: t('450 BE')
             };
             const matchedVals = values.filter(v => beLabels[v]).sort((a, b) => a - b);
             if (matchedVals.length > 2) {
@@ -1441,26 +1452,26 @@ function parseQueryToFriendlyLabel(raw, quantity) {
                 suffix = " (" + matchedVals.map(v => beLabels[v]).join('/') + ")";
             }
         } else if (notValues.includes(225) && notValues.includes(675) && notValues.includes(1575)) {
-            suffix = " (4800+ BE)";
+            suffix = ' ' + t("(4800+ BE)");
         }
     }
 
     let label = prefix + exclusivity + baseType + suffix;
 
     if ((isExclusive || isMythic || isExalted || isTranscendent) && types.length > 2) {
-        label = prefix + (exclusivity || 'Mythic/Exclusive ') + "Drop (" + baseType + ")";
+        label = prefix + (exclusivity || t('Mythic/Exclusive') + ' ') + t("Drop ({{type}})", { type: baseType });
     }
 
-    if (baseType === 'Loot Item' && raw.length > 0) {
+    if (baseType === t('Loot Item') && raw.length > 0) {
         if (raw.includes('==') || raw.includes('&&')) {
-            return prefix + exclusivity + "Random Loot Item";
+            return prefix + exclusivity + t("Random Loot Item");
         }
         let niceRaw = raw.replace(/^(LOOTBUNDLE_|LOOTTABLE_)/, '');
         return prefix + niceRaw;
     }
 
     return label;
-}
+}}
 
 function parseOddsList(list) {
     const map = new Map();
@@ -1494,7 +1505,7 @@ function formatOddsList(parsedList) {
         const firstFew = parsedList.slice(0, 5);
         const restCount = parsedList.slice(5).reduce((acc, val) => acc + val.itemsCount, 0);
         const result = firstFew.map(formatEntry);
-        result.push(`<div style="color:#746e64; font-size:12px; margin-top:4px; text-align:center;">...and ${restCount} other item pools</div>`);
+        result.push(`<div style="color:#746e64; font-size:12px; margin-top:4px; text-align:center;">${t("...and {{count}} other item pools", { count: restCount })}</div>`);
         return result.join('');
     }
     return parsedList.map(formatEntry).join('');
@@ -1532,15 +1543,15 @@ function colorizeRPAndTiers(text) {
 function formatEntry(entry) {
     let rateStr = '';
     if (Math.abs(entry.rate - 100) < 0.01) {
-        rateStr = `<span style="color:#c8aa6e; font-weight:bold;">Guaranteed</span>`;
+        rateStr = `<span style="color:#c8aa6e; font-weight:bold;">${t('Guaranteed')}</span>`;
     } else if (entry.rate > 100) {
-        rateStr = `<span style="color:#c8aa6e; font-weight:bold;">${(entry.rate / 100).toFixed(2)}x Expected</span>`;
+        rateStr = `<span style="color:#c8aa6e; font-weight:bold;">${t("{{rate}}x Expected", { rate: (entry.rate / 100).toFixed(2) })}</span>`;
     } else {
         rateStr = `<span style="color:#0ac8b9; font-weight:bold;">${entry.rate.toFixed(2)}%</span>`;
     }
 
     const coloredLabel = colorizeRPAndTiers(entry.label);
-    const poolInfo = entry.itemsCount > 3 ? `<span style="color:#746e64; margin-left:6px; font-size:11px;">(Pool of ${entry.itemsCount} items)</span>` : '';
+    const poolInfo = entry.itemsCount > 3 ? `<span style="color:#746e64; margin-left:6px; font-size:11px;">${t("(Pool of {{count}} items)", { count: entry.itemsCount })}</span>` : '';
 
     return `<div class="odds-row" style="display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid rgba(255,255,255,0.03); font-size:13px; transition: background 0.2s;">
         <div style="display:flex; align-items:center; flex-wrap:wrap; gap:4px;"><span style="color:#f0e6d2;">${coloredLabel}</span>${poolInfo}</div>
@@ -1612,7 +1623,7 @@ function renderOddsModal(item, odds) {
     }
 
     const title = document.createElement('div');
-    title.textContent = item.itemDesc || item.localizedName || item.name || 'Loot Odds';
+    title.textContent = item.itemDesc || item.localizedName || item.name || t('Loot Odds');
     Object.assign(title.style, {
         color: '#f0e6d2',
         fontWeight: 'bold',
@@ -1675,7 +1686,7 @@ function renderOddsModal(item, odds) {
 
         if (guaranteed.length > 0) {
             const gTitle = document.createElement('div');
-            gTitle.textContent = 'Guaranteed Drops';
+            gTitle.textContent = t('Guaranteed Drops');
             Object.assign(gTitle.style, {
                 color: '#c8aa6e',
                 fontWeight: 'bold',
@@ -1700,7 +1711,7 @@ function renderOddsModal(item, odds) {
 
         if (chance.length > 0) {
             const cTitle = document.createElement('div');
-            cTitle.textContent = 'Bonus Chances';
+            cTitle.textContent = t('Bonus Chances');
             Object.assign(cTitle.style, {
                 color: '#c8aa6e',
                 fontWeight: 'bold',
@@ -1739,7 +1750,7 @@ function renderOddsModal(item, odds) {
             pity.style.display = 'flex';
             pity.style.alignItems = 'center';
             pity.style.gap = '6px';
-            pity.innerHTML = pityActive ? `<img src="/fe/lol-static-assets/svg/bad_luck_protection_dice.svg" style="width:16px;height:16px;filter:${iconFilter};"> <span>Bad Luck Protection: <span style="color:#0ac8b9;font-weight:bold;">Active</span></span>` : `<img src="/fe/lol-static-assets/svg/bad_luck_protection_dice.svg" style="width:16px;height:16px;opacity:0.5;filter:${iconFilter};"> <span>Bad Luck Protection: <span style="color:#746e64;">Disabled</span></span>`;
+            pity.innerHTML = pityActive ? `<img src="/fe/lol-static-assets/svg/bad_luck_protection_dice.svg" style="width:16px;height:16px;filter:${iconFilter};"> <span>${t('Bad Luck Protection')}: <span style="color:#0ac8b9;font-weight:bold;">${t('Active')}</span></span>` : `<img src="/fe/lol-static-assets/svg/bad_luck_protection_dice.svg" style="width:16px;height:16px;opacity:0.5;filter:${iconFilter};"> <span>${t('Bad Luck Protection')}: <span style="color:#746e64;">${t('Disabled')}</span></span>`;
             pity.style.color = '#a09b8c';
             pity.style.fontSize = '12px';
             flagsContainer.appendChild(pity);
@@ -1750,7 +1761,7 @@ function renderOddsModal(item, odds) {
             ownership.style.display = 'flex';
             ownership.style.alignItems = 'center';
             ownership.style.gap = '6px';
-            ownership.innerHTML = checksOwnership ? `<img src="/fe/lol-static-assets/svg/no_duplicates_cross_out.svg" style="width:16px;height:16px;filter:${iconFilter};"> <span>Checks Ownership: <span style="color:#0ac8b9;font-weight:bold;">Yes</span></span>` : `<img src="/fe/lol-static-assets/svg/no_duplicates_cross_out.svg" style="width:16px;height:16px;opacity:0.5;filter:${iconFilter};"> <span>Checks Ownership: <span style="color:#746e64;">No</span></span>`;
+            ownership.innerHTML = checksOwnership ? `<img src="/fe/lol-static-assets/svg/no_duplicates_cross_out.svg" style="width:16px;height:16px;filter:${iconFilter};"> <span>${t('Checks Ownership')}: <span style="color:#0ac8b9;font-weight:bold;">${t('Yes')}</span></span>` : `<img src="/fe/lol-static-assets/svg/no_duplicates_cross_out.svg" style="width:16px;height:16px;opacity:0.5;filter:${iconFilter};"> <span>${t('Checks Ownership')}: <span style="color:#746e64;">${t('No')}</span></span>`;
             ownership.style.color = '#a09b8c';
             ownership.style.fontSize = '12px';
             flagsContainer.appendChild(ownership);
@@ -1789,7 +1800,7 @@ function installContextMenuInterceptors() {
                 const openAction = data.find(a => a.actionType === 'OPEN' || a.actionType === 'FORGE' || a.actionType === 'CRAFT');
                 if (openAction) {
                     activeRecipeName = openAction.name;
-                    activeItemName = openAction.recipeDescription || openAction.recipeContextMenuAction || "Loot Item";
+                    activeItemName = openAction.recipeDescription || openAction.recipeContextMenuAction || t("Loot Item");
 
                     Utils.Debug.log("[WhaleHelper Debug] Intercepted context-menu response for openable item. Recipe:", activeRecipeName);
 
@@ -1799,8 +1810,8 @@ function installContextMenuInterceptors() {
                         essenceQuantity: 0,
                         essenceType: "",
                         name: "VIEW_ODDS_" + openAction.name,
-                        recipeContextMenuAction: "View Drop Rates",
-                        recipeDescription: "View Drop Rates",
+                        recipeContextMenuAction: t("View Drop Rates"),
+                        recipeDescription: t("View Drop Rates"),
                         requiredOthers: "",
                         requiredOthersCount: 0,
                         requiredOthersName: "",
@@ -1828,7 +1839,7 @@ function installClickCapture() {
             const path = e.composedPath() || [];
             const item = path.find(el => el && el.classList && el.classList.contains('context-menu-item'));
 
-            if (item && (item.textContent.includes('View Drop Rates') || item.textContent.includes('View'))) {
+            if (item && (item.textContent.includes(t('View Drop Rates')) || item.textContent.includes(t('View')))) {
                 Utils.Debug.log("[WhaleHelper Debug] Captured click on View Drop Rates. Opening modal for recipe:", activeRecipeName);
                 e.preventDefault();
                 e.stopPropagation();
@@ -1858,7 +1869,7 @@ function renderSkinBlacklistUI(container) {
     header.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:10px 14px;cursor:pointer;user-select:none;';
 
     const title = document.createElement('div');
-    title.textContent = 'Skin Blacklist Editor';
+    title.textContent = t('Skin Blacklist Editor');
     title.style.cssText = 'color:#c8aa6e;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;';
 
     const expandIcon = document.createElement('div');
@@ -1885,7 +1896,7 @@ function renderSkinBlacklistUI(container) {
 
     const labelHide = document.createElement('span');
     labelHide.id = 'sm-blacklist-label-hide';
-    labelHide.textContent = 'Hide Completely';
+    labelHide.textContent = t('Hide Completely');
     labelHide.style.cssText = `font-size:12px;font-weight:bold;transition:color 0.2s;color:${!isBlacklistLockedMode ? '#c8aa6e' : '#4a6070'};`;
 
     const toggleWrapper = document.createElement('div');
@@ -1898,7 +1909,7 @@ function renderSkinBlacklistUI(container) {
 
     const labelLock = document.createElement('span');
     labelLock.id = 'sm-blacklist-label-lock';
-    labelLock.textContent = 'Show as Unowned';
+    labelLock.textContent = t('Show as Unowned');
     labelLock.style.cssText = `font-size:12px;font-weight:bold;transition:color 0.2s;color:${isBlacklistLockedMode ? '#c8aa6e' : '#4a6070'};`;
 
     toggleWrapper.addEventListener('click', (e) => {
@@ -1920,7 +1931,7 @@ function renderSkinBlacklistUI(container) {
 
     const hint = document.createElement('div');
     hint.style.cssText = 'font-size:12px;color:#4a6070;line-height:1.5;margin-top:2px;';
-    hint.textContent = 'Block specific skins or chromas so they don\'t appear in champion select.';
+    hint.textContent = t("Block specific skins or chromas so they don't appear in champion select.");
     content.appendChild(hint);
 
     const searchRow = document.createElement('div');
@@ -1929,7 +1940,7 @@ function renderSkinBlacklistUI(container) {
     // Champion search
     const searchInput = document.createElement('input');
     searchInput.type = 'text';
-    searchInput.placeholder = 'Search champion name...';
+    searchInput.placeholder = t('Search champion name...');
     Object.assign(searchInput.style, {
         background: '#111',
         color: '#f0e6d2',
@@ -1944,8 +1955,8 @@ function renderSkinBlacklistUI(container) {
     searchInput.addEventListener('click', e => e.stopPropagation());
 
     const clearAllBtn = document.createElement('button');
-    clearAllBtn.textContent = 'Clear All';
-    clearAllBtn.title = 'Remove all blacklisted skins';
+    clearAllBtn.textContent = t('Clear All');
+    clearAllBtn.title = t('Remove all blacklisted skins');
     clearAllBtn.style.cssText = 'padding:6px 10px;background:rgba(232,64,87,0.1);color:#e84057;border:1px solid rgba(232,64,87,0.3);border-radius:2px;cursor:pointer;font-size:12px;transition:all 0.15s;flex-shrink:0;';
     clearAllBtn.onmouseover = () => {
         clearAllBtn.style.background = 'rgba(232,64,87,0.2)';
@@ -2023,7 +2034,7 @@ function renderSkinBlacklistUI(container) {
         // Sort champions by name
         const sorted = [...champMap.entries()].map(([champId, data]) => ({
             champId,
-            name: champNameMap.get(champId) || `Champion ${champId}`,
+            name: champNameMap.get(champId) || t("Champion {{id}}", { id: champId }),
             skins: data.skins.sort((a, b) => a.id - b.id)
         })).sort((a, b) => a.name.localeCompare(b.name));
 
@@ -2054,7 +2065,7 @@ function renderSkinBlacklistUI(container) {
 
                 if (blacklistedCount > 0) {
                     const badge = document.createElement('span');
-                    badge.textContent = `${blacklistedCount} blocked`;
+                    badge.textContent = t("{{count}} blocked", { count: blacklistedCount });
                     badge.style.cssText = 'font-size:10px;color:#e84057;background:rgba(232,64,87,0.12);border:1px solid rgba(232,64,87,0.25);border-radius:3px;padding:1px 5px;';
                     row.appendChild(badge);
                 }
@@ -2079,11 +2090,11 @@ function renderSkinBlacklistUI(container) {
 
             const title = document.createElement('div');
             title.style.cssText = 'font-size:12px;font-weight:bold;color:#c8aa6e;';
-            title.textContent = `${champ.name} — Skins`;
+            title.textContent = t("{{name}} — Skins", { name: champ.name });
 
             const clearChampBtn = document.createElement('button');
-            clearChampBtn.textContent = 'Clear Champ';
-            clearChampBtn.title = 'Remove all blocks for this champion';
+            clearChampBtn.textContent = t('Clear Champ');
+            clearChampBtn.title = t('Remove all blocks for this champion');
             clearChampBtn.style.cssText = 'padding:2px 8px;background:rgba(232,64,87,0.1);color:#e84057;border:1px solid rgba(232,64,87,0.3);border-radius:2px;cursor:pointer;font-size:11px;transition:all 0.15s;';
             clearChampBtn.onmouseover = () => {
                 clearChampBtn.style.background = 'rgba(232,64,87,0.2)';
@@ -2113,11 +2124,11 @@ function renderSkinBlacklistUI(container) {
                 skinHeader.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:6px 8px;gap:8px;';
 
                 const skinName = document.createElement('span');
-                skinName.textContent = skin.name || `Skin ${skin.id}`;
+                skinName.textContent = skin.name || t("Skin {{id}}", { id: skin.id });
                 skinName.style.cssText = `font-size:12px;color:${isBlocked ? '#e84057' : '#f0e6d2'};${isBlocked ? 'text-decoration:line-through;opacity:0.7;' : ''}`;
 
                 const blockBtn = document.createElement('button');
-                blockBtn.textContent = isBlocked ? 'Unblock' : 'Block';
+                blockBtn.textContent = isBlocked ? t('Unblock') : t('Block');
                 blockBtn.style.cssText = `flex-shrink:0;padding:2px 8px;font-size:11px;border-radius:2px;cursor:pointer;border:1px solid;transition:all 0.15s;${isBlocked ? 'border-color:rgba(232,64,87,0.4);background:rgba(232,64,87,0.1);color:#e84057;' : 'border-color:rgba(200,170,110,0.3);background:rgba(200,170,110,0.06);color:#c8aa6e;'}`;
                 blockBtn.addEventListener('click', (e) => {
                     e.stopPropagation();
@@ -2137,7 +2148,7 @@ function renderSkinBlacklistUI(container) {
                     chromaHeader.style.cssText = 'padding:3px 8px;display:flex;justify-content:space-between;align-items:center;border-top:1px solid rgba(255,255,255,0.04);cursor:pointer;background:rgba(0,0,0,0.2);';
 
                     const chromaLabel = document.createElement('div');
-                    chromaLabel.textContent = `Chromas (${chromas.length})`;
+                    chromaLabel.textContent = t("Chromas ({{count}})", { count: chromas.length });
                     chromaLabel.style.cssText = 'font-size:10px;color:#4a6070;text-transform:uppercase;letter-spacing:0.05em;';
 
                     const expandIcon = document.createElement('div');
@@ -2173,11 +2184,11 @@ function renderSkinBlacklistUI(container) {
                         chromaRow.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:8px;flex-shrink:0;';
 
                         const chromaName = document.createElement('span');
-                        chromaName.textContent = chroma.name || `Chroma ${chromaId}`;
+                        chromaName.textContent = chroma.name || t("Chroma {{id}}", { id: chromaId });
                         chromaName.style.cssText = `font-size:11px;color:${chromaBlocked ? '#e84057' : '#a09b8c'};${chromaBlocked ? 'text-decoration:line-through;opacity:0.7;' : ''}`;
 
                         const chromaBtn = document.createElement('button');
-                        chromaBtn.textContent = chromaBlocked ? 'Unblock' : 'Block';
+                        chromaBtn.textContent = chromaBlocked ? t('Unblock') : t('Block');
                         chromaBtn.style.cssText = `flex-shrink:0;padding:1px 6px;font-size:10px;border-radius:2px;cursor:pointer;border:1px solid;transition:all 0.15s;${chromaBlocked ? 'border-color:rgba(232,64,87,0.4);background:rgba(232,64,87,0.1);color:#e84057;' : 'border-color:rgba(200,170,110,0.2);background:transparent;color:#746e64;'}`;
                         chromaBtn.addEventListener('click', (e) => {
                             e.stopPropagation();
@@ -2367,7 +2378,7 @@ export function installEmberHook() {
                 const btn = document.createElement('button');
                 btn.setAttribute(RANDOMIZER_BTN_ATTR, '');
                 btn.className = 'sm-randomizer-btn';
-                btn.title = 'Random Skin';
+                btn.title = t('Random Skin');
                 btn.innerHTML = '<img src="/fe/lol-static-assets/svg/bad_luck_protection_dice.svg" width="18" height="18">';
 
                 btn.addEventListener('click', (e) => {
@@ -2419,9 +2430,9 @@ export function init(context) {
     Utils.Settings.inject(context, {
         name: "whale-helper-settings",
         titleKey: "snooze_whale-helper",
-        titleName: "Whale Helper",
+        titleName: t("Whale Helper"),
         capitalTitleKey: "snooze_whale-helper_capital",
-        capitalTitleName: "WHALE HELPER",
+        capitalTitleName: t("WHALE HELPER"),
         class: "whale-helper-settings"
     });
 
@@ -2438,7 +2449,7 @@ export function init(context) {
         smSettingsArray = [{
                 type: 'toggle',
                 id: 'sm:whaleHelper',
-                label: 'Enable Rerollable Pool Button (Loot Page)',
+                label: t('Enable Rerollable Pool Button (Loot Page)'),
                 value: isLootEnabled,
                 onChange: (val) => {
                     isLootEnabled = val;
@@ -2455,7 +2466,7 @@ export function init(context) {
             {
                 type: 'toggle',
                 id: 'sm:skinTierDisplay',
-                label: 'Enable Skin Tier Badges (Champ Select)',
+                label: t('Enable Skin Tier Badges (Champ Select)'),
                 value: isSkinTierEnabled,
                 onChange: (val) => {
                     isSkinTierEnabled = val;
@@ -2472,7 +2483,7 @@ export function init(context) {
             {
                 type: 'toggle',
                 id: 'sm:lootDropOdds',
-                label: 'Enable Loot Drop Odds Previewer (Loot Page)',
+                label: t('Enable Loot Drop Odds Previewer (Loot Page)'),
                 value: isDropOddsEnabled,
                 onChange: (val) => {
                     isDropOddsEnabled = val;
@@ -2482,7 +2493,7 @@ export function init(context) {
             {
                 type: 'toggle',
                 id: 'sm:hideUnownedSkins',
-                label: 'Hide Unowned Skins & Chromas (Champ Select)',
+                label: t('Hide Unowned Skins & Chromas (Champ Select)'),
                 value: isHideUnownedEnabled,
                 onChange: (val) => {
                     isHideUnownedEnabled = val;
@@ -2497,7 +2508,7 @@ export function init(context) {
             {
                 type: 'toggle',
                 id: 'sm:skinRandomizer',
-                label: 'Show Skin Randomizer (Champ Select)',
+                label: t('Show Skin Randomizer (Champ Select)'),
                 value: isSkinRandomizerEnabled,
                 onChange: (val) => {
                     isSkinRandomizerEnabled = val;
@@ -2507,7 +2518,7 @@ export function init(context) {
             {
                 type: 'toggle',
                 id: 'sm:skinBlacklistEnabled',
-                label: 'Enable Skin Blacklist (Champ Select)',
+                label: t('Enable Skin Blacklist (Champ Select)'),
                 value: isBlacklistEnabled,
                 onChange: (val) => {
                     isBlacklistEnabled = val;
@@ -2522,14 +2533,14 @@ export function init(context) {
 
         window.SnoozeManager.registerModule({
             id: 'whaleHelper',
-            name: 'Whale Helper',
-            description: 'Shows you which rerollable skins you don\'t own yet, and adds a button to the loot page for easy access. It also adds skin tier badges & Skin Randomizer button in champion select.',
+            name: t('Whale Helper'),
+            description: t('Shows you which rerollable skins you don\'t own yet, and adds a button to the loot page for easy access. It also adds skin tier badges & Skin Randomizer button in champion select.'),
             settings: smSettingsArray
         });
     } else {
         Utils.DOM.observer.observe("lol-uikit-scrollable.whale-helper-settings", (plugin) => {
             plugin.innerHTML = '';
-            plugin.appendChild(Utils.Settings.createToggleRow("Enable Whale Helper (Loot Page)", isLootEnabled, (val) => {
+            plugin.appendChild(Utils.Settings.createToggleRow(t("Enable Whale Helper (Loot Page)"), isLootEnabled, (val) => {
                 isLootEnabled = val;
                 Utils.Store.set('whaleHelper', 'lootHelperEnabled', val);
                 if (!val) {
@@ -2541,7 +2552,7 @@ export function init(context) {
                 }
             }));
 
-            plugin.appendChild(Utils.Settings.createToggleRow("Enable Skin Tier Badges (Champ Select)", isSkinTierEnabled, (val) => {
+            plugin.appendChild(Utils.Settings.createToggleRow(t("Enable Skin Tier Badges (Champ Select)"), isSkinTierEnabled, (val) => {
                 isSkinTierEnabled = val;
                 Utils.Store.set('whaleHelper', 'skinTierEnabled', val);
                 if (!val) {
@@ -2553,12 +2564,12 @@ export function init(context) {
                 }
             }));
 
-            plugin.appendChild(Utils.Settings.createToggleRow("Enable Loot Drop Odds Previewer (Loot Page)", isDropOddsEnabled, (val) => {
+            plugin.appendChild(Utils.Settings.createToggleRow(t("Enable Loot Drop Odds Previewer (Loot Page)"), isDropOddsEnabled, (val) => {
                 isDropOddsEnabled = val;
                 Utils.Store.set('whaleHelper', 'dropOddsEnabled', val);
             }));
 
-            plugin.appendChild(Utils.Settings.createToggleRow("Hide Unowned Skins & Chromas (Champ Select)", isHideUnownedEnabled, (val) => {
+            plugin.appendChild(Utils.Settings.createToggleRow(t("Hide Unowned Skins & Chromas (Champ Select)"), isHideUnownedEnabled, (val) => {
                 isHideUnownedEnabled = val;
                 Utils.Store.set('whaleHelper', 'hideUnownedEnabled', val);
                 if (val && isBlacklistLockedMode) {
@@ -2568,12 +2579,12 @@ export function init(context) {
                 syncTogglesUI();
             }));
 
-            plugin.appendChild(Utils.Settings.createToggleRow("Show Skin Randomizer (Champ Select)", isSkinRandomizerEnabled, (val) => {
+            plugin.appendChild(Utils.Settings.createToggleRow(t("Show Skin Randomizer (Champ Select)"), isSkinRandomizerEnabled, (val) => {
                 isSkinRandomizerEnabled = val;
                 Utils.Store.set('whaleHelper', 'skinRandomizerEnabled', val);
             }));
 
-            plugin.appendChild(Utils.Settings.createToggleRow("Enable Skin Blacklist (Champ Select)", isBlacklistEnabled, (val) => {
+            plugin.appendChild(Utils.Settings.createToggleRow(t("Enable Skin Blacklist (Champ Select)"), isBlacklistEnabled, (val) => {
                 isBlacklistEnabled = val;
                 Utils.Store.set('whaleHelper', 'skinBlacklistEnabled', val);
             }));

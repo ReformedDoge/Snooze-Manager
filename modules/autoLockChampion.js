@@ -6,6 +6,7 @@
  * @link https://github.com/ReformedDoge
  */
 import Utils from './generalUtils.js';
+import { t } from './i18n.js';
 
 let isEnabled = false;
 let autoLockSessionUnsub = null;
@@ -117,7 +118,7 @@ function setPriorityList(key, role, ids) {
 }
 
 function getChampionName(champions, id) {
-    return champions.find((champ) => Number(champ.id) === Number(id))?.name || `Champion ${id}`;
+    return champions.find((champ) => Number(champ.id) === Number(id))?.name || t("Champion {{id}}", { id });
 }
 
 function styleButton(button, compact = false) {
@@ -178,7 +179,7 @@ function renderPriorityPicker(container, labelText, storeKey, role, champions) {
 
     const addBtn = document.createElement('button');
     addBtn.type = 'button';
-    addBtn.textContent = 'Add';
+    addBtn.textContent = t('Add');
     styleButton(addBtn);
 
     function paint() {
@@ -227,8 +228,8 @@ function renderPriorityPicker(container, labelText, storeKey, role, champions) {
 
             const up = document.createElement('button');
             up.type = 'button';
-            up.textContent = 'Up';
-            up.title = 'Higher priority';
+            up.textContent = t('Up');
+            up.title = t('Higher priority');
             styleButton(up, true);
             up.disabled = index === 0;
             up.style.opacity = up.disabled ? '0.35' : '1';
@@ -243,8 +244,8 @@ function renderPriorityPicker(container, labelText, storeKey, role, champions) {
 
             const down = document.createElement('button');
             down.type = 'button';
-            down.textContent = 'Dn';
-            down.title = 'Lower priority';
+            down.textContent = t('Dn');
+            down.title = t('Lower priority');
             styleButton(down, true);
             down.disabled = index === selected.length - 1;
             down.style.opacity = down.disabled ? '0.35' : '1';
@@ -259,8 +260,8 @@ function renderPriorityPicker(container, labelText, storeKey, role, champions) {
 
             const remove = document.createElement('button');
             remove.type = 'button';
-            remove.textContent = 'x';
-            remove.title = 'Remove';
+            remove.textContent = t('x');
+            remove.title = t('Remove');
             styleButton(remove, true);
             remove.onclick = (e) => {
                 e.preventDefault();
@@ -320,7 +321,7 @@ function renderExtraSettings(container) {
     });
 
     const roleLabel = document.createElement('span');
-    roleLabel.textContent = 'Configure Role:';
+    roleLabel.textContent = t('Configure Role:');
     Object.assign(roleLabel.style, {
         color: '#a09b8c',
         fontSize: '12px',
@@ -340,27 +341,27 @@ function renderExtraSettings(container) {
 
     const ROLES = [{
             id: 'default',
-            label: 'Default / Any'
+            label: t('Default / Any')
         },
         {
             id: 'top',
-            label: 'Top'
+            label: t('Top')
         },
         {
             id: 'jungle',
-            label: 'Jungle'
+            label: t('Jungle')
         },
         {
             id: 'middle',
-            label: 'Middle'
+            label: t('Middle')
         },
         {
             id: 'bottom',
-            label: 'Bottom'
+            label: t('Bottom')
         },
         {
             id: 'utility',
-            label: 'Support'
+            label: t('Support')
         }
     ];
 
@@ -389,8 +390,8 @@ function renderExtraSettings(container) {
     function updatePickers() {
         pickerHost.innerHTML = '';
         if (cachedChamps.length) {
-            renderPriorityPicker(pickerHost, 'Pick Priority', PICK_PRIORITY_KEY, selectedRoleConfig, cachedChamps);
-            renderPriorityPicker(pickerHost, 'Ban Priority', BAN_PRIORITY_KEY, selectedRoleConfig, cachedChamps);
+            renderPriorityPicker(pickerHost, t('Pick Priority'), PICK_PRIORITY_KEY, selectedRoleConfig, cachedChamps);
+            renderPriorityPicker(pickerHost, t('Ban Priority'), BAN_PRIORITY_KEY, selectedRoleConfig, cachedChamps);
         }
     }
 
@@ -410,7 +411,7 @@ function renderExtraSettings(container) {
     });
 
     const modeLabel = document.createElement('span');
-    modeLabel.textContent = 'Auto Lock Timing:';
+    modeLabel.textContent = t('Auto Lock Timing:');
     Object.assign(modeLabel.style, {
         color: '#a09b8c',
         fontSize: '12px'
@@ -429,11 +430,11 @@ function renderExtraSettings(container) {
 
     const modeOptBefore = document.createElement('option');
     modeOptBefore.value = 'before';
-    modeOptBefore.textContent = 'Before turn ends';
+    modeOptBefore.textContent = t('Before turn ends');
 
     const modeOptAfter = document.createElement('option');
     modeOptAfter.value = 'after';
-    modeOptAfter.textContent = 'After turn starts';
+    modeOptAfter.textContent = t('After turn starts');
 
     modeSelect.appendChild(modeOptBefore);
     modeSelect.appendChild(modeOptAfter);
@@ -447,11 +448,11 @@ function renderExtraSettings(container) {
     modeRow.appendChild(modeSelect);
     container.appendChild(modeRow);
 
-    container.appendChild(Utils.Settings.createNumberInputRow('Time (Seconds, 0 = instant)', lockSettings.timeMs / 1000, LOCK_TIME_MIN, LOCK_TIME_MAX, 0.5, (v) => {
+    container.appendChild(Utils.Settings.createNumberInputRow(t('Time (Seconds, 0 = instant)'), lockSettings.timeMs / 1000, LOCK_TIME_MIN, LOCK_TIME_MAX, 0.5, (v) => {
         Utils.Store.set('autoLockChampion', LOCK_TIME_KEY, v);
     }));
 
-    container.appendChild(Utils.Settings.createNumberInputRow('Hover after X seconds (0 = instant, default 3)', getHoverDelayMs() / 1000, 0, 30, 0.5, (v) => {
+    container.appendChild(Utils.Settings.createNumberInputRow(t('Hover after X seconds (0 = instant, default 3)'), getHoverDelayMs() / 1000, 0, 30, 0.5, (v) => {
         Utils.Store.set('autoLockChampion', HOVER_DELAY_KEY, v);
     }));
 
@@ -472,7 +473,7 @@ function renderExtraSettings(container) {
         cursor: 'pointer',
         marginTop: '10px'
     });
-    pickToggleRow.appendChild(Utils.Settings.createToggleRow('Auto Lock-in Pick', Utils.Store.get('autoLockChampion', 'instantPick') !== false, (next) => {
+    pickToggleRow.appendChild(Utils.Settings.createToggleRow(t('Auto Lock-in Pick'), Utils.Store.get('autoLockChampion', 'instantPick') !== false, (next) => {
         Utils.Store.set('autoLockChampion', 'instantPick', next);
     }));
     container.appendChild(pickToggleRow);
@@ -485,7 +486,7 @@ function renderExtraSettings(container) {
         cursor: 'pointer',
         marginTop: '10px'
     });
-    banToggleRow.appendChild(Utils.Settings.createToggleRow('Auto Lock-in Ban', Utils.Store.get('autoLockChampion', 'instantBan') !== false, (next) => {
+    banToggleRow.appendChild(Utils.Settings.createToggleRow(t('Auto Lock-in Ban'), Utils.Store.get('autoLockChampion', 'instantBan') !== false, (next) => {
         Utils.Store.set('autoLockChampion', 'instantBan', next);
     }));
     container.appendChild(banToggleRow);
@@ -498,7 +499,7 @@ function renderExtraSettings(container) {
         cursor: 'pointer',
         marginTop: '10px'
     });
-    intentRow.appendChild(Utils.Settings.createToggleRow('Respect Team Intent', Utils.Store.get('autoLockChampion', 'respectTeamIntent') !== false, (next) => {
+    intentRow.appendChild(Utils.Settings.createToggleRow(t('Respect Team Intent'), Utils.Store.get('autoLockChampion', 'respectTeamIntent') !== false, (next) => {
         Utils.Store.set('autoLockChampion', 'respectTeamIntent', next);
     }));
     container.appendChild(intentRow);
@@ -511,7 +512,7 @@ function renderExtraSettings(container) {
         cursor: 'pointer',
         marginTop: '10px'
     });
-    manualPickRow.appendChild(Utils.Settings.createToggleRow('Allow Manual Pick', Utils.Store.get('autoLockChampion', 'respectManualPick') === true, (next) => {
+    manualPickRow.appendChild(Utils.Settings.createToggleRow(t('Allow Manual Pick'), Utils.Store.get('autoLockChampion', 'respectManualPick') === true, (next) => {
         Utils.Store.set('autoLockChampion', 'respectManualPick', next);
     }));
     container.appendChild(manualPickRow);
@@ -519,10 +520,10 @@ function renderExtraSettings(container) {
     // Panic Key Hotkey
     const currentPanicKey = Utils.Store.get('global', 'panicKey') || 'F2';
     container.appendChild(Utils.Settings.createHotkeyRow(
-        'Panic Key (Cancel Auto Lock)',
+        t('Panic Key (Cancel Auto Lock)'),
         currentPanicKey,
         (newKey) => Utils.Store.set('global', 'panicKey', newKey),
-        'Press the panic key at any point during champion select to cancel auto-lock for the current champion select only. Next champ select will re-enable automatically.'
+        t('Press the panic key at any point during champion select to cancel auto-lock for the current champion select only. Next champ select will re-enable automatically.')
     ));
 
 }
@@ -628,9 +629,9 @@ export function init(context) {
     Utils.Settings.inject(context, {
         name: "autolock-settings",
         titleKey: "snooze_autolock",
-        titleName: "Auto Select",
+        titleName: t("Auto Select"),
         capitalTitleKey: "snooze_autolock_capital",
-        capitalTitleName: "AUTO SELECT",
+        capitalTitleName: t("AUTO SELECT"),
         class: "autolock-settings"
     });
 
@@ -639,12 +640,12 @@ export function init(context) {
     if (window.SnoozeManager && window.SnoozeManager.registerModule) {
         window.SnoozeManager.registerModule({
             id: 'autoLockChampion',
-            name: 'Auto Select',
-            description: 'Automatically hovers, locks, or bans champions by priority & role in champion select, with separate top-3 priority lists per role.',
+            name: t('Auto Select'),
+            description: t('Automatically hovers, locks, or bans champions by priority & role in champion select, with separate top-3 priority lists per role.'),
             settings: [{
                     type: 'toggle',
                     id: 'sm:autoLockChampion',
-                    label: 'Enable Auto Select Champion',
+                    label: t('Enable Auto Select Champion'),
                     value: isEnabled,
                     onChange: (val) => toggleFeature(val)
                 },
@@ -656,7 +657,7 @@ export function init(context) {
         });
     } else {
         Utils.DOM.observer.observe("lol-uikit-scrollable.autolock-settings", (plugin) => {
-            const mainToggle = Utils.Settings.createToggleRow('Enable Auto Select Champion', isEnabled, (next) => {
+            const mainToggle = Utils.Settings.createToggleRow(t('Enable Auto Select Champion'), isEnabled, (next) => {
                 isEnabled = next;
                 toggleFeature(next);
             });
@@ -1287,7 +1288,7 @@ function panic() {
     actionActiveStartTimes.clear();
     actionHoverStartTimes.clear();
 
-    Utils.Toast.info('Auto Lock Override — Next champ select will re-enable');
+    Utils.Toast.info(t('Auto Lock Override — Next champ select will re-enable'));
 }
 
 function mountAutoLockChampion() {

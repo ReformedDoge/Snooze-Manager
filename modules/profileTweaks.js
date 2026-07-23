@@ -5,6 +5,7 @@
  * @description Profile customization utilities: remove banner/border, manage tokens, and unlock profile background.
  * @link https://github.com/ReformedDoge
  */
+import { t } from './i18n.js';
 import Utils from './generalUtils.js';
 
 const MODULE_KEY = 'profileTweaks';
@@ -111,11 +112,11 @@ async function removeBanner(statusMessageElement) {
             prestigeCrestBorderLevel: prefs.prestigeCrestBorderLevel,
             challengeIds: prefs.challengeIds
         });
-        flashMessage(statusMessageElement, 'Banner removed!', '#4caf82');
+        flashMessage(statusMessageElement, t('Banner removed!'), '#4caf82');
 
         currentProfilePreferences = null;
     } catch (err) {
-        flashMessage(statusMessageElement, `Banner removal failed (${err.message || 'network error'})`, '#e49429');
+        flashMessage(statusMessageElement, t("Banner removal failed ({{error}})", { error: err.message || t('network error') }), '#e49429');
     }
 }
 
@@ -126,9 +127,9 @@ async function removeBorder(statusMessageElement) {
             preferredBannerType: 'blank',
             selectedPrestigeCrest: 22,
         });
-        flashMessage(statusMessageElement, 'Border removed!', '#4caf82');
+        flashMessage(statusMessageElement, t('Border removed!'), '#4caf82');
     } catch (err) {
-        flashMessage(statusMessageElement, `Border removal failed (${err.message || 'network error'})`, '#e49429');
+        flashMessage(statusMessageElement, t("Border removal failed ({{error}})", { error: err.message || t('network error') }), '#e49429');
     }
 }
 
@@ -158,17 +159,17 @@ async function applyTokenSelection(statusMessageElement) {
             .filter(Number.isFinite);
 
         if (chosenIds.length === 0) {
-            flashMessage(statusMessageElement, 'Enter at least one token ID.', '#e49429');
+            flashMessage(statusMessageElement, t('Enter at least one token ID.'), '#e49429');
             return;
         }
 
         debugLog('applyTokenSelection chosenIds', chosenIds);
         await updatePlayerPreferences(chosenIds);
         saveTokenState();
-        flashMessage(statusMessageElement, 'Token selection saved!', '#4caf82');
+        flashMessage(statusMessageElement, t('Token selection saved!'), '#4caf82');
         currentProfilePreferences = null;
     } catch (err) {
-        flashMessage(statusMessageElement, `Token update failed (${err.message || 'network error'})`, '#e49429');
+        flashMessage(statusMessageElement, t("Token update failed ({{error}})", { error: err.message || t('network error') }), '#e49429');
     }
 }
 
@@ -209,12 +210,12 @@ function renderTokenRow(slotIndex, refreshTokenRow, statusMessageElement) {
 
     const title = document.createElement('div');
     title.className = 'pm-label-title';
-    title.textContent = `Token slot ${slotIndex + 1}`;
+    title.textContent = t("Token slot {{slot}}", { slot: slotIndex + 1 });
     title.style.flex = '1 1 100%';
 
     const input = document.createElement('input');
     input.type = 'text';
-    input.placeholder = 'Token ID';
+    input.placeholder = t('Token ID');
     input.value = tokenIds[slotIndex] || '';
     Object.assign(input.style, {
         background: '#111',
@@ -235,7 +236,7 @@ function renderTokenRow(slotIndex, refreshTokenRow, statusMessageElement) {
     const clearBtn = document.createElement('button');
     clearBtn.type = 'button';
     clearBtn.className = 'pm-btn';
-    clearBtn.textContent = 'Clear';
+    clearBtn.textContent = t('Clear');
     Object.assign(clearBtn.style, {
         minWidth: '72px',
         padding: '7px 10px',
@@ -264,13 +265,13 @@ function renderTokenRow(slotIndex, refreshTokenRow, statusMessageElement) {
         tokenIds[slotIndex] = '';
         input.value = '';
         saveTokenState();
-        flashMessage(statusMessageElement, `Slot ${slotIndex + 1} cleared.`, '#c8aa6e');
+        flashMessage(statusMessageElement, t("Slot {{slot}} cleared.", { slot: slotIndex + 1 }), '#c8aa6e');
     });
 
     const cloneBtn = document.createElement('button');
     cloneBtn.type = 'button';
     cloneBtn.className = 'pm-btn';
-    cloneBtn.textContent = 'Clone';
+    cloneBtn.textContent = t('Clone');
     Object.assign(cloneBtn.style, {
         minWidth: '72px',
         padding: '7px 10px',
@@ -298,7 +299,7 @@ function renderTokenRow(slotIndex, refreshTokenRow, statusMessageElement) {
         event.stopPropagation();
         const tokenValue = input.value.trim();
         if (!tokenValue) {
-            flashMessage(statusMessageElement, 'No token to clone.', '#e49429');
+            flashMessage(statusMessageElement, t('No token to clone.'), '#e49429');
             return;
         }
 
@@ -307,7 +308,7 @@ function renderTokenRow(slotIndex, refreshTokenRow, statusMessageElement) {
         tokenIds[destinationSlotIndex] = tokenValue;
         saveTokenState();
         refreshTokenRow(destinationSlotIndex);
-        flashMessage(statusMessageElement, `Cloned to slot ${destinationSlotIndex + 1}.`, '#4caf82');
+        flashMessage(statusMessageElement, t("Cloned to slot {{slot}}.", { slot: destinationSlotIndex + 1 }), '#4caf82');
     });
 
     row.appendChild(title);
@@ -363,13 +364,13 @@ async function renderSettings(container) {
     refreshLabel.style.gap = '4px';
 
     const refreshTitle = document.createElement('div');
-    refreshTitle.textContent = 'Current profile summary';
+    refreshTitle.textContent = t('Current profile summary');
     refreshTitle.style.color = '#f0e6d2';
     refreshTitle.style.fontSize = '13px';
     refreshTitle.style.fontWeight = '700';
 
     const refreshDesc = document.createElement('div');
-    refreshDesc.textContent = 'Loads the current title, banner, border, and token data.';
+    refreshDesc.textContent = t('Loads the current title, banner, border, and token data.');
     refreshDesc.style.color = '#a09b8c';
     refreshDesc.style.fontSize = '12px';
     refreshDesc.style.lineHeight = '1.4';
@@ -377,7 +378,7 @@ async function renderSettings(container) {
     refreshLabel.appendChild(refreshTitle);
     refreshLabel.appendChild(refreshDesc);
 
-    const refreshBtn = createActionButton('Refresh', async () => {
+    const refreshBtn = createActionButton(t('Refresh'), async () => {
         currentProfilePreferences = null;
         await renderSettings(container);
     });
@@ -408,12 +409,12 @@ async function renderSettings(container) {
         titleName.style.fontWeight = '700';
 
         const bannerSpan = document.createElement('div');
-        bannerSpan.textContent = 'Banner: ' + (raw.bannerId || currentProfilePreferences.bannerAccent || 'N/A');
+        bannerSpan.textContent = t('Banner:') + ' ' + (raw.bannerId || currentProfilePreferences.bannerAccent || t('N/A'));
         bannerSpan.style.color = '#a09b8c';
         bannerSpan.style.fontSize = '12px';
 
         const crestSpan = document.createElement('div');
-        crestSpan.textContent = 'Crest: ' + (raw.crestId || currentProfilePreferences.crestBorder || 'N/A');
+        crestSpan.textContent = t('Crest:') + ' ' + (raw.crestId || currentProfilePreferences.crestBorder || t('N/A'));
         crestSpan.style.color = '#a09b8c';
         crestSpan.style.fontSize = '12px';
 
@@ -478,7 +479,7 @@ async function renderSettings(container) {
                     holder.title = tip;
                 }
             } else {
-                holder.textContent = '-';
+                holder.textContent = t('-');
                 holder.style.opacity = '0.45';
             }
 
@@ -496,8 +497,8 @@ async function renderSettings(container) {
     buttonRow.style.flexWrap = 'wrap';
     buttonRow.style.gap = '10px';
 
-    const bannerBtn = createActionButton('Remove Banner', () => removeBanner(statusMessage));
-    const borderBtn = createActionButton('Remove Border', () => removeBorder(statusMessage));
+    const bannerBtn = createActionButton(t('Remove Banner'), () => removeBanner(statusMessage));
+    const borderBtn = createActionButton(t('Remove Border'), () => removeBorder(statusMessage));
     buttonRow.appendChild(bannerBtn);
     buttonRow.appendChild(borderBtn);
     wrapper.appendChild(buttonRow);
@@ -512,7 +513,7 @@ async function renderSettings(container) {
     tokenSection.style.background = 'rgba(0,0,0,0.08)';
 
     const tokenTitle = document.createElement('div');
-    tokenTitle.textContent = 'Token selection';
+    tokenTitle.textContent = t('Token selection');
     tokenTitle.style.color = '#c8aa6e';
     tokenTitle.style.fontSize = '13px';
     tokenTitle.style.fontWeight = '700';
@@ -521,7 +522,7 @@ async function renderSettings(container) {
     tokenSection.appendChild(tokenTitle);
 
     const tokenDesc = document.createElement('div');
-    tokenDesc.textContent = 'Choose up to 3 token ids, including duplicates, then save them to your profile preferences.';
+    tokenDesc.textContent = t('Choose up to 3 token ids, including duplicates, then save them to your profile preferences.');
     tokenDesc.style.color = '#a09b8c';
     tokenDesc.style.fontSize = '12px';
     tokenDesc.style.lineHeight = '1.5';
@@ -539,7 +540,7 @@ async function renderSettings(container) {
         tokenSection.appendChild(tokenRow);
     }
 
-    const saveTokensBtn = createActionButton('Save token selection', () => applyTokenSelection(statusMessage));
+    const saveTokensBtn = createActionButton(t('Save token selection'), () => applyTokenSelection(statusMessage));
     saveTokensBtn.style.alignSelf = 'flex-start';
     tokenSection.appendChild(saveTokensBtn);
     wrapper.appendChild(tokenSection);
@@ -553,9 +554,9 @@ export function init(context) {
     Utils.Settings.inject(context, {
         name: 'profile-tweaks-settings',
         titleKey: 'snooze_profile-tweaks',
-        titleName: 'Profile Tweaks',
+        titleName: t('Profile Tweaks'),
         capitalTitleKey: 'snooze_profile-tweaks_capital',
-        capitalTitleName: 'PROFILE TWEAKS',
+        capitalTitleName: t('PROFILE TWEAKS'),
         class: 'profile-tweaks-settings'
     });
 
@@ -567,12 +568,12 @@ export function init(context) {
     if (window.SnoozeManager && window.SnoozeManager.registerModule) {
         window.SnoozeManager.registerModule({
             id: 'profileTweaks',
-            name: 'Profile Tweaks',
-            description: 'Remove profile banner/border, manage token preferences, and unlock profile background.',
+            name: t('Profile Tweaks'),
+            description: t('Remove profile banner/border, manage token preferences, and unlock profile background.'),
             settings: [{
                     type: 'toggle',
                     id: 'sm:unlockProfileBackground',
-                    label: 'Unlock Profile Background',
+                    label: t('Unlock Profile Background'),
                     value: unlockBackgroundEnabled,
                     onChange: (val) => toggleUnlockProfileBackground(val)
                 },
@@ -586,7 +587,7 @@ export function init(context) {
         Utils.DOM.observer.observe('lol-uikit-scrollable.profile-tweaks-settings', (plugin) => {
             plugin.innerHTML = '';
 
-            const toggleRow = Utils.Settings.createToggleRow('Unlock Profile Background', unlockBackgroundEnabled, (next) => {
+            const toggleRow = Utils.Settings.createToggleRow(t('Unlock Profile Background'), unlockBackgroundEnabled, (next) => {
                 toggleUnlockProfileBackground(next);
             });
             toggleRow.classList.add('plugins-settings-row');

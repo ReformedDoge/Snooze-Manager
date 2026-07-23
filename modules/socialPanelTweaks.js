@@ -5,6 +5,7 @@
  * @description Improves friend list status display, same-party visuals, and adds a collapsible sidebar.
  * @link https://github.com/ReformedDoge
  */
+import { t } from './i18n.js';
 import Utils from './generalUtils.js';
 
 const FRIENDS_URI = '/lol-chat/v1/friends';
@@ -555,13 +556,13 @@ function getFallbackQueueName(lol) {
     const gameMode = String(lol?.gameMode || '').trim();
 
     if (queueType) return queueType;
-    if (gameMode === 'CHERRY') return 'Arena';
-    if (gameMode === 'TFT') return 'TFT';
-    if (gameMode === 'KIWI') return 'ARAM: Mayhem';
-    if (gameMode === 'SWIFTPLAY') return 'Swiftplay';
-    if (gameMode === 'ARAM') return 'ARAM';
+    if (gameMode === 'CHERRY') return t('Arena');
+    if (gameMode === 'TFT') return t('TFT');
+    if (gameMode === 'KIWI') return t('ARAM: Mayhem');
+    if (gameMode === 'SWIFTPLAY') return t('Swiftplay');
+    if (gameMode === 'ARAM') return t('ARAM');
     if (gameMode && gameMode !== 'CLASSIC') return gameMode;
-    return 'League';
+    return t('League');
 }
 
 function buildActivity(friend) {
@@ -639,48 +640,48 @@ function getKnownQueueLabel(activity) {
     const queueType = String(activity.gameQueueType || '').toUpperCase();
     const mode = String(activity.gameMode || '').toUpperCase();
 
-    if ([1700, 1710, 1750].includes(queueId) || queueType === 'CHERRY' || mode === 'CHERRY') return 'Arena';
-    if (queueId === 2400 || queueType === 'KIWI' || mode === 'KIWI') return 'ARAM: Mayhem';
-    if (queueId === 420 || queueType === 'RANKED_SOLO_5X5') return 'Solo/Duo';
-    if (queueId === 440 || queueType === 'RANKED_FLEX_SR') return 'Flex';
-    if (queueId === 450 || queueType === 'ARAM_UNRANKED_5X5' || mode === 'ARAM') return 'ARAM';
-    if (queueId === 480 || queueType === 'SWIFTPLAY' || mode === 'SWIFTPLAY') return 'Swiftplay';
-    if (queueId === 490 || queueType === 'QUICKPLAY') return 'Quickplay';
-    if (queueId === 400 || queueType === 'NORMAL_DRAFT') return 'Draft';
-    if (queueId === 430 || queueType === 'NORMAL_BLIND') return 'Blind';
+    if ([1700, 1710, 1750].includes(queueId) || queueType === 'CHERRY' || mode === 'CHERRY') return t('Arena');
+    if (queueId === 2400 || queueType === 'KIWI' || mode === 'KIWI') return t('ARAM: Mayhem');
+    if (queueId === 420 || queueType === 'RANKED_SOLO_5X5') return t('Solo/Duo');
+    if (queueId === 440 || queueType === 'RANKED_FLEX_SR') return t('Flex');
+    if (queueId === 450 || queueType === 'ARAM_UNRANKED_5X5' || mode === 'ARAM') return t('ARAM');
+    if (queueId === 480 || queueType === 'SWIFTPLAY' || mode === 'SWIFTPLAY') return t('Swiftplay');
+    if (queueId === 490 || queueType === 'QUICKPLAY') return t('Quickplay');
+    if (queueId === 400 || queueType === 'NORMAL_DRAFT') return t('Draft');
+    if (queueId === 430 || queueType === 'NORMAL_BLIND') return t('Blind');
     if ([1090, 1100, 1130, 1160].includes(queueId) || queueType.includes('TFT') || mode === 'TFT') {
-        if (queueType.includes('DOUBLE_UP') || queueId === 1160) return 'TFT Double Up';
-        if (queueType.includes('TURBO') || queueType.includes('HYPER') || queueId === 1130) return 'TFT Hyper Roll';
-        if (queueType.includes('RANKED') || queueId === 1100) return 'TFT Ranked';
-        return 'TFT';
+        if (queueType.includes('DOUBLE_UP') || queueId === 1160) return t('TFT Double Up');
+        if (queueType.includes('TURBO') || queueType.includes('HYPER') || queueId === 1130) return t('TFT Hyper Roll');
+        if (queueType.includes('RANKED') || queueId === 1100) return t('TFT Ranked');
+        return t('TFT');
     }
     return '';
 }
 
 function abbreviateQueueLabel(label, activity) {
-    const text = String(label || 'In Game').trim();
+    const text = String(label || t('In Game')).trim();
     const lower = text.toLowerCase();
 
     if (activity.isTft || lower.includes('teamfight tactics')) {
-        if (lower.includes('double up')) return 'TFT Double Up';
-        if (lower.includes('hyper roll')) return 'TFT Hyper Roll';
-        if (lower.includes('rank')) return 'TFT Ranked';
-        return 'TFT';
+        if (lower.includes('double up')) return t('TFT Double Up');
+        if (lower.includes('hyper roll')) return t('TFT Hyper Roll');
+        if (lower.includes('rank')) return t('TFT Ranked');
+        return t('TFT');
     }
 
-    if (lower === 'aram_unranked_5x5') return 'ARAM';
-    if (lower === 'ranked_solo_5x5') return 'Solo/Duo';
-    if (lower === 'ranked_flex_sr') return 'Flex';
-    if (lower === 'ranked_tft') return 'TFT Ranked';
-    if (lower === 'swiftplay') return 'Swiftplay';
-    if (lower === 'cherry') return 'Arena';
-    if (lower === 'kiwi') return 'ARAM: Mayhem';
-    if (lower === 'league') return 'League';
-    if (lower.includes('ranked solo')) return 'Solo/Duo';
-    if (lower.includes('ranked flex')) return 'Flex';
-    if (lower.includes('normal draft')) return 'Draft';
-    if (lower.includes('normal blind')) return 'Blind';
-    if (lower.includes('quickplay')) return 'Quickplay';
+    if (lower === 'aram_unranked_5x5') return t('ARAM');
+    if (lower === 'ranked_solo_5x5') return t('Solo/Duo');
+    if (lower === 'ranked_flex_sr') return t('Flex');
+    if (lower === 'ranked_tft') return t('TFT Ranked');
+    if (lower === 'swiftplay') return t('Swiftplay');
+    if (lower === 'cherry') return t('Arena');
+    if (lower === 'kiwi') return t('ARAM: Mayhem');
+    if (lower === 'league') return t('League');
+    if (lower.includes('ranked solo')) return t('Solo/Duo');
+    if (lower.includes('ranked flex')) return t('Flex');
+    if (lower.includes('normal draft')) return t('Draft');
+    if (lower.includes('normal blind')) return t('Blind');
+    if (lower.includes('quickplay')) return t('Quickplay');
     if (lower.includes('aram')) return text.replace(/^aram:?\s*/i, 'ARAM: ');
     if (lower.includes('arena')) return text.replace(/^arena:?\s*/i, 'Arena ');
 
@@ -702,11 +703,11 @@ function getQueueLabel(activity) {
 function formatElapsed(startedAt) {
     const elapsedMs = Math.max(0, Date.now() - startedAt);
     const minutes = Math.max(1, Math.floor(elapsedMs / 60000));
-    return `${minutes}m`;
+    return `${minutes}${t('m')}`;
 }
 
 function formatFriendLine(activity) {
-    return `${getQueueLabel(activity)} - ${formatElapsed(activity.startedAt)}`;
+    return `${getQueueLabel(activity)} ${t('-')} ${formatElapsed(activity.startedAt)}`;
 }
 
 // roster member DOM
@@ -1268,9 +1269,9 @@ export function init(context) {
     Utils.Settings.inject(context, {
         name: 'social-panel-tweaks-settings',
         titleKey: 'snooze_social_panel_tweaks',
-        titleName: 'Social Panel Tweaks',
+        titleName: t('Social Panel Tweaks'),
         capitalTitleKey: 'snooze_social_panel_tweaks_capital',
-        capitalTitleName: 'SOCIAL PANEL TWEAKS',
+        capitalTitleName: t('SOCIAL PANEL TWEAKS'),
         class: 'social-panel-tweaks-settings',
     });
 
@@ -1283,52 +1284,52 @@ export function init(context) {
     if (window.SnoozeManager && window.SnoozeManager.registerModule) {
         window.SnoozeManager.registerModule({
             id: 'socialPanelTweaks',
-            name: 'Social Panel Tweaks',
-            description: 'Enhances the social panel with queue labels, in-game timers, connected party status visuals, and a collapsible sidebar.',
+            name: t('Social Panel Tweaks'),
+            description: t('Enhances the social panel with queue labels, in-game timers, connected party status visuals, and a collapsible sidebar.'),
             settings: [{
                     type: 'toggle',
                     id: 'sm:socialPanelTweaks',
-                    label: 'Enable Better Friends Status',
+                    label: t('Enable Better Friends Status'),
                     value: isEnabled,
                     onChange: (val) => toggleFeature(val),
                 },
                 {
                     type: 'toggle',
                     id: 'sm:sidebarToggle',
-                    label: 'Enable Sidebar Collapse Toggle',
+                    label: t('Enable Sidebar Collapse Toggle'),
                     value: isSidebarToggleEnabled,
                     onChange: (val) => toggleSidebarFeature(val),
                 },
                 {
                     type: 'toggle',
                     id: 'sm:partyGroup',
-                    label: 'Highlight Friends In The Same Lobby',
+                    label: t('Highlight Friends In The Same Lobby'),
                     value: isPartyGroupEnabled,
                     onChange: (val) => togglePartyGroup(val),
                 },
                 {
                     type: 'toggle',
                     id: 'sm:folderInvite',
-                    label: 'Enable Group Folder Invite Option',
+                    label: t('Enable Group Folder Invite Option'),
                     value: isFolderInviteEnabled,
                     onChange: (val) => toggleFolderInvite(val),
                 },
                 {
                     type: 'select',
                     id: 'sm:collapseMethod',
-                    label: 'Collapse Method',
+                    label: t('Collapse Method'),
                     value: collapseMethod,
                     options: [{
                             value: 'crop',
-                            label: 'Crop (Resize Window)'
+                            label: t('Crop (Resize Window)')
                         },
                         {
                             value: 'stretch',
-                            label: 'Stretch (Scale Layout)'
+                            label: t('Stretch (Scale Layout)')
                         },
                         {
                             value: 'slide',
-                            label: 'Slide (Shift Layout)'
+                            label: t('Slide (Shift Layout)')
                         }
                     ],
                     onChange: (val) => toggleCollapseMethod(val),
@@ -1349,7 +1350,7 @@ export function init(context) {
                             fontSize: '12px',
                             lineHeight: '1.5'
                         });
-                        note.innerHTML = '<span style="color:#c8aa6e;font-weight:600;">Slide mode note:</span> Unlike Crop and Stretch, this method shifts interface elements without resizing the window — the original client background stays visible in the uncovered sidebar area. For the cleanest look, pair it with a custom theme that removes or replaces that background.';
+                        note.innerHTML = `<span style="color:#c8aa6e;font-weight:600;">${t('Slide mode note:')}</span> ${t('Unlike Crop and Stretch, this method shifts interface elements without resizing the window — the original client background stays visible in the uncovered sidebar area. For the cleanest look, pair it with a custom theme that removes or replaces that background.')}`;
                         row.appendChild(note);
                     }
                 }
@@ -1365,28 +1366,28 @@ export function init(context) {
                 return row;
             };
 
-            plugin.appendChild(createFlatCheckbox('Enable Better Friends Status', isEnabled, toggleFeature));
-            plugin.appendChild(createFlatCheckbox('Enable Sidebar Collapse Toggle', isSidebarToggleEnabled, toggleSidebarFeature));
-            plugin.appendChild(createFlatCheckbox('Highlight friends in the same lobby', isPartyGroupEnabled, togglePartyGroup));
-            plugin.appendChild(createFlatCheckbox('Enable Group Folder Invite Option', isFolderInviteEnabled, toggleFolderInvite));
+            plugin.appendChild(createFlatCheckbox(t('Enable Better Friends Status'), isEnabled, toggleFeature));
+            plugin.appendChild(createFlatCheckbox(t('Enable Sidebar Collapse Toggle'), isSidebarToggleEnabled, toggleSidebarFeature));
+            plugin.appendChild(createFlatCheckbox(t('Highlight friends in the same lobby'), isPartyGroupEnabled, togglePartyGroup));
+            plugin.appendChild(createFlatCheckbox(t('Enable Group Folder Invite Option'), isFolderInviteEnabled, toggleFolderInvite));
 
-            plugin.appendChild(Utils.Settings.createSelectRow('Collapse Method', [{
+            plugin.appendChild(Utils.Settings.createSelectRow(t('Collapse Method'), [{
                     value: 'crop',
-                    label: 'Crop (Resize Window)'
+                    label: t('Crop (Resize Window)')
                 },
                 {
                     value: 'stretch',
-                    label: 'Stretch (Scale Layout)'
+                    label: t('Stretch (Scale Layout)')
                 },
                 {
                     value: 'slide',
-                    label: 'Slide (Shift Layout)'
+                    label: t('Slide (Shift Layout)')
                 }
             ], collapseMethod, (v) => {
                 toggleCollapseMethod(v);
             }));
 
-            plugin.appendChild(Utils.Settings.createInfoBox('<span style="color:#c8aa6e;font-weight:600;">Slide mode note:</span> Unlike Crop and Stretch, this method shifts interface elements without resizing the window — the original client background stays visible in the uncovered sidebar area. For the cleanest look, pair it with a custom theme that removes or replaces that background.'));
+            plugin.appendChild(Utils.Settings.createInfoBox(`<span style="color:#c8aa6e;font-weight:600;">${t('Slide mode note:')}</span> ${t('Unlike Crop and Stretch, this method shifts interface elements without resizing the window — the original client background stays visible in the uncovered sidebar area. For the cleanest look, pair it with a custom theme that removes or replaces that background.')}`));
         });
     }
 }
@@ -1485,7 +1486,7 @@ export function installEmberHook() {
                             const customItem = document.createElement('div');
                             customItem.className = 'menu-item';
                             customItem.setAttribute('data-snooze-folder-invite-btn', 'true');
-                            customItem.textContent = 'Invite Folder';
+                            customItem.textContent = t('Invite Folder');
 
                             customItem.addEventListener('click', async (e) => {
                                 e.preventDefault();

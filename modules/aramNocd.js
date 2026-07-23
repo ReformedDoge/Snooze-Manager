@@ -6,6 +6,7 @@
  * @link https://github.com/ReformedDoge
  */
 import Utils from './generalUtils.js';
+import { t } from './i18n.js';
 
 let isEnabled = false;
 
@@ -74,9 +75,9 @@ export function init(context) {
     Utils.Settings.inject(context, {
         name: "aram-nocd-settings",
         titleKey: "snooze_aram-nocd",
-        titleName: "ARAM No Cooldown",
+        titleName: t("ARAM No Cooldown"),
         capitalTitleKey: "snooze_aram-nocd_capital",
-        capitalTitleName: "ARAM NO COOLDOWN",
+        capitalTitleName: t("ARAM NO COOLDOWN"),
         class: "aram-nocd-settings"
     });
 
@@ -127,19 +128,19 @@ export function init(context) {
     if (window.SnoozeManager && window.SnoozeManager.registerModule) {
         window.SnoozeManager.registerModule({
             id: 'aramNocd',
-            name: 'ARAM No Cooldown',
-            description: 'Removes the cooldown when swapping champions with the ARAM bench.',
+            name: t('ARAM No Cooldown'),
+            description: t('Removes the cooldown when swapping champions with the ARAM bench.'),
             settings: [{
                 type: 'toggle',
                 id: 'sm:aramNocd',
-                label: 'Enable ARAM No Cooldown',
+                label: t('Enable ARAM No Cooldown'),
                 value: isEnabled,
                 onChange: (val) => toggleFeature(val)
             }]
         });
     } else {
         Utils.DOM.observer.observe("lol-uikit-scrollable.aram-nocd-settings", (plugin) => {
-            plugin.appendChild(Utils.Settings.createToggleRow("Enable ARAM No Cooldown", isEnabled, (next) => {
+            plugin.appendChild(Utils.Settings.createToggleRow(t("Enable ARAM No Cooldown"), isEnabled, (next) => {
                 isEnabled = next;
                 toggleFeature(isEnabled);
             }));

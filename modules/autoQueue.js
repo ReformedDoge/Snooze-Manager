@@ -6,6 +6,7 @@
  * @link https://github.com/ReformedDoge
  */
 import Utils from './generalUtils.js';
+import { t } from './i18n.js';
 
 // Arm on WaitingForStats/PreEndOfGame, fire on EndOfGame
 let _armed = false;
@@ -22,7 +23,7 @@ async function fetchQueues() {
     if (_queuesLoadPromise) return _queuesLoadPromise;
 
     _queuesLoadPromise = (async () => {
-        Utils.Debug.log('[AutoQueue]', 'Loading queues...');
+        Utils.Debug.log('[AutoQueue]', t('Loading queues...'));
         try {
             if (!Utils.GameData.Assets._initialized) {
                 await Utils.GameData.Assets.init();
@@ -149,7 +150,7 @@ function renderSettings(container) {
     });
 
     const queueLabel = document.createElement('span');
-    queueLabel.textContent = 'Queue';
+    queueLabel.textContent = t('Queue');
     Object.assign(queueLabel.style, {
         color: '#a09b8c',
         fontSize: '12px',
@@ -176,7 +177,7 @@ function renderSettings(container) {
             Utils.Debug.log('[AutoQueue]', 'No available queues yet; waiting for queue load.');
             const opt = document.createElement('option');
             opt.value = '';
-            opt.textContent = 'Loading queues...';
+            opt.textContent = t('Loading queues...');
             queueSelect.appendChild(opt);
             await fetchQueues();
             if (_availableQueues.length === 0) return;
@@ -207,18 +208,18 @@ function renderSettings(container) {
     container.appendChild(queueRow);
 
     const delay = Utils.Store.get('autoQueue', 'delay') || 0;
-    container.appendChild(Utils.Settings.createNumberInputRow('Delay before re-queue (seconds)', delay, 0, 60, 1, (v) => {
+    container.appendChild(Utils.Settings.createNumberInputRow(t('Delay before re-queue (seconds)'), delay, 0, 60, 1, (v) => {
         Utils.Store.set('autoQueue', 'delay', v);
     }));
 
-    container.appendChild(Utils.Settings.createInfoBox(`<span style="color:#c8aa6e;font-weight:600;">Full Automation Guide:</span> For a completely hands-free journey from queue to game, make sure to also enable <b>Auto Accept</b>, <b>Auto Lock Champion</b>, and <b>Auto Honor</b> (with the <i>'Skip Honor'</i> option checked).`));
+    container.appendChild(Utils.Settings.createInfoBox(t(`<span style="color:#c8aa6e;font-weight:600;">Full Automation Guide:</span> For a completely hands-free journey from queue to game, make sure to also enable <b>Auto Accept</b>, <b>Auto Lock Champion</b>, and <b>Auto Honor</b> (with the <i>'Skip Honor'</i> option checked).`)));
 
     const currentPanicKey = Utils.Store.get('global', 'panicKey') || 'F2';
     container.appendChild(Utils.Settings.createHotkeyRow(
-        'Panic Key (Cancel Auto Actions)',
+        t('Panic Key (Cancel Auto Actions)'),
         currentPanicKey,
         (newKey) => Utils.Store.set('global', 'panicKey', newKey),
-        'Note: The Panic Key only works if you have set a Delay greater than 0 seconds. You must press the key during the countdown window to cancel the auto-queue.'
+        t('Note: The Panic Key only works if you have set a Delay greater than 0 seconds. You must press the key during the countdown window to cancel the auto-queue.')
     ));
 }
 
@@ -228,9 +229,9 @@ export function init(context) {
     Utils.Settings.inject(context, {
         name: 'auto-queue-settings',
         titleKey: 'snooze_auto-queue',
-        titleName: 'Auto Queue',
+        titleName: t('Auto Queue'),
         capitalTitleKey: 'snooze_auto-queue_capital',
-        capitalTitleName: 'AUTO QUEUE',
+        capitalTitleName: t('AUTO QUEUE'),
         class: 'auto-queue-settings'
     });
 
@@ -239,11 +240,11 @@ export function init(context) {
     if (window.SnoozeManager && window.SnoozeManager.registerModule) {
         window.SnoozeManager.registerModule({
             id: 'autoQueue',
-            name: 'Auto Queue',
-            description: 'Automatically re-queues into your chosen game mode after a match ends, with configurable delay.',
+            name: t('Auto Queue'),
+            description: t('Automatically re-queues into your chosen game mode after a match ends, with configurable delay.'),
             settings: [{
                     type: 'toggle',
-                    label: 'Enable Auto Queue',
+                    label: t('Enable Auto Queue'),
                     value: isEnabled,
                     onChange: (val) => {
                         isEnabled = val;
@@ -258,7 +259,7 @@ export function init(context) {
         });
     } else {
         Utils.DOM.observer.observe("lol-uikit-scrollable.auto-queue-settings", (plugin) => {
-            plugin.appendChild(Utils.Settings.createToggleRow("Enable Auto Queue", isEnabled, (next) => {
+            plugin.appendChild(Utils.Settings.createToggleRow(t("Enable Auto Queue"), isEnabled, (next) => {
                 isEnabled = next;
                 Utils.Store.set('autoQueue', 'enabled', isEnabled);
             }));

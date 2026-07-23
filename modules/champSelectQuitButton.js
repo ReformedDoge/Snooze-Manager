@@ -5,6 +5,7 @@
  * @description Adds a dodge button in champion select for quick lobby exit.
  * @link https://github.com/ReformedDoge
  */
+import { t } from './i18n.js';
 import Utils from './generalUtils.js';
 
 let isEnabled = false;
@@ -42,9 +43,9 @@ export function init(context) {
     Utils.Settings.inject(context, {
         name: "dodge-button-settings",
         titleKey: "snooze_dodge-button",
-        titleName: "Dodge Button",
+        titleName: t('Dodge Button'),
         capitalTitleKey: "snooze_dodge-button_capital",
-        capitalTitleName: "DODGE BUTTON",
+        capitalTitleName: t('DODGE BUTTON'),
         class: "dodge-button-settings"
     });
 
@@ -66,7 +67,7 @@ export function init(context) {
                 if (!container.querySelector('#pm-quit-btn')) {
                     const btn = document.createElement('lol-uikit-flat-button');
                     btn.id = 'pm-quit-btn';
-                    btn.textContent = 'Dodge';
+                    btn.textContent = t('Dodge');
                     btn.style.cssText = 'margin-right: 10px; margin-top: 5px; width: auto; min-width: 80px; text-align: center;';
 
                     let dodging = false;
@@ -104,12 +105,12 @@ export function init(context) {
     if (window.SnoozeManager && window.SnoozeManager.registerModule) {
         window.SnoozeManager.registerModule({
             id: 'champSelectQuitButton',
-            name: 'Champ Select Dodge Button',
-            description: 'Adds a dodge button in the champion select.',
+            name: t('Champ Select Dodge Button'),
+            description: t('Adds a dodge button in the champion select.'),
             settings: [{
                 type: 'toggle',
                 id: 'sm:champSelectQuitButton',
-                label: 'Enable Champ Select Dodge Button',
+                label: t('Enable Champ Select Dodge Button'),
                 value: isEnabled,
                 onChange: (val) => toggleFeature(val)
             }]

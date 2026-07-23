@@ -6,6 +6,7 @@
  * @link https://github.com/ReformedDoge
  */
 import Utils from './generalUtils.js';
+import { t } from './i18n.js';
 
 let isEnabled = false;
 let statusMenu = null;
@@ -144,27 +145,27 @@ function getStatusMenu() {
 
     const opts = [{
             v: 'chat',
-            l: 'Online (Green)',
+            l: t('Online (Green)'),
             d: '#43b581'
         },
         {
             v: 'away',
-            l: 'Away (Red)',
+            l: t('Away (Red)'),
             d: '#f04747'
         },
         {
             v: 'dnd',
-            l: 'Do Not Disturb (Yellow)',
+            l: t('Do Not Disturb (Yellow)'),
             d: '#faa61a'
         },
         {
             v: 'mobile',
-            l: 'Mobile (Green)',
+            l: t('Mobile (Green)'),
             d: '#43b581'
         },
         {
             v: 'offline',
-            l: 'Offline (Gray)',
+            l: t('Offline (Gray)'),
             d: '#747f8d'
         }
     ];
@@ -206,7 +207,7 @@ function getStatusMenu() {
     });
     statusMsgInput = document.createElement('textarea');
     statusMsgInput.setAttribute('data-pm-status-message', 'true');
-    statusMsgInput.placeholder = 'Custom Status Message...';
+    statusMsgInput.placeholder = t('Custom Status Message...');
     Object.assign(statusMsgInput.style, {
         width: '100%',
         background: '#111',
@@ -260,21 +261,21 @@ export function init(context) {
     Utils.Settings.inject(context, {
         name: "custom-status-settings",
         titleKey: "snooze_custom-status",
-        titleName: "Custom Status",
+        titleName: t("Custom Status"),
         capitalTitleKey: "snooze_custom-status_capital",
-        capitalTitleName: "CUSTOM STATUS",
+        capitalTitleName: t("CUSTOM STATUS"),
         class: "custom-status-settings"
     });
 
     if (window.SnoozeManager && window.SnoozeManager.registerModule) {
         window.SnoozeManager.registerModule({
             id: 'customOnlineStatus',
-            name: 'Custom Online Status',
-            description: 'Overrides your online status indicator. Menu available by clicking the availability icon under your icon.',
+            name: t('Custom Online Status'),
+            description: t('Overrides your online status indicator. Menu available by clicking the availability icon under your icon.'),
             settings: [{
                     type: 'toggle',
                     id: 'sm:customOnlineStatus',
-                    label: 'Enable Custom Online Status',
+                    label: t('Enable Custom Online Status'),
                     value: isEnabled,
                     onChange: (val) => toggleFeature(val)
                 },
@@ -284,23 +285,23 @@ export function init(context) {
                     value: Utils.Store.get('customOnlineStatus', 'status') || 'chat',
                     options: [{
                             value: 'chat',
-                            label: 'Online (Green)'
+                            label: t('Online (Green)')
                         },
                         {
                             value: 'away',
-                            label: 'Away (Red)'
+                            label: t('Away (Red)')
                         },
                         {
                             value: 'dnd',
-                            label: 'Do Not Disturb (Yellow)'
+                            label: t('Do Not Disturb (Yellow)')
                         },
                         {
                             value: 'mobile',
-                            label: 'Mobile (Green)'
+                            label: t('Mobile (Green)')
                         },
                         {
                             value: 'offline',
-                            label: 'Offline (Gray)'
+                            label: t('Offline (Gray)')
                         }
                     ],
                     onChange: async (val) => {
@@ -315,7 +316,7 @@ export function init(context) {
                 {
                     type: 'textarea',
                     id: 'sm:customStatusMsg',
-                    placeholder: 'Custom Status Message...',
+                    placeholder: t('Custom Status Message...'),
                     value: Utils.Store.get('customOnlineStatus', 'statusMsg') || '',
                     onChange: async (val) => {
                         Utils.Store.set('customOnlineStatus', 'statusMsg', val);
@@ -332,7 +333,7 @@ export function init(context) {
         // Inject UI into native settings panel
         Utils.DOM.observer.observe("lol-uikit-scrollable.custom-status-settings", (plugin) => {
             plugin.innerHTML = '';
-            plugin.appendChild(Utils.Settings.createToggleRow("Enable Custom Online Status", isEnabled, async (next) => {
+            plugin.appendChild(Utils.Settings.createToggleRow(t("Enable Custom Online Status"), isEnabled, async (next) => {
                 isEnabled = next;
                 Utils.Store.set('customOnlineStatus', 'enabled', isEnabled);
                 await toggleFeature(isEnabled);
@@ -354,19 +355,19 @@ export function init(context) {
             });
             const opts = [{
                 v: 'chat',
-                l: 'Online (Green)'
+                l: t('Online (Green)')
             }, {
                 v: 'away',
-                l: 'Away (Red)'
+                l: t('Away (Red)')
             }, {
                 v: 'dnd',
-                l: 'Do Not Disturb (Yellow)'
+                l: t('Do Not Disturb (Yellow)')
             }, {
                 v: 'mobile',
-                l: 'Mobile (Green)'
+                l: t('Mobile (Green)')
             }, {
                 v: 'offline',
-                l: 'Offline (Gray)'
+                l: t('Offline (Gray)')
             }];
             opts.forEach(o => {
                 const opt = document.createElement('option');
@@ -390,7 +391,7 @@ export function init(context) {
             textRow.classList.add("plugins-settings-row");
             textRow.style.marginTop = "10px";
             const statusInput = document.createElement('textarea');
-            statusInput.placeholder = 'Custom Status Message...';
+            statusInput.placeholder = t('Custom Status Message...');
             Object.assign(statusInput.style, {
                 background: '#111',
                 color: '#f0e6d2',

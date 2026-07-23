@@ -5,6 +5,7 @@
  * @description Shows balance adjustment tooltips on champion hover.
  * @link https://github.com/ReformedDoge
  */
+import { t } from './i18n.js';
 import Utils from './generalUtils.js';
 
 let isEnabled = false;
@@ -54,20 +55,20 @@ function getModeKey(gameMode) {
 }
 
 const LABELS = {
-    dmg_dealt: 'Damage Dealt',
-    dmg_taken: 'Damage Taken',
-    healing: 'Healing',
-    shielding: 'Shielding',
-    ability_haste: 'Ability Haste',
-    attack_speed: 'Attack Speed',
-    total_as: 'Total Attack Speed',
-    energy_regen: 'Energy Regen',
-    mana_regen: 'Mana Regen',
-    energyregen_mod: 'Energy Regen',
-    manaregen_mod: 'Mana Regen',
-    movement_speed: 'Movement Speed',
-    tenacity: 'Tenacity',
-    crit_mod: 'Critical Damage'
+    dmg_dealt: t('Damage Dealt'),
+    dmg_taken: t('Damage Taken'),
+    healing: t('Healing'),
+    shielding: t('Shielding'),
+    ability_haste: t('Ability Haste'),
+    attack_speed: t('Attack Speed'),
+    total_as: t('Total Attack Speed'),
+    energy_regen: t('Energy Regen'),
+    mana_regen: t('Mana Regen'),
+    energyregen_mod: t('Energy Regen'),
+    manaregen_mod: t('Mana Regen'),
+    movement_speed: t('Movement Speed'),
+    tenacity: t('Tenacity'),
+    crit_mod: t('Critical Damage')
 };
 
 // Custom SVGs
@@ -104,7 +105,7 @@ function buildStatsHtml(stats) {
     }
 
     if (entries.length === 0) {
-        return '<div style="color:#746e64;font-style:italic;font-size:12px;margin-top:4px;">No balance adjustments</div>';
+        return '<div style="color:#746e64;font-style:italic;font-size:12px;margin-top:4px;">' + t('No balance adjustments') + '</div>';
     }
 
     return entries.map(([key, value]) => {
@@ -199,7 +200,7 @@ function showBalanceTooltip(component, position) {
     }
 
     const stats = balanceData[champId]?.stats?.[currentMode] || {};
-    showTT(component.element, position, `${currentMode.toUpperCase()} BALANCE`, buildStatsHtml(stats));
+    showTT(component.element, position, t("{{mode}} BALANCE", { mode: currentMode.toUpperCase() }), buildStatsHtml(stats));
 }
 
 function parseStatsBlock(content) {
@@ -348,9 +349,9 @@ export function init(context) {
     Utils.Settings.inject(context, {
         name: "balance-tooltip-settings",
         titleKey: "snooze_balance-tooltip",
-        titleName: "Balance Tooltip",
+        titleName: t("Balance Tooltip"),
         capitalTitleKey: "snooze_balance-tooltip_capital",
-        capitalTitleName: "BALANCE TOOLTIP",
+        capitalTitleName: t("BALANCE TOOLTIP"),
         class: "balance-tooltip-settings"
     });
     isEnabled = Utils.Store.get('SnoozeBalanceTooltip', 'enabled') || false;
@@ -387,11 +388,11 @@ export function init(context) {
         window.SnoozeManager.registerModule({
             id: 'SnoozeBalanceTooltip',
             name: 'Balance Tooltip',
-            description: 'Hover over champions in special modes (ARAM/URF/Arena) to see balance info/nerfs natively.',
+            description: t('Hover over champions in special modes (ARAM/URF/Arena) to see balance info/nerfs natively.'),
             settings: [{
                 type: 'toggle',
                 id: 'sm:SnoozeBalanceTooltip',
-                label: 'Enable Balance Tooltip',
+                label: t('Enable Balance Tooltip'),
                 value: isEnabled,
                 onChange: (val) => toggleFeature(val)
             }]
@@ -399,7 +400,7 @@ export function init(context) {
     } else {
         Utils.DOM.observer.observe("lol-uikit-scrollable.balance-tooltip-settings", (plugin) => {
             plugin.innerHTML = '';
-            plugin.appendChild(Utils.Settings.createToggleRow("Enable Balance Tooltip", isEnabled, (next) => {
+            plugin.appendChild(Utils.Settings.createToggleRow(t("Enable Balance Tooltip"), isEnabled, (next) => {
                 isEnabled = next;
                 Utils.Store.set('SnoozeBalanceTooltip', 'enabled', isEnabled);
                 toggleFeature(isEnabled);

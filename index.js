@@ -6,6 +6,9 @@
  * @link https://github.com/ReformedDoge
  */
 import Utils from './modules/generalUtils.js';
+import { init as initI18n, setLanguage, getCurrentLanguage, SUPPORTED_LANGUAGES, t } from './modules/i18n.js';
+
+await initI18n();
 
 function log(...args) {
     Utils.Debug.log('[Snooze-Manager]', ...args);
@@ -205,10 +208,10 @@ const Modal = (function() {
 
         const header = document.createElement('div');
         header.className = 'pm-header';
-        header.innerHTML = '<h2 class="pm-title">Snooze-Manager</h2>';
+        header.innerHTML = '<h2 class="pm-title">' + t("Snooze-Manager") + '</h2>';
         const closeBtn = document.createElement('button');
         closeBtn.className = 'pm-close';
-        closeBtn.innerHTML = '&#x2715;';
+        closeBtn.innerHTML = t('✕');
         closeBtn.addEventListener('click', () => hide());
         header.appendChild(closeBtn);
         modal.appendChild(header);
@@ -249,14 +252,14 @@ const Modal = (function() {
         }
 
         // Search Section (Player Lookup)
-        createTab('tab-lookup', 'Player Lookup', true);
+        createTab('tab-lookup', t('Player Lookup'), true);
 
         const lookupContent = document.createElement('div');
         lookupContent.id = 'tab-lookup';
         lookupContent.className = 'pm-tab-content active';
         lookupContent.innerHTML = `
-      <div class="pm-section-title">Player Lookup</div>
-      <div style="color:#a09b8c; font-size:13px; margin-bottom:20px; line-height:1.5;">Instantly look up match history for any player on any game mode using their Riot ID (Name#Tag).</div>
+      <div class="pm-section-title">${t("Player Lookup")}</div>
+      <div style="color:#a09b8c; font-size:13px; margin-bottom:20px; line-height:1.5;">${t("Instantly look up match history for any player on any game mode using their Riot ID (Name#Tag).")}</div>
     `;
 
         const searchRow = document.createElement('div');
@@ -274,23 +277,23 @@ const Modal = (function() {
             cursor: 'pointer'
         });
         const regions = [{
-                label: 'Local Region',
+                label: t('Local Region'),
                 value: ''
             },
             {
-                label: 'Americas (NA/BR/LAN/LAS)',
+                label: t('Americas (NA/BR/LAN/LAS)'),
                 value: 'NA1'
             },
             {
-                label: 'Europe (EUW/EUNE/TR/RU)',
+                label: t('Europe (EUW/EUNE/TR/RU)'),
                 value: 'EUW'
             },
             {
-                label: 'Asia (KR/JP)',
+                label: t('Asia (KR/JP)'),
                 value: 'KR'
             },
             {
-                label: 'SEA / OCE',
+                label: t('SEA / OCE'),
                 value: 'SG2'
             }
         ];
@@ -304,16 +307,16 @@ const Modal = (function() {
         const searchInput = document.createElement('input');
         searchInput.type = 'text';
         searchInput.className = 'pm-input';
-        searchInput.placeholder = 'e.g. Faker#KR1';
+        searchInput.placeholder = t('e.g. Faker#KR1');
 
         const searchBtn = document.createElement('button');
         searchBtn.className = 'pm-btn';
-        searchBtn.textContent = 'Search';
+        searchBtn.textContent = t('Search');
 
         const meBtn = document.createElement('button');
         meBtn.className = 'pm-btn';
-        meBtn.textContent = 'Me';
-        meBtn.title = 'Look up your own match history';
+        meBtn.textContent = t('Me');
+        meBtn.title = t('Look up your own match history');
 
         const resultDiv = document.createElement('div');
         resultDiv.style.marginTop = '16px';
@@ -327,11 +330,11 @@ const Modal = (function() {
         });
 
         meBtn.addEventListener('click', async () => {
-            resultDiv.innerHTML = '<div style="color:#c8aa6e">Looking up your account...</div>';
+            resultDiv.innerHTML = '<div style="color:#c8aa6e">' + t('Looking up your account...') + '</div>';
             try {
                 const me = await Utils.LCU.get('/lol-summoner/v1/current-summoner').catch(() => null);
                 if (!me || !me.puuid) {
-                    resultDiv.innerHTML = '<div style="color:#d92323">Could not find your account? RIOT!</div>';
+                    resultDiv.innerHTML = '<div style="color:#d92323">' + t('Could not find your account? RIOT!') + '</div>';
                     return;
                 }
                 const gameName = me.gameName || me.displayName || '';
@@ -344,7 +347,7 @@ const Modal = (function() {
                     tagLine
                 };
 
-                resultDiv.innerHTML = '<div style="color:#0ac8b9">Loading Match History...</div>';
+                resultDiv.innerHTML = '<div style="color:#0ac8b9">' + t('Loading Match History...') + '</div>';
                 import('./modules/gameAnalysisPopup.js').then(mod => {
                     mod.MatchHistoryModal.show(finalPlayer, '');
                 });
@@ -352,7 +355,7 @@ const Modal = (function() {
                     resultDiv.innerHTML = '';
                 }, 1000);
             } catch (e) {
-                resultDiv.innerHTML = '<div style="color:#d92323">Error looking up your account</div>';
+                resultDiv.innerHTML = '<div style="color:#d92323">' + t('Error looking up your account') + '</div>';
             }
         });
 
@@ -361,11 +364,11 @@ const Modal = (function() {
             const selectedRegion = regionSelect.value || null;
 
             if (!input) {
-                resultDiv.innerHTML = '<div style="color:#d92323">Please enter a name</div>';
+                resultDiv.innerHTML = '<div style="color:#d92323">' + t('Please enter a name') + '</div>';
                 return;
             }
 
-            resultDiv.innerHTML = '<div style="color:#c8aa6e">Searching...</div>';
+            resultDiv.innerHTML = '<div style="color:#c8aa6e">' + t('Searching...') + '</div>';
             try {
                 let puuidToUse = null;
                 let finalPlayer = null;
@@ -405,7 +408,7 @@ const Modal = (function() {
                         };
                     } catch (e) {}
 
-                    resultDiv.innerHTML = '<div style="color:#0ac8b9">Loading Match History...</div>';
+                    resultDiv.innerHTML = '<div style="color:#0ac8b9">' + t('Loading Match History...') + '</div>';
                     import('./modules/gameAnalysisPopup.js').then(mod => {
                         mod.MatchHistoryModal.show(finalPlayer, '', selectedRegion);
                     });
@@ -414,10 +417,10 @@ const Modal = (function() {
                         searchInput.value = '';
                     }, 1000);
                 } else {
-                    resultDiv.innerHTML = '<div style="color:#d92323">Player not found</div>';
+                    resultDiv.innerHTML = '<div style="color:#d92323">' + t('Player not found') + '</div>';
                 }
             } catch (e) {
-                resultDiv.innerHTML = '<div style="color:#d92323">Error looking up player</div>';
+                resultDiv.innerHTML = '<div style="color:#d92323">' + t('Error looking up player') + '</div>';
             }
         });
 
@@ -597,7 +600,7 @@ const Modal = (function() {
         const settingsTab = document.createElement('div');
         settingsTab.className = 'pm-tab pm-tab-settings';
         settingsTab.setAttribute('data-target', settingsTabId);
-        settingsTab.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Settings`;
+        settingsTab.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>${t('Settings')}`;
         settingsTab.addEventListener('click', () => {
             switchTab(settingsTabId);
             buildSettingsContent(settingsTabContent);
@@ -648,13 +651,42 @@ const Modal = (function() {
             }
 
             // General Section
-            const generalSection = makeSettingsSection('General', 'Global plugin manager settings.');
+            const generalSection = makeSettingsSection(t('General'), t('Global plugin manager settings.'));
+
+            const languageRow = document.createElement('div');
+            languageRow.className = 'pm-settings-row';
+            const languageLabel = document.createElement('span');
+            languageLabel.className = 'pm-settings-row-label';
+            languageLabel.textContent = t('Language (Requires reload)');
+
+            const languageSelect = document.createElement('select');
+            Object.assign(languageSelect.style, {
+                background: '#111', color: '#f0e6d2', border: '1px solid #3e2e13',
+                padding: '6px 12px', borderRadius: '4px', outline: 'none',
+                fontSize: '13px', cursor: 'pointer'
+            });
+
+            for (const [val, label] of Object.entries(SUPPORTED_LANGUAGES)) {
+                const opt = document.createElement('option');
+                opt.value = val;
+                opt.textContent = label;
+                if (val === getCurrentLanguage()) opt.selected = true;
+                languageSelect.appendChild(opt);
+            }
+
+            languageSelect.addEventListener('change', (e) => {
+                setLanguage(e.target.value);
+            });
+
+            languageRow.appendChild(languageLabel);
+            languageRow.appendChild(languageSelect);
+            generalSection.appendChild(languageRow);
 
             const hotkeyRow = document.createElement('div');
             hotkeyRow.className = 'pm-settings-row';
             const hotkeyLabel = document.createElement('span');
             hotkeyLabel.className = 'pm-settings-row-label';
-            hotkeyLabel.textContent = 'Menu Shortcut (Click to set)';
+            hotkeyLabel.textContent = t('Menu Shortcut (Click to set)');
 
             const hotkeyBtn = document.createElement('button');
             hotkeyBtn.className = 'pm-btn';
@@ -669,7 +701,7 @@ const Modal = (function() {
                 if (window._isCapturingHotkey) return;
 
                 window._isCapturingHotkey = true;
-                hotkeyBtn.textContent = 'Press keys...';
+                hotkeyBtn.textContent = t('Press keys...');
                 hotkeyBtn.style.borderColor = '#0ac8b9';
                 hotkeyBtn.style.color = '#0ac8b9';
 
@@ -716,7 +748,7 @@ const Modal = (function() {
                         parts.push(keyName);
 
                         if (parts.length > 3) {
-                            hotkeyBtn.textContent = 'Max 3 keys!';
+                            hotkeyBtn.textContent = t('Max 3 keys!');
                             setTimeout(() => {
                                 if (!window._isCapturingHotkey) return;
                                 hotkeyBtn.textContent = currentHotkey.display;
@@ -749,7 +781,7 @@ const Modal = (function() {
                     const isModifier = ['Control', 'Shift', 'Alt', 'Meta'].includes(ev.key);
                     if (isModifier && window._isCapturingHotkey) {
                         if (!ev.ctrlKey && !ev.shiftKey && !ev.altKey && !ev.metaKey) {
-                            hotkeyBtn.textContent = 'Press keys...';
+                hotkeyBtn.textContent = t('Press keys...');
                         } else {
                             const parts = [];
                             if (ev.ctrlKey) parts.push('Ctrl');
@@ -788,8 +820,8 @@ const Modal = (function() {
 
             // Updates Section 
             const updateSection = makeSettingsSection(
-                'Updates',
-                'Check GitHub for new Snooze-Manager releases.'
+                t('Updates'),
+                t('Check GitHub for new Snooze-Manager releases.')
             );
 
             const autoCheckEnabled = Utils.Store.get('core', 'checkUpdates') !== false;
@@ -798,7 +830,7 @@ const Modal = (function() {
             autoCheckRow.className = 'pm-settings-row';
             const autoCheckLabel = document.createElement('span');
             autoCheckLabel.className = 'pm-settings-row-label';
-            autoCheckLabel.textContent = 'Auto-check for updates on startup';
+            autoCheckLabel.textContent = t('Auto-check for updates on startup');
             const autoCheckToggle = makeSettingsToggle(autoCheckEnabled, (val) => {
                 Utils.Store.set('core', 'checkUpdates', val);
             });
@@ -816,7 +848,7 @@ const Modal = (function() {
                 if (_latestRelease) {
                     const title = document.createElement('div');
                     title.className = 'pm-update-title';
-                    title.textContent = `Update available: v${_latestRelease.version}`;
+                    title.textContent = t("Update available: v{{version}}", { version: _latestRelease.version });
                     updateStatusEl.appendChild(title);
 
                     const relName = document.createElement('div');
@@ -837,13 +869,13 @@ const Modal = (function() {
                     link.href = _latestRelease.url;
                     link.target = '_blank';
                     link.className = 'pm-update-link';
-                    link.textContent = 'View release on GitHub';
+                    link.textContent = t('View release on GitHub');
                     linkRow.appendChild(link);
                     updateStatusEl.appendChild(linkRow);
                 } else {
                     const span = document.createElement('span');
                     span.style.color = '#3a5060';
-                    span.textContent = `Current version: v${CURRENT_VERSION} — up to date`;
+                    span.textContent = t("Current version: v{{version}} — up to date", { version: CURRENT_VERSION });
                     updateStatusEl.appendChild(span);
                 }
             }
@@ -861,20 +893,20 @@ const Modal = (function() {
             const checkBtn = document.createElement('button');
             checkBtn.className = 'pm-btn';
             checkBtn.style.cssText = 'font-size:12px;padding:5px 12px;';
-            checkBtn.textContent = 'Check now';
+            checkBtn.textContent = t('Check now');
 
             const checkStatus = document.createElement('span');
             checkStatus.className = 'pm-update-check-status';
 
             checkBtn.addEventListener('click', async () => {
                 checkBtn.disabled = true;
-                checkBtn.textContent = 'Checking...';
+                checkBtn.textContent = t('Checking...');
                 checkStatus.textContent = '';
                 await checkForUpdates(true);
                 renderUpdateStatus();
                 checkBtn.disabled = false;
-                checkBtn.textContent = 'Check now';
-                checkStatus.textContent = _latestRelease ? '' : 'Already up to date';
+                checkBtn.textContent = t('Check now');
+                checkStatus.textContent = _latestRelease ? '' : t('Already up to date');
                 setTimeout(() => {
                     checkStatus.textContent = '';
                 }, 3000);
@@ -886,22 +918,22 @@ const Modal = (function() {
             wrap.appendChild(updateSection);
 
             // About Section 
-            const aboutSection = makeSettingsSection('About', '');
+            const aboutSection = makeSettingsSection(t('About'), '');
 
             const aboutContent = document.createElement('div');
             aboutContent.style.cssText = 'font-size:12px;color:#3a5060;line-height:1.8;margin-top:8px;';
 
             const aboutLines = [{
-                    label: 'Plugin:',
-                    value: 'Snooze-Manager by Reformed Doge'
+                    label: t('Plugin:'),
+                    value: t('Snooze-Manager by Reformed Doge')
                 },
                 {
-                    label: 'Version:',
+                    label: t('Version:'),
                     value: `v${CURRENT_VERSION}`
                 },
                 {
-                    label: 'GitHub:',
-                    value: 'github.com/ReformedDoge/Snooze-Manager',
+                    label: t('GitHub:'),
+                    value: t('github.com/ReformedDoge/Snooze-Manager'),
                     href: 'https://github.com/ReformedDoge/Snooze-Manager'
                 },
             ];
@@ -935,13 +967,13 @@ const Modal = (function() {
             wrap.appendChild(aboutSection);
 
             // Developer Section (debug logs)
-            const devSection = makeSettingsSection('Developer', 'Developer / debug settings. Enable to see debug logs from modules.');
+            const devSection = makeSettingsSection(t('Developer'), t('Developer / debug settings. Enable to see debug logs from modules.'));
             const debugEnabled = Utils.Store.get('core', 'debugLogs') === true;
             const debugRow = document.createElement('div');
             debugRow.className = 'pm-settings-row';
             const debugLabel = document.createElement('span');
             debugLabel.className = 'pm-settings-row-label';
-            debugLabel.textContent = 'Enable debug logs';
+            debugLabel.textContent = t('Enable debug logs');
             const debugToggle = makeSettingsToggle(debugEnabled, (val) => {
                 Utils.Store.set('core', 'debugLogs', val);
                 Utils.Debug.setEnabled(val);
@@ -957,11 +989,11 @@ const Modal = (function() {
             resetWelcomeLabelWrap.className = 'pm-label-wrapper';
             const resetWelcomeTitle = document.createElement('div');
             resetWelcomeTitle.className = 'pm-settings-row-label';
-            resetWelcomeTitle.textContent = 'Welcome modal';
+            resetWelcomeTitle.textContent = t('Welcome modal');
             const resetWelcomeDesc = document.createElement('div');
             resetWelcomeDesc.className = 'pm-label-desc';
             resetWelcomeDesc.style.color = '#4a6070';
-            resetWelcomeDesc.textContent = 'Show again on next startup.';
+            resetWelcomeDesc.textContent = t('Show again on next startup.');
             resetWelcomeLabelWrap.appendChild(resetWelcomeTitle);
             resetWelcomeLabelWrap.appendChild(resetWelcomeDesc);
 
@@ -969,14 +1001,14 @@ const Modal = (function() {
             resetWelcomeBtn.type = 'button';
             resetWelcomeBtn.className = 'pm-btn';
             resetWelcomeBtn.style.cssText = 'font-size:11px;padding:4px 10px;flex-shrink:0;background:rgba(255,255,255,0.015);border-color:rgba(200,170,110,0.16);color:#785a28;';
-            resetWelcomeBtn.textContent = 'Reset';
+            resetWelcomeBtn.textContent = t('Reset');
             resetWelcomeBtn.addEventListener('click', (e) => {
                 e.preventDefault();
                 e.stopPropagation();
                 Utils.Store.remove('core', 'welcomeModalDismissed');
-                resetWelcomeBtn.textContent = 'Reset done';
+                resetWelcomeBtn.textContent = t('Reset done');
                 setTimeout(() => {
-                    resetWelcomeBtn.textContent = 'Reset';
+                    resetWelcomeBtn.textContent = t('Reset');
                 }, 1800);
             });
 
@@ -986,7 +1018,7 @@ const Modal = (function() {
             wrap.appendChild(devSection);
 
             // Module Visibility Section
-            const visSection = makeSettingsSection('Module Visibility', 'Choose which modules appear in the sidebar. Modules with an active toggle are marked with a green dot - hidden modules can also be fully disabled so their code never runs (red dot).');
+            const visSection = makeSettingsSection(t('Module Visibility'), t('Choose which modules appear in the sidebar. Modules with an active toggle are marked with a green dot - hidden modules can also be fully disabled so their code never runs (red dot).'));
 
             const visDualList = document.createElement('div');
             visDualList.style.cssText = 'display:flex;gap:12px;margin-top:10px;';
@@ -1032,7 +1064,7 @@ const Modal = (function() {
 
                     if (mods.length === 0) {
                         const empty = document.createElement('div');
-                        empty.textContent = 'None';
+                        empty.textContent = t('None');
                         empty.style.cssText = 'color:#3a5060;font-size:12px;text-align:center;padding:20px 0;';
                         list.appendChild(empty);
                     }
@@ -1141,17 +1173,17 @@ const Modal = (function() {
                     buildVisibilityList();
                 }
 
-                const leftCol = makeColumn('Visible in Menu', visibleMods, [{
-                    label: 'Hide',
+                const leftCol = makeColumn(t('Visible in Menu'), visibleMods, [{
+                    label: t('Hide'),
                     className: 'pm-vis-hide-btn',
                     onClick: toggleVisibility
                 }]);
-                const rightCol = makeColumn('Hidden from Menu', hiddenMods, [{
-                        label: (mod) => disabledIds.has(mod.id) ? 'Enable' : 'Disable',
+                const rightCol = makeColumn(t('Hidden from Menu'), hiddenMods, [{
+                        label: (mod) => disabledIds.has(mod.id) ? t('Enable') : t('Disable'),
                         onClick: toggleDisabled
                     },
                     {
-                        label: 'Show',
+                        label: t('Show'),
                         className: 'pm-vis-show-btn',
                         onClick: toggleVisibility
                     }
@@ -1172,7 +1204,7 @@ const Modal = (function() {
             if (_restartDisabledCount > 0) {
                 const restartNote = document.createElement('div');
                 restartNote.style.cssText = 'font-size:11px;color:#a09b8c;margin-top:8px;padding:6px 10px;border-radius:4px;background:rgba(200,170,110,0.06);border:1px solid rgba(200,170,110,0.15);display:flex;align-items:center;gap:6px;';
-                restartNote.innerHTML = '<span style="color:#c8aa6e;font-weight:700;">!</span> Restart required for module enable/disable changes to take effect.';
+                restartNote.innerHTML = '<span style="color:#c8aa6e;font-weight:700;">!</span> ' + t('Restart required for module enable/disable changes to take effect.');
                 visSection.appendChild(restartNote);
             }
 
@@ -1391,11 +1423,11 @@ const WelcomeModal = (function() {
         const headingWrap = document.createElement('div');
         const kicker = document.createElement('div');
         kicker.className = 'pm-welcome-kicker';
-        kicker.textContent = 'Snooze-Manager';
+        kicker.textContent = t('Snooze-Manager');
         const title = document.createElement('h2');
         title.id = 'pm-welcome-title';
         title.className = 'pm-welcome-title';
-        title.textContent = 'Welcome to your new plugin manager';
+        title.textContent = t('Welcome to your new plugin manager');
         headingWrap.appendChild(kicker);
         headingWrap.appendChild(title);
 
@@ -1403,7 +1435,7 @@ const WelcomeModal = (function() {
         closeBtn.type = 'button';
         closeBtn.className = 'pm-welcome-close';
         closeBtn.setAttribute('aria-label', 'Close welcome');
-        closeBtn.innerHTML = '&#x2715;';
+        closeBtn.innerHTML = t('✕');
         closeBtn.addEventListener('click', () => hide());
 
         header.appendChild(headingWrap);
@@ -1414,7 +1446,7 @@ const WelcomeModal = (function() {
 
         const copy = document.createElement('p');
         copy.className = 'pm-welcome-copy';
-        copy.textContent = 'Snooze-Manager brings QoL features together in one menu, making them easy to configure and use.';
+        copy.textContent = t('Snooze-Manager brings QoL features together in one menu, making them easy to configure and use.');
         body.appendChild(copy);
 
         const hotkeyCard = document.createElement('div');
@@ -1427,19 +1459,19 @@ const WelcomeModal = (function() {
         const hotkeyText = document.createElement('div');
         const hotkeyLabel = document.createElement('div');
         hotkeyLabel.className = 'pm-welcome-hotkey-label';
-        hotkeyLabel.textContent = 'Default menu hotkey';
+        hotkeyLabel.textContent = t('Default menu hotkey');
         const hotkeyTitle = document.createElement('div');
         hotkeyTitle.className = 'pm-welcome-hotkey-title';
-        hotkeyTitle.textContent = `Press ${DEFAULT_MENU_HOTKEY.display} anytime to open the Snooze-Manager menu.`;
+        hotkeyTitle.textContent = t("Press {{hotkey}} anytime to open the Snooze-Manager menu.", { hotkey: DEFAULT_MENU_HOTKEY.display });
         const hotkeyNote = document.createElement('div');
         hotkeyNote.className = 'pm-welcome-hotkey-note';
-        hotkeyNote.innerHTML = 'Prefer another shortcut? It is <strong>fully customizable</strong> in Settings under General > Menu Shortcut.';
+        hotkeyNote.innerHTML = t('Prefer another shortcut? It is <strong>fully customizable</strong> in Settings under General > Menu Shortcut.');
         const hotkeyActions = document.createElement('div');
         hotkeyActions.className = 'pm-welcome-hotkey-actions';
         const gotItBtn = document.createElement('button');
         gotItBtn.type = 'button';
         gotItBtn.className = 'pm-welcome-btn';
-        gotItBtn.textContent = 'Got it';
+        gotItBtn.textContent = t('Got it');
         gotItBtn.addEventListener('click', () => hide());
         hotkeyActions.appendChild(gotItBtn);
         hotkeyText.appendChild(hotkeyLabel);
@@ -1458,16 +1490,16 @@ const WelcomeModal = (function() {
         featuresPanel.className = 'pm-welcome-panel';
         const featuresTitle = document.createElement('div');
         featuresTitle.className = 'pm-welcome-panel-title';
-        featuresTitle.textContent = 'What is inside';
+        featuresTitle.textContent = t('What is inside');
         const featuresList = document.createElement('ul');
         featuresList.className = 'pm-welcome-features';
         [
-            'Player lookup and match history tools',
-            'Auto features for re-queue, auto accept, champion select, and honor',
-            'Champion select quality-of-life options, Dodge Button',
-            'Client window, profile, social panel, and mode selector tweaks',
-            'Whale Helper loot and skin collection utilities',
-            'And more...',
+            t('Player lookup and match history tools'),
+            t('Auto features for re-queue, auto accept, champion select, and honor'),
+            t('Champion select quality-of-life options, Dodge Button'),
+            t('Client window, profile, social panel, and mode selector tweaks'),
+            t('Whale Helper loot and skin collection utilities'),
+            t('And more...'),
         ].forEach(feature => {
             const item = document.createElement('li');
             item.textContent = feature;
@@ -1480,7 +1512,7 @@ const WelcomeModal = (function() {
         aboutPanel.className = 'pm-welcome-panel';
         const aboutTitle = document.createElement('div');
         aboutTitle.className = 'pm-welcome-panel-title';
-        aboutTitle.textContent = 'About';
+        aboutTitle.textContent = t('About');
         const aboutContent = document.createElement('div');
         aboutContent.className = 'pm-welcome-about';
 
@@ -1492,26 +1524,26 @@ const WelcomeModal = (function() {
             updateLink.className = 'pm-welcome-update-link';
             updateLink.href = release.url || 'https://github.com/ReformedDoge/Snooze-Manager/releases';
             updateLink.target = '_blank';
-            updateLink.textContent = `Update available: v${release.version}`;
+            updateLink.textContent = t("Update available: v{{version}}", { version: release.version });
             versionWrap.appendChild(updateLink);
         }
 
         [{
-                label: 'Plugin:',
-                value: 'Snooze-Manager'
+                label: t('Plugin:'),
+                value: t('Snooze-Manager')
             },
             {
-                label: 'Version:',
+                label: t('Version:'),
                 value: `v${CURRENT_VERSION}`
             },
             {
-                label: 'GitHub:',
-                value: 'github.com/ReformedDoge/Snooze-Manager',
+                label: t('GitHub:'),
+                value: t('github.com/ReformedDoge/Snooze-Manager'),
                 href: 'https://github.com/ReformedDoge/Snooze-Manager'
             },
             {
-                label: 'By:',
-                value: 'SnoozeFest @ReformedDoge on github.'
+                label: t('By:'),
+                value: t('SnoozeFest @ReformedDoge on github.')
             },
         ].forEach(({
             label,
@@ -1622,55 +1654,55 @@ function getDisabledModuleIds() {
 
 const MODULE_INFO = {
     autoAccept: {
-        name: 'Auto Accept Match'
+        name: t('Auto Accept')
     },
     aramNocd: {
-        name: 'ARAM No CD'
+        name: t('ARAM No CD')
     },
     autoLockChampion: {
-        name: 'Auto Lock Champion'
+        name: t('Auto Lock Champion')
     },
     champSelectQuitButton: {
-        name: 'Champ Select Quit Button'
+        name: t('Champ Select Quit Button')
     },
     SnoozeBalanceTooltip: {
-        name: 'Balance Tooltip'
+        name: t('Balance Tooltip')
     },
     gameAnalysisPopup: {
-        name: 'Game Analysis Popup'
+        name: t('Game Analysis Popup')
     },
     customOnlineStatus: {
-        name: 'Custom Online Status'
+        name: t('Custom Online Status')
     },
     clientWindowTweaks: {
-        name: 'Client Window Tweaks'
+        name: t('Client Window Tweaks')
     },
     profileTweaks: {
-        name: 'Profile Tweaks'
+        name: t('Profile Tweaks')
     },
     autoHonor: {
-        name: 'Auto Honor'
+        name: t('Auto Honor')
     },
     arenaGod: {
-        name: 'Arena God'
+        name: t('Arena God')
     },
     socialPanelTweaks: {
-        name: 'Social Panel Tweaks'
+        name: t('Social Panel Tweaks')
     },
     whaleHelper: {
-        name: 'Whale Helper'
+        name: t('Whale Helper')
     },
     lowPrioWarningSuppress: {
-        name: 'Low Prio Warning Suppress'
+        name: t('Low Prio Warning Suppress')
     },
     autoQueue: {
-        name: 'Auto Queue'
+        name: t('Auto Queue')
     },
     modeSelectorTweaks: {
-        name: 'Mode Selector Tweaks'
+        name: t('Mode Selector Tweaks')
     },
     nameSpoofer: {
-        name: 'Name Spoofer'
+        name: t('Name Spoofer')
     }
 };
 

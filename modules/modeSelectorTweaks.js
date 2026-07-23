@@ -5,6 +5,7 @@
  * @description Mode Selector Tweaks:Mode Selector Tweaks: Declutters and cleans up the play screen by hiding unwanted navigation categories, game modes and queues.
  * @link https://github.com/ReformedDoge/Snooze-Manager
  */
+import { t } from './i18n.js';
 import Utils from './generalUtils.js';
 
 let isEnabled = false;
@@ -14,17 +15,17 @@ let hiddenQueues = new Set();
 let emberHookRegistered = false;
 
 const NAME_MAP = {
-    'kPvP': 'PvP',
-    'kVersusAI': 'Co-op vs. AI',
-    'kTraining': 'Training',
-    'CreateCustom': 'Create Custom',
-    'JoinCustom': 'Join Custom',
-    'CLASSIC': 'Summoner\'s Rift',
-    'ARAM': 'ARAM',
-    'CHERRY': 'Arena',
-    'TFT': 'Teamfight Tactics',
-    'TUTORIAL': 'Tutorial',
-    'PRACTICETOOL': 'Practice Tool'
+    'kPvP': t('PvP'),
+    'kVersusAI': t('Co-op vs. AI'),
+    'kTraining': t('Training'),
+    'CreateCustom': t('Create Custom'),
+    'JoinCustom': t('Join Custom'),
+    'CLASSIC': t("Summoner's Rift"),
+    'ARAM': t('ARAM'),
+    'CHERRY': t('Arena'),
+    'TFT': t('Teamfight Tactics'),
+    'TUTORIAL': t('Tutorial'),
+    'PRACTICETOOL': t('Practice Tool')
 };
 
 function getLabel(id) {
@@ -208,7 +209,7 @@ function injectButton() {
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.id = 'pm-mode-config-btn';
-    btn.title = 'Configure Mode Selector';
+    btn.title = t('Configure Mode Selector');
 
     // SVG gear icon
     btn.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`;
@@ -285,10 +286,10 @@ function openConfigModal() {
 
     const header = document.createElement('div');
     header.className = 'pm-header';
-    header.innerHTML = `<h2 class="pm-title">Mode Selector Config</h2>`;
+    header.innerHTML = `<h2 class="pm-title">${t('Mode Selector Config')}</h2>`;
     const closeBtn = document.createElement('button');
     closeBtn.className = 'pm-close';
-    closeBtn.innerHTML = '&#x2715;';
+    closeBtn.innerHTML = t('✕');
     closeBtn.onclick = () => overlay.remove();
     header.appendChild(closeBtn);
     modal.appendChild(header);
@@ -319,9 +320,9 @@ function openConfigModal() {
             });
         });
 
-        content.appendChild(createSection('Navigation Tabs', navs, hiddenNavs, '', '', null, getLabel));
-        content.appendChild(createSection('Game Modes', modes, hiddenModes, '', '', renderLists, getLabel));
-        content.appendChild(createSection('Queues', queues, hiddenQueues, 'id', 'name', null, (label) => label));
+        content.appendChild(createSection(t('Navigation Tabs'), navs, hiddenNavs, '', '', null, getLabel));
+        content.appendChild(createSection(t('Game Modes'), modes, hiddenModes, '', '', renderLists, getLabel));
+        content.appendChild(createSection(t('Queues'), queues, hiddenQueues, 'id', 'name', null, (label) => label));
     }
 
     function createSection(titleText, items, hiddenSet, idKey, labelKey, onToggleCallback, labelFormatter) {
@@ -475,9 +476,9 @@ export function init(context) {
     Utils.Settings.inject(context, {
         name: "mode-selector-settings",
         titleKey: "snooze_mode-selector",
-        titleName: "Mode Selector",
+        titleName: t("Mode Selector"),
         capitalTitleKey: "snooze_mode-selector_capital",
-        capitalTitleName: "MODE SELECTOR",
+        capitalTitleName: t("MODE SELECTOR"),
         class: "mode-selector-settings"
     });
 
@@ -487,19 +488,19 @@ export function init(context) {
     if (window.SnoozeManager && window.SnoozeManager.registerModule) {
         window.SnoozeManager.registerModule({
             id: 'modeSelectorTweaks',
-            name: 'Mode Selector Tweaks',
-            description: 'Declutter the game mode selection screen by hiding entire tabs, modes, or specific queues.',
+            name: t('Mode Selector Tweaks'),
+            description: t('Declutter the game mode selection screen by hiding entire tabs, modes, or specific queues.'),
             settings: [{
                 type: 'toggle',
                 id: 'sm:modeSelectorTweaks',
-                label: 'Enable Mode Selector Tweaks',
+                label: t('Enable Mode Selector Tweaks'),
                 value: isEnabled,
                 onChange: (val) => toggleFeature(val)
             }]
         });
     } else {
         Utils.DOM.observer.observe("lol-uikit-scrollable.mode-selector-settings", (plugin) => {
-            plugin.appendChild(Utils.Settings.createToggleRow("Enable Mode Selector Tweaks", isEnabled, (next) => {
+            plugin.appendChild(Utils.Settings.createToggleRow(t("Enable Mode Selector Tweaks"), isEnabled, (next) => {
                 toggleFeature(next);
             }));
         });

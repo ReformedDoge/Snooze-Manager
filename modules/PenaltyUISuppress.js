@@ -5,6 +5,7 @@
  * @description Suppresses low priority queue / leaverbuster warnings and player restriction info tooltips in the Ember layer.
  * @link https://github.com/ReformedDoge
  */
+import { t } from './i18n.js';
 import Utils from './generalUtils.js';
 
 const MODULE_KEY = 'lowPrioWarningSuppress';
@@ -261,9 +262,9 @@ export function init(context) {
     Utils.Settings.inject(context, {
         name: 'low-prio-warning-suppress-settings',
         titleKey: 'snooze_penalty-ui-suppress',
-        titleName: 'Penalty UI Suppression',
+        titleName: t('Penalty UI Suppression'),
         capitalTitleKey: 'snooze_penalty-ui-suppress_capital',
-        capitalTitleName: 'PENALTY UI SUPPRESSION',
+        capitalTitleName: t('PENALTY UI SUPPRESSION'),
         class: 'low-prio-warning-suppress-settings'
     });
 
@@ -438,18 +439,18 @@ export function init(context) {
     if (window.SnoozeManager && window.SnoozeManager.registerModule) {
         window.SnoozeManager.registerModule({
             id: MODULE_KEY,
-            name: 'Penalty UI Suppression',
-            description: 'Suppresses low priority queue, leaverbuster, queue dodge, ready-check-failer warning dialogs, and player restriction info tooltips.',
+            name: t('Penalty UI Suppression'),
+            description: t('Suppresses low priority queue, leaverbuster, queue dodge, ready-check-failer warning dialogs, and player restriction info tooltips.'),
             settings: [{
                 type: 'toggle',
                 id: 'sm:lowPrioWarningSuppress',
-                label: 'Low Priority Warning Suppression',
+                label: t('Low Priority Warning Suppression'),
                 value: enabled,
                 onChange: (v) => setEnabled(v)
             }, {
                 type: 'toggle',
                 id: 'sm:restrictionInfoSuppress',
-                label: 'Restriction Info Tooltip Suppression',
+                label: t('Restriction Info Tooltip Suppression'),
                 value: restrictionInfoEnabled,
                 onChange: (v) => setRestrictionInfoEnabled(v)
             }]
@@ -457,10 +458,10 @@ export function init(context) {
     } else {
         Utils.DOM.observer.observe('lol-uikit-scrollable.low-prio-warning-suppress-settings', (plugin) => {
             plugin.innerHTML = '';
-            plugin.appendChild(Utils.Settings.createToggleRow('Low Priority Warning Suppression', enabled, (next) => {
+            plugin.appendChild(Utils.Settings.createToggleRow(t('Low Priority Warning Suppression'), enabled, (next) => {
                 setEnabled(next);
             }));
-            plugin.appendChild(Utils.Settings.createToggleRow('Restriction Info Tooltip Suppression', restrictionInfoEnabled, (next) => {
+            plugin.appendChild(Utils.Settings.createToggleRow(t('Restriction Info Tooltip Suppression'), restrictionInfoEnabled, (next) => {
                 setRestrictionInfoEnabled(next);
             }));
         });

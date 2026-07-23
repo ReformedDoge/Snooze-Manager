@@ -5,6 +5,7 @@
  * @description Adds game analysis enhancements with player rank, recent match history and game in progress player history analysis.
  * @link https://github.com/ReformedDoge
  */
+import { t } from './i18n.js';
 import Utils from './generalUtils.js';
 
 // WS-cached session data (no HTTP GET needed)
@@ -118,7 +119,7 @@ function computeTeamAvgLabel(bests) {
         const avgTierNum = Math.round(players.reduce((s, b) => s + TIER_ORDER[b.tier], 0) / players.length);
         const avgLp = Math.round(players.reduce((s, b) => s + (b.lp || 0), 0) / players.length);
         const tierLabel = tierNumToHighEloLabel(avgTierNum);
-        return tierLabel ? `${tierLabel} ~${avgLp} LP` : null;
+            return tierLabel ? `${tierLabel} ${t("~{{lp}} LP", { lp: avgLp })}` : null;
     };
 
     // All Master+ — average tier + LP across everyone
@@ -212,13 +213,13 @@ async function fetchRankForPuuid(puuid) {
         // best = whichever queue is higher; ties favour solo
         const best = flexValue > soloValue ? {
             ...flex,
-            queue: 'Flex'
+            queue: t('Flex')
         } : (!solo.isUnranked ? {
             ...solo,
-            queue: 'Solo'
+            queue: t('Solo')
         } : {
             ...flex,
-            queue: 'Flex'
+            queue: t('Flex')
         });
         const result = {
             solo,
@@ -240,7 +241,7 @@ async function loadAugments() {
             augs.forEach(a => {
                 if (a.id && a.id > 0) {
                     augmentsCache[a.id] = {
-                        name: a.nameTRA || `Augment ${a.id}`,
+                        name: a.nameTRA || t("Augment {{id}}", { id: a.id }),
                         icon: a.augmentSmallIconPath || a.augmentIconPath || ''
                     };
                 }
@@ -464,7 +465,7 @@ async function analyzePlayer(p, currentTag, premadeColor) {
     let roleHtml = '<div style="width:14px;height:14px;margin-right:4px;flex-shrink:0;"></div>';
     if (hasAssignedRole) {
         const posLower = assignedPos.toLowerCase();
-        const displayRole = posLower === 'utility' ? 'Support' : (posLower.charAt(0).toUpperCase() + posLower.slice(1));
+        const displayRole = posLower === 'utility' ? t('Support') : (posLower.charAt(0).toUpperCase() + posLower.slice(1));
         roleHtml = `<img src="/fe/lol-parties/icon-position-${posLower}.png" style="width:14px;height:14px;margin-right:4px;vertical-align:middle;opacity:0.8;flex-shrink:0;" title="${displayRole}">`;
     }
 
@@ -481,7 +482,7 @@ async function analyzePlayer(p, currentTag, premadeColor) {
         }
     }
 
-    let rankStr = '<span style="color:#746e64">Unranked</span>';
+    let rankStr = `<span style="color:#746e64">${t('Unranked')}</span>`;
     if (puuid) {
         const ranked = await Utils.LCU.get('/lol-ranked/v1/ranked-stats/' + puuid).catch(() => null);
         if (ranked && ranked.queueMap && ranked.queueMap.RANKED_SOLO_5x5) {
@@ -534,7 +535,7 @@ async function analyzePlayer(p, currentTag, premadeColor) {
                 const totalValid = results.filter(r => r !== 'remake').length;
                 const wr = totalValid > 0 ? Math.round((wins / totalValid) * 100) : 0;
 
-                wrStr = `<span style="color:${wr >= 50 ? '#0ac8b9' : '#e84057'}">${wr}% WR</span> <span style="color:#a09b8c;font-size:11px;margin-left:4px;">(${wins}W ${totalValid - wins}L)</span>`;
+                wrStr = `<span style="color:${wr >= 50 ? '#0ac8b9' : '#e84057'}">${wr}${t("% WR")}</span> <span style="color:#a09b8c;font-size:11px;margin-left:4px;">(${wins}${t("W")} ${totalValid - wins}${t("L")})</span>`;
 
                 const recentResults = results.slice(0, 10);
                 trendHtml = `<div style="display:flex; gap:3px; margin-top:6px; justify-content:center; height:8px;">${recentResults.map(res => `<div class="trend-dot ${res.toLowerCase()}"></div>`).join('')}</div>`;
@@ -550,9 +551,9 @@ async function analyzePlayer(p, currentTag, premadeColor) {
                     }
                     if (mainRole) {
                         const posLower = mainRole.toLowerCase();
-                        const displayRole = posLower === 'utility' ? 'Support' : (posLower.charAt(0).toUpperCase() + posLower.slice(1));
-                        mainRoleHtml = `<div style="display:flex; align-items:center; justify-content:center; gap:4px; font-size:11px; color:#a09b8c; height:14px;" title="Main Role (Recent)">
-                      <span style="font-weight:600; color:#8a9aaa;">Main Role:</span>
+                        const displayRole = posLower === 'utility' ? t('Support') : (posLower.charAt(0).toUpperCase() + posLower.slice(1));
+                        mainRoleHtml = `<div style="display:flex; align-items:center; justify-content:center; gap:4px; font-size:11px; color:#a09b8c; height:14px;" title="${t("Main Role (Recent)")}">
+                      <span style="font-weight:600; color:#8a9aaa;">${t("Main Role:")}</span>
                       <img src="/fe/lol-parties/icon-position-${posLower}.png" style="width:14px;height:14px;opacity:0.8;">
                       <span style="color:#f0e6d2;">${displayRole}</span>
                   </div>`;
@@ -581,7 +582,7 @@ async function analyzePlayer(p, currentTag, premadeColor) {
     }
 
     const champInfo = Utils.GameData.Assets.champs[p.championId];
-    const champName = champInfo?.name || 'Unknown';
+    const champName = champInfo?.name || t('Unknown');
     let champIcon = champInfo?.squarePortraitPath || `/lol-game-data/assets/v1/champion-icons/${p.championId}.png`;
     champIcon = champIcon.replace('/lol-game-data/assets/', '/lol-game-data/assets/');
     const safeSummonerName = escapeHtml(sName);
@@ -594,7 +595,7 @@ async function analyzePlayer(p, currentTag, premadeColor) {
     return `
       <div style="display:flex; flex-direction:column; padding:10px; background:rgba(255,255,255,0.015); border-radius:6px; border:1px solid rgba(255,255,255,0.03); ${borderTop} transition: background 0.2s; position:relative; box-sizing:border-box; height:100%; overflow:hidden;">
         <div style="display:flex; flex-direction:column; align-items:center; text-align:center; gap:6px; margin-bottom:8px;">
-          <img src="${champIcon}" style="width:44px; height:44px; border-radius:50%; border:2px solid #785a28; cursor:pointer; flex-shrink:0;" onerror="this.style.opacity=0" onclick="if(window._pmShowHistory) window._pmShowHistory('${safePuuid}', '${safeTag}')" title="View Match History"/>
+          <img src="${champIcon}" style="width:44px; height:44px; border-radius:50%; border:2px solid #785a28; cursor:pointer; flex-shrink:0;" onerror="this.style.opacity=0" onclick="if(window._pmShowHistory) window._pmShowHistory('${safePuuid}', '${safeTag}')" title="${t("View Match History")}"/>
           <div style="display:flex; flex-direction:column; align-items:center; width:100%; gap:2px;">
             <span style="font-weight:bold; font-size:14px; color:#f0e6d2; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:100%; height:18px;" title="${safeSummonerName}">${safeSummonerName}</span>
             <span style="color:#a09b8c; font-size:12px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:100%; display:flex; align-items:center; justify-content:center; height:16px;">${roleHtml}${safeChampionName}</span>
@@ -603,7 +604,7 @@ async function analyzePlayer(p, currentTag, premadeColor) {
         <div style="height:1px; background:rgba(255,255,255,0.05); margin-bottom:8px; width:100%; flex-shrink:0;"></div>
         <div style="display:flex; flex-direction:column; align-items:center; justify-content:flex-start; text-align:center; gap:5px; width:100%; flex:1;">
           <div style="font-size:13px; font-weight:bold; height:16px; display:flex; align-items:center; justify-content:center;">${rankStr}</div>
-          <div style="font-size:13px; height:16px; display:flex; align-items:center; justify-content:center;">${wrStr || '<span style="color:#746e64">No recent matches</span>'}</div>
+          <div style="font-size:13px; height:16px; display:flex; align-items:center; justify-content:center;">          ${wrStr || `<span style="color:#746e64">${t("No recent matches")}</span>`}</div>
           ${trendHtml ? trendHtml : '<div style="height:8px;"></div>'}
           
           <div style="display:flex; flex-direction:column; align-items:center; gap:5px; margin-top:2px;">
@@ -667,11 +668,11 @@ const showGameAnalysis = async () => {
         .pm-analysis-btn-close:hover { color:#f0e6d2; }
       </style>
       <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #3e2e13;padding-bottom:12px;margin-bottom:16px;">
-        <h2 style="margin:0;color:#c8aa6e;font-size:20px;text-transform:uppercase;letter-spacing:1px;">Game Analysis</h2>
-        <button class="pm-analysis-btn-close" onclick="window._pmCloseAnalysisModal(this)">&#x2715;</button>
+        <h2 style="margin:0;color:#c8aa6e;font-size:20px;text-transform:uppercase;letter-spacing:1px;">${t("Game Analysis")}</h2>
+        <button class="pm-analysis-btn-close" onclick="window._pmCloseAnalysisModal(this)">${t('✕')}</button>
       </div>
       <div class="pm-analysis-content" style="text-align:center;color:#c8aa6e;margin-top:20px;">
-        Fetching detailed player data...
+        ${t("Fetching detailed player data...")}
       </div>
     `;
 
@@ -691,18 +692,18 @@ const showGameAnalysis = async () => {
             const sortedTeam2 = sortPlayersWithPremades(session.gameData.teamTwo, team2Premades);
 
             html += '<div style="background:rgba(74,158,255,0.02); border:1px solid rgba(74,158,255,0.15); border-radius:8px; padding:12px; margin-bottom:12px;">';
-            html += '<div style="color:#4a9eff; font-weight:bold; font-size:14px; margin-bottom:12px; letter-spacing:1px; border-bottom:1px solid rgba(74,158,255,0.15); padding-bottom:6px;">TEAM 1 (BLUE)</div><div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:12px;">';
+            html += `<div style="color:#4a9eff; font-weight:bold; font-size:14px; margin-bottom:12px; letter-spacing:1px; border-bottom:1px solid rgba(74,158,255,0.15); padding-bottom:6px;">${t("TEAM 1 (BLUE)")}</div><div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:12px;">`;
             const team1Htmls = await Promise.all(sortedTeam1.map(p => analyzePlayer(p, currentTag, team1Premades.get(p.puuid))));
             html += team1Htmls.join('');
             html += '</div></div>';
 
             html += '<div style="background:rgba(232,64,87,0.02); border:1px solid rgba(232,64,87,0.15); border-radius:8px; padding:12px;">';
-            html += '<div style="color:#e84057; font-weight:bold; font-size:14px; margin-bottom:12px; letter-spacing:1px; border-bottom:1px solid rgba(232,64,87,0.15); padding-bottom:6px;">TEAM 2 (RED)</div><div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:12px;">';
+            html += `<div style="color:#e84057; font-weight:bold; font-size:14px; margin-bottom:12px; letter-spacing:1px; border-bottom:1px solid rgba(232,64,87,0.15); padding-bottom:6px;">${t("TEAM 2 (RED)")}</div><div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:12px;">`;
             const team2Htmls = await Promise.all(sortedTeam2.map(p => analyzePlayer(p, currentTag, team2Premades.get(p.puuid))));
             html += team2Htmls.join('');
             html += '</div></div>';
         } else {
-            html += '<div style="text-align:center; color:#a09b8c; padding:20px;">No team data found</div>';
+            html += `<div style="text-align:center; color:#a09b8c; padding:20px;">${t("No team data found")}</div>`;
         }
         html += '</div>';
 
@@ -711,7 +712,7 @@ const showGameAnalysis = async () => {
     } catch (e) {
         Utils.Debug.error('[GameAnalysis] Render error', e);
         const contentTarget = panel.querySelector('.pm-analysis-content');
-        if (contentTarget) contentTarget.innerHTML = '<div style="color:#d92323;text-align:center;padding:20px;">Error loading game data</div>';
+        if (contentTarget) contentTarget.innerHTML = `<div style="color:#d92323;text-align:center;padding:20px;">${t("Error loading game data")}</div>`;
     }
 };
 
@@ -758,7 +759,7 @@ function handleGameAnalysisPhase(phase) {
                     if (!document.getElementById('pm-analysis-btn')) {
                         const btn = document.createElement('lol-uikit-flat-button');
                         btn.id = 'pm-analysis-btn';
-                        btn.textContent = 'Game Analysis';
+                        btn.textContent = t('Game Analysis');
                         btn.style.cssText = 'margin-top: 12px; width: 100%;';
                         btn.onclick = showGameAnalysis;
                         container.appendChild(btn);
@@ -782,9 +783,9 @@ export function init(context) {
     Utils.Settings.inject(context, {
         name: "analysis-popup-settings",
         titleKey: "snooze_analysis-popup",
-        titleName: "Player Analysis",
+        titleName: t("Player Analysis"),
         capitalTitleKey: "snooze_analysis-popup_capital",
-        capitalTitleName: "PLAYER ANALYSIS",
+        capitalTitleName: t("PLAYER ANALYSIS"),
         class: "analysis-popup-settings"
     });
 
@@ -810,19 +811,19 @@ export function init(context) {
     if (window.SnoozeManager && window.SnoozeManager.registerModule) {
         window.SnoozeManager.registerModule({
             id: 'gameAnalysisPopup',
-            name: 'Player Analysis',
-            description: 'Auto-opens a modal displaying rank and performance stats when game starts. Optionally shows stats & highlights premade groups in Champ Select.',
+            name: t('Player Analysis'),
+            description: t('Auto-opens a modal displaying rank and performance stats when game starts. Optionally shows stats & highlights premade groups in Champ Select.'),
             settings: [{
                     type: 'toggle',
                     id: 'sm:gameAnalysisPopup',
-                    label: 'Enable Game Analysis Popup',
+                    label: t('Enable Game Analysis Popup'),
                     value: isEnabled,
                     onChange: (val) => toggleFeature(val)
                 },
                 {
                     type: 'toggle',
                     id: 'sm:champSelectStats',
-                    label: 'Show Stats in Champ Select',
+                    label: t('Show Stats in Champ Select'),
                     value: isChampSelectStatsEnabled,
                     onChange: (val) => {
                         isChampSelectStatsEnabled = val;
@@ -833,7 +834,7 @@ export function init(context) {
                 {
                     type: 'toggle',
                     id: 'sm:premadeHighlight',
-                    label: 'Highlight Premade Groups',
+                    label: t('Highlight Premade Groups'),
                     value: isPremadeHighlightEnabled,
                     onChange: (val) => {
                         isPremadeHighlightEnabled = val;
@@ -844,7 +845,7 @@ export function init(context) {
                 {
                     type: 'toggle',
                     id: 'sm:includeAllQueues',
-                    label: 'Include all game modes in dropdown',
+                    label: t('Include all game modes in dropdown'),
                     value: includeAllQueues,
                     onChange: (val) => {
                         includeAllQueues = val;
@@ -855,13 +856,13 @@ export function init(context) {
         });
     } else {
         Utils.DOM.observer.observe("lol-uikit-scrollable.analysis-popup-settings", (plugin) => {
-            const row1 = Utils.Settings.createToggleRow("Enable Game Analysis Popup", isEnabled, (next) => {
+            const row1 = Utils.Settings.createToggleRow(t("Enable Game Analysis Popup"), isEnabled, (next) => {
                 isEnabled = next;
                 toggleFeature(isEnabled);
             });
             plugin.appendChild(row1);
 
-            const row2 = Utils.Settings.createToggleRow("Show Stats in Champ Select", isChampSelectStatsEnabled, (next) => {
+            const row2 = Utils.Settings.createToggleRow(t("Show Stats in Champ Select"), isChampSelectStatsEnabled, (next) => {
                 isChampSelectStatsEnabled = next;
                 Utils.Store.set('gameAnalysisPopup', 'champSelectStats', isChampSelectStatsEnabled);
                 champSelectStatsCache.clear();
@@ -869,7 +870,7 @@ export function init(context) {
             row2.style.marginTop = "10px";
             plugin.appendChild(row2);
 
-            const row3 = Utils.Settings.createToggleRow("Highlight Premade Groups", isPremadeHighlightEnabled, (next) => {
+            const row3 = Utils.Settings.createToggleRow(t("Highlight Premade Groups"), isPremadeHighlightEnabled, (next) => {
                 isPremadeHighlightEnabled = next;
                 Utils.Store.set('gameAnalysisPopup', 'premadeHighlight', isPremadeHighlightEnabled);
                 champSelectStatsCache.clear();
@@ -877,7 +878,7 @@ export function init(context) {
             row3.style.marginTop = "10px";
             plugin.appendChild(row3);
 
-            const row4 = Utils.Settings.createToggleRow("Include all game modes in dropdown", includeAllQueues, (next) => {
+            const row4 = Utils.Settings.createToggleRow(t("Include all game modes in dropdown"), includeAllQueues, (next) => {
                 includeAllQueues = next;
                 Utils.Store.set('gameAnalysisPopup', 'includeAllQueues', includeAllQueues);
             });
@@ -900,7 +901,7 @@ export function init(context) {
                     const el = this.element;
                     const btn = document.createElement('div');
                     btn.className = 'pm-view-history-btn';
-                    btn.textContent = 'View History';
+                    btn.textContent = t('View History');
                     btn.style.cssText = 'position:absolute; bottom:5px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.8); color:#0ac8b9; border:1px solid #0ac8b9; padding:2px 6px; font-size:10px; cursor:pointer; border-radius:4px; z-index:99; display:none; transition:opacity 0.2s;';
 
                     el.addEventListener('mouseenter', () => {
@@ -1018,8 +1019,7 @@ export function init(context) {
             }
             const preBadge = document.createElement('span');
             preBadge.className = 'pm-pre-badge';
-            preBadge.textContent = 'PRE';
-            // Strong text shadow ensures readability on any champion skin art
+            preBadge.textContent = t('PRE');
             preBadge.style.cssText = `position:absolute; top:-4px; left:50%; transform:translateX(-50%); font-size:11px; font-weight:900; color:${premadeColor}; text-shadow:-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 0 4px #000; text-transform:uppercase; z-index:10; pointer-events:none;`;
             iconContainer.appendChild(preBadge);
         }
@@ -1045,9 +1045,9 @@ export function init(context) {
         if (!statsData.empty) {
             badgeWR = `
             <div style="display:inline-flex; align-items:center; gap:3px; font-size:9px; color:#a09b8c; background:rgba(0,0,0,0.6); padding:2px 3px; border-radius:3px; border:1px solid rgba(255,255,255,0.08); white-space:nowrap;">
-                <span style="color:${wrColor}; font-weight:bold;">${statsData.wr}% WR</span>
-                <span style="color:#746e64;">|</span>
-                <span style="font-weight:600;">${statsData.kda} KDA</span>
+                <span style="color:${wrColor}; font-weight:bold;">${statsData.wr}${t("% WR")}</span>
+                <span style="color:#746e64;">${t("|")}</span>
+                <span style="font-weight:600;">${statsData.kda} ${t("KDA")}</span>
             </div>
             `;
         }
@@ -1520,8 +1520,8 @@ export function formatTime(ts) {
         minute: '2-digit',
         hour12: false
     });
-    if (diffDays === 0) return `Today ${time}`;
-    if (diffDays === 1) return `Yesterday ${time}`;
+        if (diffDays === 0) return t("Today {{time}}", { time });
+    if (diffDays === 1) return t("Yesterday {{time}}", { time });
     return d.toLocaleDateString(undefined, {
         month: '2-digit',
         day: '2-digit'
@@ -1538,7 +1538,7 @@ export function buildMatchRow(g, player, globalIdx) {
 
     const statusClass = isRemake ? '#746e64' : (win ? '#0ac8b9' : '#e84057');
     const bgClass = isRemake ? 'rgba(116,110,100,0.03)' : (win ? 'rgba(10,200,185,0.03)' : 'rgba(232,64,87,0.03)');
-    const statusText = isRemake ? 'REMAKE' : (win ? 'VICTORY' : 'DEFEAT');
+    const statusText = isRemake ? t('REMAKE') : (win ? t('VICTORY') : t('DEFEAT'));
 
     const champIcon = Utils.GameData.Assets.getIcon('champs', p.championId) || '/lol-game-data/assets/v1/champion-icons/' + p.championId + '.png';
     const spell1 = Utils.GameData.Assets.getIcon('spells', p.spell1Id);
@@ -1565,7 +1565,7 @@ export function buildMatchRow(g, player, globalIdx) {
 
     const cs = (p.totalMinionsKilled || 0) + (p.neutralMinionsKilled || 0);
     const gold = p.goldEarned || 0;
-    const goldStr = gold >= 1000 ? (gold / 1000).toFixed(1) + 'k' : gold;
+    const goldStr = gold >= 1000 ? (gold / 1000).toFixed(1) + t('k') : gold;
 
     return `
       <div class="pm-match-row" data-idx="${globalIdx}" style="display:flex; align-items:center; justify-content:space-between; padding:12px 20px; background:${bgClass}; border-radius:6px; border-left:4px solid ${statusClass}; margin-bottom:8px; box-shadow:0 2px 8px rgba(0,0,0,0.2); cursor:pointer;">
@@ -1598,16 +1598,16 @@ export function buildMatchRow(g, player, globalIdx) {
         </div>
 
         <div style="display:flex; flex-direction:column; align-items:center; width:110px;">
-          <div style="color:#f0e6d2; font-weight:bold; font-size:15px; letter-spacing:0.5px;">${p.kills} <span style="color:#746e64">/</span> <span style="color:#e84057">${p.deaths}</span> <span style="color:#746e64">/</span> ${p.assists}</div>
-          <div style="color:#a09b8c; font-size:12px; margin-top:4px;">${kda} <span style="color:#746e64; font-size:11px;">KDA</span></div>
+          <div style="color:#f0e6d2; font-weight:bold; font-size:15px; letter-spacing:0.5px;">${p.kills} <span style="color:#746e64">${t("/")}</span> <span style="color:#e84057">${p.deaths}</span> <span style="color:#746e64">${t("/")}</span> ${p.assists}</div>
+          <div style="color:#a09b8c; font-size:12px; margin-top:4px;">${kda} <span style="color:#746e64; font-size:11px;">${t("KDA")}</span></div>
         </div>
 
         <div style="display:flex; flex-direction:column; align-items:center; width:80px; gap:4px;">
-          <div style="color:#a09b8c; font-size:13px; display:flex; align-items:center; gap:4px;" title="Minion Score">
-            <span style="color:#f0e6d2; font-weight:600;">${cs}</span> <span style="color:#746e64; font-size:11px;">CS</span>
+          <div style="color:#a09b8c; font-size:13px; display:flex; align-items:center; gap:4px;" title="${t("Minion Score")}">
+            <span style="color:#f0e6d2; font-weight:600;">${cs}</span> <span style="color:#746e64; font-size:11px;">${t("CS")}</span>
           </div>
-          <div style="color:#f0e6d2; font-size:13px; font-weight:600; display:flex; align-items:center; gap:4px;" title="Gold Earned">
-            <span style="color:#c8aa6e">${goldStr}</span> <span style="color:#746e64; font-size:11px;">G</span>
+          <div style="color:#f0e6d2; font-size:13px; font-weight:600; display:flex; align-items:center; gap:4px;" title="${t("Gold Earned")}">
+            <span style="color:#c8aa6e">${goldStr}</span> <span style="color:#746e64; font-size:11px;">${t("G")}</span>
           </div>
         </div>
 
@@ -1799,7 +1799,7 @@ export const MatchHistoryModal = (function() {
         titleSection.appendChild(filterSelect);
 
         const closeBtn = document.createElement('button');
-        closeBtn.innerHTML = '&#x2715;';
+        closeBtn.innerHTML = t('✕');
         Object.assign(closeBtn.style, {
             background: 'none',
             border: 'none',
@@ -1915,7 +1915,7 @@ export const MatchHistoryModal = (function() {
                             const label = computeTeamAvgLabel(bests);
                             if (!label) return;
                             const slot = row.querySelector(`[data-avg-rank-row="${gameId}"]`);
-                            if (slot) slot.textContent = '~' + label;
+                            if (slot) slot.textContent = t('~') + label;
                         });
                     }
                 }
@@ -1936,7 +1936,7 @@ export const MatchHistoryModal = (function() {
         const listDiv = document.getElementById('pm-history-list');
         if (loadingDiv) {
             loadingDiv.style.display = 'block';
-            loadingDiv.textContent = 'Loading matches from Riot...';
+            loadingDiv.textContent = t('Loading matches from Riot...');
         }
 
         try {
@@ -1958,11 +1958,11 @@ export const MatchHistoryModal = (function() {
                 listDiv.insertAdjacentHTML('beforeend', html);
             } else {
                 listDiv.innerHTML = html;
-                if (games.length === 0) listDiv.innerHTML = '<div style="color:#a09b8c;text-align:center;margin-top:40px;">No matches found for this filter.</div>';
+                if (games.length === 0) listDiv.innerHTML = `<div style="color:#a09b8c;text-align:center;margin-top:40px;">${t("No matches found for this filter.")}</div>`;
             }
 
             _startIndex += games.length;
-            if (!_hasMore && loadingDiv) loadingDiv.textContent = 'No more matches.';
+            if (!_hasMore && loadingDiv) loadingDiv.textContent = t('No more matches.');
 
             // Lazy load ranks for visible matches
             const observer = initLazyRankObserver();
@@ -1972,7 +1972,7 @@ export const MatchHistoryModal = (function() {
                 observer.observe(row);
             });
         } catch (err) {
-            if (loadingDiv) loadingDiv.textContent = 'Failed to load Endpoint match history';
+            if (loadingDiv) loadingDiv.textContent = t('Failed to load Endpoint match history');
             Utils.Debug.error('SGP history error:', err);
         }
         _isLoading = false;
@@ -2021,10 +2021,10 @@ export const MatchHistoryModal = (function() {
                 const best = rank?.best;
                 if (best && !best.isUnranked) {
                     const color = getTierColor(best.tier);
-                    const label = best.tier.charAt(0) + best.tier.slice(1).toLowerCase() + (best.division ? ' ' + best.division : '') + (best.lp ? ' · ' + best.lp + 'LP' : '');
+                    const label = best.tier.charAt(0) + best.tier.slice(1).toLowerCase() + (best.division ? ' ' + best.division : '') + (best.lp ? ' ' + t('·') + ' ' + best.lp + t('LP') : '');
                     slot.innerHTML = `<span style="color:${color};">${escapeHtml(label)}</span><span style="color:#5a5a5a; font-size:8px; margin-left:3px;">${best.queue}</span>`;
                 } else {
-                    slot.textContent = 'Unranked';
+                    slot.textContent = t('Unranked');
                 }
             }
             if (rank?.best && !rank.best.isUnranked) {
@@ -2040,7 +2040,7 @@ export const MatchHistoryModal = (function() {
             if (!label) return;
             const avgSlot = detailDiv.querySelector(`[data-avg-rank-slot="${side}"]`);
             if (avgSlot) {
-                avgSlot.textContent = 'Avg: ' + label;
+                avgSlot.textContent = t('Avg:') + ' ' + label;
             }
         });
     }
@@ -2054,10 +2054,10 @@ export const MatchHistoryModal = (function() {
         const dateStr = formatTime(game.json.gameCreation || 0);
 
         const me = participants.find(p => p.puuid === _player.puuid) || participants[0];
-        if (!me) return '<div style="color:#a09b8c;text-align:center;padding:40px;font-size:13px;">Match data unavailable</div>';
+        if (!me) return `<div style="color:#a09b8c;text-align:center;padding:40px;font-size:13px;">${t("Match data unavailable")}</div>`;
         const isWin = me.win;
         const remakeMode = game.json.gameDuration < 240 && mode !== 'PRACTICETOOL';
-        const statusText = remakeMode ? 'REMAKE' : (isWin ? 'VICTORY' : 'DEFEAT');
+        const statusText = remakeMode ? t('REMAKE') : (isWin ? t('VICTORY') : t('DEFEAT'));
         const statusColor = remakeMode ? '#746e64' : (isWin ? '#0ac8b9' : '#e84057');
 
         const maxDmg = Math.max(...participants.map(p => p.totalDamageDealtToChampions || 0), 1);
@@ -2096,14 +2096,14 @@ export const MatchHistoryModal = (function() {
         const myRating = scoresMap[_player.puuid];
         let ratingBadgeHtml = '';
         if (myRating) {
-            const label = myRating.isMvp ? 'Match MVP' : (myRating.isAce ? 'Match ACE' : `#${myRating.rank} in Match`);
+            const label = myRating.isMvp ? t('Match MVP') : (myRating.isAce ? t('Match ACE') : t("#{{rank}} in Match", { rank: myRating.rank }));
             const bg = myRating.isMvp ? 'rgba(10, 200, 185, 0.15)' : (myRating.isAce ? 'rgba(232, 64, 87, 0.15)' : 'rgba(200, 170, 110, 0.1)');
             const border = myRating.isMvp ? 'rgba(10, 200, 185, 0.3)' : (myRating.isAce ? 'rgba(232, 64, 87, 0.3)' : 'rgba(200, 170, 110, 0.25)');
             const color = myRating.isMvp ? '#0ac8b9' : (myRating.isAce ? '#e84057' : '#c8aa6e');
 
             ratingBadgeHtml = `
         <div style="font-size:11px; color:${color}; margin-top:6px; font-weight:bold; background:${bg}; padding:3px 10px; border-radius:4px; display:inline-block; border:1px solid ${border}; text-transform:uppercase; letter-spacing:0.5px;">
-          Rating: ${myRating.score} &bull; ${label}
+          ${t("Rating:")} ${myRating.score} ${t('•')} ${label}
         </div>
       `;
         }
@@ -2170,17 +2170,17 @@ export const MatchHistoryModal = (function() {
 
         return `
       <div class="pm-btn-back" style="display:inline-flex; align-items:center; gap:6px; color:#c8aa6e; cursor:pointer; font-weight:bold; font-size:13px; margin-bottom:12px; transition:color 0.2s; max-width:fit-content;">
-        <span style="font-size:16px;">←</span> Back to Match History
+        <span style="font-size:16px;">${t('←')}</span> ${t("Back to Match History")}
       </div>
       
       <div style="background:rgba(255, 255, 255, 0.02); border:1px solid rgba(255, 255, 255, 0.05); border-radius:8px; padding:12px 16px; display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
         <div style="display:flex; flex-direction:column; gap:2px;">
           <div style="font-size:18px; font-weight:bold; color:${statusColor}; letter-spacing:0.5px;">${statusText}</div>
-          <div style="font-size:11px; color:#a09b8c;">${mode} &bull; ${durationMin}m ${durationSec}s</div>
+          <div style="font-size:11px; color:#a09b8c;">${mode} ${t('•')} ${durationMin}${t('m')} ${durationSec}${t('s')}</div>
         </div>
         <div style="text-align:right;">
           <div style="font-size:12px; color:#f0e6d2; font-weight:600;">${dateStr}</div>
-          <div style="font-size:11px; color:#746e64; margin-top:2px;">ID: ${game.json.gameId || ''}</div>
+          <div style="font-size:11px; color:#746e64; margin-top:2px;">${t("ID: {{id}}", { id: game.json.gameId || '' })}</div>
           ${ratingBadgeHtml}
         </div>
       </div>
@@ -2192,18 +2192,18 @@ export const MatchHistoryModal = (function() {
     function buildTeamColumnHtml(team, side, maxDmg, scoresMap) {
         const isWin = team.win;
         const teamColor = side === 'left' ? '#4a9eff' : '#e84057';
-        const statusText = isWin ? 'VICTORY' : 'DEFEAT';
+        const statusText = isWin ? t('VICTORY') : t('DEFEAT');
         const totalKills = team.kills;
-        const totalGold = (team.gold / 1000).toFixed(1) + 'k';
+        const totalGold = (team.gold / 1000).toFixed(1) + t('k');
 
         let html = `
       <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 10px; background:rgba(255,255,255,0.02); border-bottom:2px solid ${teamColor}; margin-bottom:8px;">
         <span style="font-weight:bold; font-size:13px; color:${teamColor}; letter-spacing:0.5px;">
-          ${side === 'left' ? 'YOUR TEAM' : 'ENEMY TEAM'} 
+          ${side === 'left' ? t('YOUR TEAM') : t('ENEMY TEAM')} 
           <span style="font-size:11px; color:#a09b8c; font-weight:normal; margin-left:6px;">(${statusText})</span>
         </span>
         <span style="font-size:11px; color:#a09b8c; font-weight:600; display:flex; flex-direction:column; align-items:flex-end; gap:1px;">
-          <span>${totalKills} Kills &bull; ${totalGold} Gold</span>
+          <span>${totalKills} ${t("Kills")} ${t('•')} ${totalGold} ${t("Gold")}</span>
           <span data-avg-rank-slot="${side}" style="font-size:10px; color:#746e64;"></span>
         </span>
       </div>
@@ -2223,13 +2223,13 @@ export const MatchHistoryModal = (function() {
         const totalKills = team.kills;
         const teamColor = isWin ? '#0ac8b9' : 'rgba(255, 255, 255, 0.05)';
         const textColor = isWin ? '#0ac8b9' : '#a09b8c';
-        const statusText = isWin ? '1st Place' : 'Eliminated';
+        const statusText = isWin ? t('1st Place') : t('Eliminated');
 
         let html = `
       <div style="background:rgba(255, 255, 255, 0.015); border:1px solid rgba(255, 255, 255, 0.04); border-radius:6px; padding:10px; display:flex; flex-direction:column; gap:4px; border-left:3px solid ${teamColor};">
         <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:4px; margin-bottom:4px;">
-          <span style="font-weight:bold; font-size:12px; color:${textColor};">Team ${teamIndex} (${statusText})</span>
-          <span style="font-size:10px; color:#746e64; font-weight:600;">${totalKills} Kills</span>
+          <span style="font-weight:bold; font-size:12px; color:${textColor};">${t("Team {{index}} ({{status}})", { index: teamIndex, status: statusText })}</span>
+          <span style="font-size:10px; color:#746e64; font-weight:600;">${totalKills} ${t("Kills")}</span>
         </div>
     `;
 
@@ -2243,7 +2243,7 @@ export const MatchHistoryModal = (function() {
 
     function buildPlayerDetailRowHtml(p, side, maxDmg, scoresMap) {
         const champInfo = Utils.GameData.Assets.champs[p.championId];
-        const champName = champInfo?.name || p.championName || 'Unknown';
+        const champName = champInfo?.name || p.championName || t('Unknown');
         let champIcon = champInfo?.squarePortraitPath || `/lol-game-data/assets/v1/champion-icons/${p.championId}.png`;
         champIcon = champIcon.replace('/lol-game-data/assets/', '/lol-game-data/assets/');
 
@@ -2267,7 +2267,7 @@ export const MatchHistoryModal = (function() {
         <div style="display:flex; gap:2px; margin-top:2px; justify-content:flex-end;">
           ${augments.map(id => {
             const aug = augmentsCache[id];
-            const name = aug?.name || `Augment ${id}`;
+            const name = aug?.name || t("Augment {{id}}", { id });
             const safeName = escapeHtml(name);
             let src = aug?.icon || '';
             if (src) {
@@ -2284,7 +2284,7 @@ export const MatchHistoryModal = (function() {
         const dmg = p.totalDamageDealtToChampions || 0;
         const dmgPercent = Math.min(100, Math.max(0, (dmg / maxDmg) * 100));
         const barColor = side === 'left' ? 'rgba(74, 158, 255, 0.06)' : 'rgba(232, 64, 87, 0.06)';
-        const playerName = p.riotIdGameName ? `${p.riotIdGameName}#${p.riotIdTagline}` : (p.summonerName || 'Unknown');
+        const playerName = p.riotIdGameName ? `${p.riotIdGameName}#${p.riotIdTagline}` : (p.summonerName || t('Unknown'));
         const safePlayerName = escapeHtml(playerName);
         const safeChampName = escapeHtml(champName);
         const isMeHighlight = p.puuid === _player.puuid ? 'border-left: 3px solid #c8aa6e; background: rgba(200,170,110,0.04);' : '';
@@ -2294,9 +2294,9 @@ export const MatchHistoryModal = (function() {
         if (rating) {
             const badgeColor = rating.isMvp ? '#0ac8b9' : (rating.isAce ? '#e84057' : 'rgba(255, 255, 255, 0.12)');
             const badgeTextColor = rating.isMvp || rating.isAce ? '#010a13' : '#a09b8c';
-            const badgeText = rating.isMvp ? 'MVP' : (rating.isAce ? 'ACE' : rating.score);
+            const badgeText = rating.isMvp ? t('MVP') : (rating.isAce ? t('ACE') : rating.score);
             badgeHtml = `
-        <span style="font-size:8px; font-weight:bold; color:${badgeTextColor}; background:${badgeColor}; padding:1px 4px; border-radius:3px; margin-left:6px; text-transform:uppercase; letter-spacing:0.5px; flex-shrink:0;" title="Rating: ${rating.score}/10 (#${rating.rank} in match)">
+        <span style="font-size:8px; font-weight:bold; color:${badgeTextColor}; background:${badgeColor}; padding:1px 4px; border-radius:3px; margin-left:6px; text-transform:uppercase; letter-spacing:0.5px; flex-shrink:0;" title="${t("Rating: {{score}}/10 (#{{rank}} in match)", { score: rating.score, rank: rating.rank })}">
           ${badgeText}
         </span>
       `;
@@ -2314,22 +2314,22 @@ export const MatchHistoryModal = (function() {
           </div>
           <div style="display:flex; flex-direction:column; align-items:center; text-align:center; min-width:0; overflow:hidden;">
             <div style="display:flex; align-items:center; justify-content:center; min-width:0; max-width:100%;">
-              <span style="font-weight:bold; font-size:11px; color:#f0e6d2; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; cursor:pointer; transition:color 0.15s; ${p.puuid === _player.puuid ? 'color:#c8aa6e;' : ''}" title="Click to copy: ${safePlayerName}" onclick="navigator.clipboard.writeText('${escapeJsSingleQuoted(playerName)}'); const el = this; const orig = el.innerText; const origColor = el.style.color; el.innerText = 'Copied!'; el.style.color = '#0ac8b9'; setTimeout(() => { el.innerText = orig; el.style.color = origColor; }, 1500);">
+              <span style="font-weight:bold; font-size:11px; color:#f0e6d2; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; cursor:pointer; transition:color 0.15s; ${p.puuid === _player.puuid ? 'color:#c8aa6e;' : ''}" title="${t("Click to copy: {{name}}", { name: safePlayerName })}" onclick="navigator.clipboard.writeText('${escapeJsSingleQuoted(playerName)}'); const el = this; const orig = el.innerText; const origColor = el.style.color; el.innerText = '${t('Copied!')}'; el.style.color = '#0ac8b9'; setTimeout(() => { el.innerText = orig; el.style.color = origColor; }, 1500);">
                 ${safePlayerName}
               </span>
               ${badgeHtml}
             </div>
             <span style="font-size:10px; color:#a09b8c; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:100%;" title="${safeChampName}">${safeChampName}</span>
-            <span data-rank-slot="${p.puuid}" style="font-size:9px; color:#746e64; margin-top:1px;">…</span>
+            <span data-rank-slot="${p.puuid}" style="font-size:9px; color:#746e64; margin-top:1px;">${t('…')}</span>
           </div>
         </div>
         
         <div style="display:flex; flex-direction:column; align-items:center; text-align:center; min-width:0; position:relative; z-index:1;">
           <span style="font-size:11px; font-weight:bold; color:#f0e6d2;">
-            ${p.kills} <span style="color:#746e64">/</span> <span style="color:#e84057">${p.deaths}</span> <span style="color:#746e64">/</span> ${p.assists}
+            ${p.kills} <span style="color:#746e64">${t("/")}</span> <span style="color:#e84057">${p.deaths}</span> <span style="color:#746e64">${t("/")}</span> ${p.assists}
           </span>
           <span style="font-size:9px; color:#a09b8c; margin-top:1px;">
-            ${dmg.toLocaleString()} DMG &bull; <span style="color:#c8aa6e">${cs} CS</span>
+            ${dmg.toLocaleString()} ${t("DMG")} ${t('•')} <span style="color:#c8aa6e">${cs} ${t("CS")}</span>
           </span>
         </div>
         
@@ -2360,7 +2360,7 @@ export const MatchHistoryModal = (function() {
         const filterSelect = document.getElementById('pm-history-filter');
         if (listDiv) {
             listDiv.style.display = 'flex';
-            listDiv.innerHTML = '<div style="color:#c8aa6e;text-align:center;margin-top:40px;">Loading...</div>';
+            listDiv.innerHTML = `<div style="color:#c8aa6e;text-align:center;margin-top:40px;">${t('Loading...')}</div>`;
         }
         if (detailDiv) detailDiv.style.display = 'none';
         if (filterSelect) filterSelect.style.display = 'block';
@@ -2369,7 +2369,7 @@ export const MatchHistoryModal = (function() {
 
         const select = document.getElementById('pm-history-filter');
         if (select) {
-            select.innerHTML = '<option value="">All Modes</option>';
+            select.innerHTML = `<option value="">${t("All Modes")}</option>`;
         }
 
         _root.style.display = 'flex';
@@ -2395,7 +2395,7 @@ export const MatchHistoryModal = (function() {
         _currentTag = defaultTag;
 
         if (select) {
-            select.innerHTML = '<option value="">All Modes</option>';
+            select.innerHTML = `<option value="">${t("All Modes")}</option>`;
             if (Utils.GameData.Assets.queues && Utils.GameData.Assets.queues.length > 0) {
                 const queueList = includeAllQueues ?
                     Utils.GameData.Assets.queues :

@@ -6,6 +6,7 @@
  * @link https://github.com/ReformedDoge
  */
 import Utils from './generalUtils.js';
+import { t } from './i18n.js';
 const SETTINGS_KEY = 'enabled';
 const POS_KEY = 'pos';
 const PLAYED_ID = '602001';
@@ -105,11 +106,11 @@ function updatePanelContent() {
     progressPanel.innerHTML = `
       <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px;">
         <div style="font-size:12px;font-weight:bold;text-transform:uppercase;letter-spacing:.06em;color:#c8aa6e;">
-          Arena God
+          ${t('Arena God')}
         </div>
         <div style="display:flex;align-items:center;gap:8px;">
           <span style="font-size:12px;color:#b7b1a1;">
-            ${remaining} left
+            ${t("{{count}} left", { count: remaining })}
           </span>
           <span
             id="sm-arena-god-close"
@@ -122,7 +123,7 @@ function updatePanelContent() {
               border-radius:3px;
               transition:background .12s ease,color .12s ease;
             "
-            title="Close"
+            title="${t('Close')}"
           >
             ✕
           </span>
@@ -135,11 +136,11 @@ function updatePanelContent() {
               ${current}
             </span>
             <span style="font-size:12px;color:#b7b1a1;">
-              / ${required} unique champions
+              ${t("/ {{count}} unique champions", { count: required })}
             </span>
           </div>
           <div style="font-size:11px;color:#8b8578;margin-top:2px;">
-            first place wins
+            ${t('first place wins')}
           </div>
         </div>
         <div style="text-align:right;">
@@ -147,7 +148,7 @@ function updatePanelContent() {
             ${playedCount}
           </div>
           <div style="font-size:10px;color:#6f6a63;margin-top:2px;">
-            champions played
+            ${t('champions played')}
           </div>
         </div>
       </div>
@@ -248,9 +249,9 @@ export function init(context) {
     Utils.Settings.inject(context, {
         name: 'arena-god-settings',
         titleKey: 'snooze_arena-god',
-        titleName: 'Arena God',
+        titleName: t('Arena God'),
         capitalTitleKey: 'snooze_arena-god_capital',
-        capitalTitleName: 'ARENA GOD',
+        capitalTitleName: t('ARENA GOD'),
         class: 'arena-god-settings'
     });
 
@@ -260,12 +261,12 @@ export function init(context) {
     if (window.SnoozeManager && window.SnoozeManager.registerModule) {
         window.SnoozeManager.registerModule({
             id: 'arenaGod',
-            name: 'Arena God Tracker',
-            description: 'Enhances Arena mode champion grid and progress display with status icons on individual grid tiles.',
+            name: t('Arena God Tracker'),
+            description: t('Enhances Arena mode champion grid and progress display with status icons on individual grid tiles.'),
             settings: [{
                 type: 'toggle',
                 id: SETTINGS_KEY,
-                label: 'Enable Arena God Tracker',
+                label: t('Enable Arena God Tracker'),
                 value: isEnabled,
                 onChange: (val) => toggleFeature(val)
             }]
@@ -273,7 +274,7 @@ export function init(context) {
     } else {
         Utils.DOM.observer.observe('lol-uikit-scrollable.arena-god-settings', (plugin) => {
             plugin.innerHTML = '';
-            plugin.appendChild(Utils.Settings.createToggleRow('Enable Arena God Tracker', isEnabled, (next) => {
+            plugin.appendChild(Utils.Settings.createToggleRow(t('Enable Arena God Tracker'), isEnabled, (next) => {
                 isEnabled = next;
                 Utils.Store.set('arenaGod', SETTINGS_KEY, isEnabled);
                 toggleFeature(isEnabled);

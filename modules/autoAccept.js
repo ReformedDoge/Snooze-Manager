@@ -6,6 +6,7 @@
  * @link https://github.com/ReformedDoge
  */
 import Utils from './generalUtils.js';
+import { t } from './i18n.js';
 
 const SETTINGS_KEY = 'enabled';
 const DELAY_KEY = 'delay';
@@ -55,35 +56,35 @@ function renderExtraSettings(container, native = false) {
     container.style.marginTop = '0';
     container.style.borderLeft = '2px solid #3e2e13';
 
-    container.appendChild(Utils.Settings.createNumberInputRow('Accept Delay (seconds)', getDelay(), DELAY_MIN, DELAY_MAX, 0.5, (v) => {
+    container.appendChild(Utils.Settings.createNumberInputRow(t('Accept Delay (seconds)'), getDelay(), DELAY_MIN, DELAY_MAX, 0.5, (v) => {
         Utils.Store.set('autoAccept', DELAY_KEY, v);
     }));
 
     // Exit on Decline Toggle
     const exitEnabled = Utils.Store.get('autoAccept', EXIT_ON_DECLINE_KEY) || false;
-    container.appendChild(Utils.Settings.createToggleRow('Exit queue if someone declines', exitEnabled, (next) => {
+    container.appendChild(Utils.Settings.createToggleRow(t('Exit queue if someone declines'), exitEnabled, (next) => {
         Utils.Store.set('autoAccept', EXIT_ON_DECLINE_KEY, next);
     }));
 
     // Exit on Dodge Toggle
     const exitDodgeEnabled = Utils.Store.get('autoAccept', EXIT_ON_DODGE_KEY) || false;
-    container.appendChild(Utils.Settings.createToggleRow('Exit queue if someone dodges', exitDodgeEnabled, (next) => {
+    container.appendChild(Utils.Settings.createToggleRow(t('Exit queue if someone dodges'), exitDodgeEnabled, (next) => {
         Utils.Store.set('autoAccept', EXIT_ON_DODGE_KEY, next);
     }));
 
     // Hide Ready Check Modal
     const hideReadyCheckEnabled = Utils.Store.get('autoAccept', HIDE_READY_CHECK_KEY) || false;
-    container.appendChild(Utils.Settings.createToggleRow('Hide queue pop', hideReadyCheckEnabled, (next) => {
+    container.appendChild(Utils.Settings.createToggleRow(t('Hide queue pop'), hideReadyCheckEnabled, (next) => {
         Utils.Store.set('autoAccept', HIDE_READY_CHECK_KEY, next);
     }));
 
     // Panic Key Hotkey
     const currentPanicKey = Utils.Store.get('global', 'panicKey') || 'F2';
     container.appendChild(Utils.Settings.createHotkeyRow(
-        'Panic Key (Cancel Auto Actions)',
+        t('Panic Key (Cancel Auto Actions)'),
         currentPanicKey,
         (newKey) => Utils.Store.set('global', 'panicKey', newKey),
-        'Note: The Panic Key only works if you have set an Accept Delay greater than 0 seconds. You must press the key during the countdown window to cancel the action.'
+        t('Note: The Panic Key only works if you have set an Accept Delay greater than 0 seconds. You must press the key during the countdown window to cancel the action.')
     ));
 }
 
@@ -93,9 +94,9 @@ export function init(context) {
     Utils.Settings.inject(context, {
         name: "auto-accept-settings",
         titleKey: "snooze_auto-accept",
-        titleName: "Auto Accept",
+        titleName: t("Auto Accept"),
         capitalTitleKey: "snooze_auto-accept_capital",
-        capitalTitleName: "AUTO ACCEPT",
+        capitalTitleName: t("AUTO ACCEPT"),
         class: "auto-accept-settings"
     });
 
@@ -111,12 +112,12 @@ export function init(context) {
     if (window.SnoozeManager && window.SnoozeManager.registerModule) {
         window.SnoozeManager.registerModule({
             id: 'autoAccept',
-            name: 'Auto Accept',
-            description: 'Automatically accepts matchmaking ready checks with optional delay and queue exit on decline.',
+            name: t('Auto Accept'),
+            description: t('Automatically accepts matchmaking ready checks with optional delay and queue exit on decline.'),
             settings: [{
                     type: 'toggle',
                     id: SETTINGS_KEY,
-                    label: 'Enable Auto Accept',
+                    label: t('Enable Auto Accept'),
                     value: isEnabled,
                     onChange: (val) => toggleAutoAccept(val)
                 },
@@ -131,7 +132,7 @@ export function init(context) {
             const row = document.createElement("div");
             row.classList.add("plugins-settings-row");
             row.appendChild(
-                Utils.Settings.createToggleRow("Enable Auto Accept", isEnabled, (val) => {
+                Utils.Settings.createToggleRow(t("Enable Auto Accept"), isEnabled, (val) => {
                     isEnabled = val;
                     toggleAutoAccept(isEnabled);
                 })

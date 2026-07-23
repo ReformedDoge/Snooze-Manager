@@ -6,6 +6,7 @@
  * @link https://github.com/ReformedDoge
  */
 import Utils from './generalUtils.js';
+import { t } from './i18n.js';
 
 const STYLE_ID = 'snooze-use-client-in-game-style';
 
@@ -64,9 +65,9 @@ export function init(context) {
     Utils.Settings.inject(context, {
         name: 'use-client-in-game-settings',
         titleKey: 'snooze_use-client-in-game',
-        titleName: 'Use Client In Game',
+        titleName: t('Use Client In Game'),
         capitalTitleKey: 'snooze_use-client-in-game_capital',
-        capitalTitleName: 'USE CLIENT IN GAME',
+        capitalTitleName: t('USE CLIENT IN GAME'),
         class: 'use-client-in-game-settings'
     });
 
@@ -75,11 +76,11 @@ export function init(context) {
     if (window.SnoozeManager && window.SnoozeManager.registerModule) {
         window.SnoozeManager.registerModule({
             id: 'useClientDuringGame',
-            name: 'Use Client In Game',
-            description: 'Dismiss the "game in progress" screen so you can browse the client during a live game. The screen returns automatically when a reconnect is needed.',
+            name: t('Use Client In Game'),
+            description: t('Dismiss the "game in progress" screen so you can browse the client during a live game. The screen returns automatically when a reconnect is needed.'),
             settings: [{
                 type: 'toggle',
-                label: 'Enable Use Client In Game',
+                label: t('Enable Use Client In Game'),
                 value: isEnabled,
                 onChange: (val) => {
                     isEnabled = val;
@@ -90,7 +91,7 @@ export function init(context) {
         });
     } else {
         Utils.DOM.observer.observe('lol-uikit-scrollable.use-client-in-game-settings', (plugin) => {
-            plugin.appendChild(Utils.Settings.createToggleRow('Enable Use Client In Game', isEnabled, (next) => {
+            plugin.appendChild(Utils.Settings.createToggleRow(t('Enable Use Client In Game'), isEnabled, (next) => {
                 isEnabled = next;
                 Utils.Store.set('useClientDuringGame', 'enabled', isEnabled);
                 applyPhase(_currentPhase);

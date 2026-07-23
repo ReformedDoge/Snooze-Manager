@@ -5,6 +5,7 @@
  * @description Automatically honor players after matches, with optional prioritization of friends or selection based on contributions, and score display on honor cards.
  * @link https://github.com/ReformedDoge
  */
+import { t } from './i18n.js';
 import Utils from './generalUtils.js';
 
 let isEnabled = false;
@@ -66,13 +67,13 @@ function renderExtraSettings(container) {
 
     const optAllies = document.createElement('option');
     optAllies.value = 'allies';
-    optAllies.textContent = 'Honor Allies';
+    optAllies.textContent = t('Honor Allies');
     const optEnemies = document.createElement('option');
     optEnemies.value = 'enemies';
-    optEnemies.textContent = 'Honor Enemies';
+    optEnemies.textContent = t('Honor Enemies');
     const optRandom = document.createElement('option');
     optRandom.value = 'random';
-    optRandom.textContent = 'Honor Random (Any)';
+    optRandom.textContent = t('Honor Random (Any)');
 
     select.appendChild(optAllies);
     select.appendChild(optEnemies);
@@ -83,12 +84,12 @@ function renderExtraSettings(container) {
     selectRow.appendChild(select);
 
     container.appendChild(selectRow);
-    container.appendChild(Utils.Settings.createNumberInputRow('Delay between votes (ms)', getDelay(), 0, 5000, 50, (v) => {
+    container.appendChild(Utils.Settings.createNumberInputRow(t('Delay between votes (ms)'), getDelay(), 0, 5000, 50, (v) => {
         Utils.Store.set('autoHonor', 'delayMs', v);
     }));
 
     // Skip Honor toggle
-    const skipRow = Utils.Settings.createToggleRow('Skip Honor', Utils.Store.get('autoHonor', 'skip') || false, (next) => {
+    const skipRow = Utils.Settings.createToggleRow(t('Skip Honor'), Utils.Store.get('autoHonor', 'skip') || false, (next) => {
         Utils.Store.set('autoHonor', 'skip', next);
         if (next) {
             Utils.Store.set('autoHonor', 'prioritizeByContribution', false);
@@ -101,7 +102,7 @@ function renderExtraSettings(container) {
     container.appendChild(skipRow);
 
     // Prioritize by Contribution toggle (mutually exclusive with Skip Honor)
-    const prioRow = Utils.Settings.createToggleRow('Prioritize by Contribution', Utils.Store.get('autoHonor', 'prioritizeByContribution') || false, (next) => {
+    const prioRow = Utils.Settings.createToggleRow(t('Prioritize by Contribution'), Utils.Store.get('autoHonor', 'prioritizeByContribution') || false, (next) => {
         Utils.Store.set('autoHonor', 'prioritizeByContribution', next);
         if (next) {
             Utils.Store.set('autoHonor', 'skip', false);
@@ -112,7 +113,7 @@ function renderExtraSettings(container) {
     container.appendChild(prioRow);
 
     // Prefer Friends toggle — honor friends first out of the current mode's candidates
-    const preferRow = Utils.Settings.createToggleRow('Prefer Friends', Utils.Store.get('autoHonor', 'preferFriends') || false, (next) => {
+    const preferRow = Utils.Settings.createToggleRow(t('Prefer Friends'), Utils.Store.get('autoHonor', 'preferFriends') || false, (next) => {
         Utils.Store.set('autoHonor', 'preferFriends', next);
         if (next) {
             Utils.Store.set('autoHonor', 'skip', false);
@@ -127,9 +128,9 @@ export function init(context) {
     Utils.Settings.inject(context, {
         name: "auto-honor-settings",
         titleKey: "snooze_auto-honor",
-        titleName: "Auto Honor",
+        titleName: t("Auto Honor"),
         capitalTitleKey: "snooze_auto-honor_capital",
-        capitalTitleName: "AUTO HONOR",
+        capitalTitleName: t("AUTO HONOR"),
         class: "auto-honor-settings"
     });
 
@@ -140,12 +141,12 @@ export function init(context) {
     if (window.SnoozeManager && window.SnoozeManager.registerModule) {
         window.SnoozeManager.registerModule({
             id: 'autoHonor',
-            name: 'Auto Honor',
-            description: 'Automatically honors a teammate, enemy, or random player when the game finishes.',
+            name: t('Auto Honor'),
+            description: t('Automatically honors a teammate, enemy, or random player when the game finishes.'),
             settings: [{
                     type: 'toggle',
                     id: 'sm:autoHonor',
-                    label: 'Enable Auto Honor',
+                    label: t('Enable Auto Honor'),
                     value: isEnabled,
                     onChange: (val) => toggleFeature(val)
                 },
@@ -156,7 +157,7 @@ export function init(context) {
                 {
                     type: 'toggle',
                     id: 'sm:showScoreOnCard',
-                    label: 'Show KDA & Score on Honor Card',
+                    label: t('Show KDA & Score on Honor Card'),
                     value: showScoreOnCard,
                     onChange: (val) => Utils.Store.set('autoHonor', 'showScoreOnCard', val)
                 }
@@ -164,7 +165,7 @@ export function init(context) {
         });
     } else {
         Utils.DOM.observer.observe("lol-uikit-scrollable.auto-honor-settings", (plugin) => {
-            const mainToggle = Utils.Settings.createToggleRow('Enable Auto Honor', isEnabled, (next) => {
+            const mainToggle = Utils.Settings.createToggleRow(t('Enable Auto Honor'), isEnabled, (next) => {
                 isEnabled = next;
                 toggleFeature(next);
             });
@@ -177,7 +178,7 @@ export function init(context) {
             renderExtraSettings(extraRow);
             plugin.appendChild(extraRow);
 
-            const scoreRow = Utils.Settings.createToggleRow('Show KDA & Score on Honor Card', showScoreOnCard, (next) => {
+            const scoreRow = Utils.Settings.createToggleRow(t('Show KDA & Score on Honor Card'), showScoreOnCard, (next) => {
                 Utils.Store.set('autoHonor', 'showScoreOnCard', next);
             });
             scoreRow.classList.add('plugins-settings-row');
@@ -451,8 +452,8 @@ function injectScoreOnHonorCard(element, puuid) {
     chip.innerHTML = `
         <div style="color:#e8d5a3;font-weight:700;font-size:11px;letter-spacing:0.3px;text-shadow:0 0 4px rgba(0,0,0,0.9),0 0 2px rgba(0,0,0,0.9);">${rating.kills}/${rating.deaths}/${rating.assists}</div>
         <div style="font-size:9px;display:flex;gap:6px;justify-content:center;">
-            <span style="font-weight:600;text-shadow:0 0 3px rgba(0,0,0,0.9);color:#c0b89a;">${rating.kda} KDA</span>
-            <span style="color:${color};font-weight:700;text-shadow:0 0 3px rgba(0,0,0,0.9),0 0 6px ${color}80;">Score: ${rating.score}</span>
+            <span style="font-weight:600;text-shadow:0 0 3px rgba(0,0,0,0.9);color:#c0b89a;">${rating.kda} ${t('KDA')}</span>
+            <span style="color:${color};font-weight:700;text-shadow:0 0 3px rgba(0,0,0,0.9),0 0 6px ${color}80;">${t('Score:')} ${rating.score}</span>
         </div>
     `;
 
@@ -474,8 +475,8 @@ function injectFriendBadge(element, puuid) {
     const chip = document.createElement('div');
     chip.className = 'ah-friend-badge';
     chip.innerHTML = `
-        <span style="color:#ff6b8a;font-size:11px;text-shadow:0 0 4px rgba(0,0,0,0.9);">&#9829;</span>
-        <span style="color:#e8d5a3;font-weight:700;font-size:10px;letter-spacing:0.3px;text-shadow:0 0 4px rgba(0,0,0,0.9);">Friend</span>
+        <span style="color:#ff6b8a;font-size:11px;text-shadow:0 0 4px rgba(0,0,0,0.9);">${t('&#9829;')}</span>
+        <span style="color:#e8d5a3;font-weight:700;font-size:10px;letter-spacing:0.3px;text-shadow:0 0 4px rgba(0,0,0,0.9);">${t('Friend')}</span>
     `;
 
     // Adapt to native role indicator if present
