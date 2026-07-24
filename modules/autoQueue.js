@@ -12,6 +12,9 @@ import { t } from './i18n.js';
 let _armed = false;
 // Prevent double-firing
 let _queuing = false;
+let _phaseUnsub = null;
+let _cancelPendingRequeue = null;
+let _unloaded = false;
 
 let _availableQueues = []; // [{ id, name }] from Utils.GameData.Assets
 let _queuesLoadPromise = null;
@@ -78,11 +81,24 @@ async function reQueue() {
         if (delayMs > 0) {
             Utils.Debug.log('[AutoQueue]', `Waiting ${delay}s before re-queuing...`);
             let isCancelled = false;
-            const unregisterPanic = Utils.Panic.register(() => {
-                isCancelled = true;
+            await new Promise(resolve => {
+                let settled = false;
+                let unregisterPanic = null;
+                const finish = (cancelled = false) => {
+                    if (settled) return;
+                    settled = true;
+                    isCancelled = cancelled;
+                    clearTimeout(timer);
+                    unregisterPanic?.();
+                    unregisterPanic = null;
+                    if (_cancelPendingRequeue === cancel) _cancelPendingRequeue = null;
+                    resolve();
+                };
+                const cancel = () => finish(true);
+                const timer = setTimeout(() => finish(false), delayMs);
+                unregisterPanic = Utils.Panic.register(cancel);
+                _cancelPendingRequeue = cancel;
             });
-            await new Promise(r => setTimeout(r, delayMs));
-            unregisterPanic();
 
             if (isCancelled) {
                 Utils.Debug.log('[AutoQueue]', 'Cancelled via Panic Key - aborting.');
@@ -107,6 +123,7 @@ async function reQueue() {
 
         // Small settle pause so the lobby is fully created before we mutate it
         await new Promise(r => setTimeout(r, 500));
+        if (_unloaded) return;
 
         Utils.Debug.log('[AutoQueue]', `POST /lol-lobby/v2/lobby  { queueId: ${queueId} }`);
         try {
@@ -274,6 +291,7 @@ export function init(context) {
 }
 
 export async function load() {
+    _unloaded = false;
     Utils.Debug.log('[AutoQueue]', 'load() called — loading queues and subscribing to gameflow phase.');
     await fetchQueues();
 
@@ -282,7 +300,8 @@ export async function load() {
         return;
     }
 
-    Utils.LCU.observe('/lol-gameflow/v1/gameflow-phase', (e) => {
+    if (_phaseUnsub) return;
+    _phaseUnsub = Utils.LCU.observe('/lol-gameflow/v1/gameflow-phase', (e) => {
         const isEnabled = Utils.Store.get('autoQueue', 'enabled');
         if (!isEnabled) {
             _armed = false;
@@ -312,4 +331,13 @@ export async function load() {
         _armed = false;
         _queuing = false;
     });
+}
+export function unload() {
+    _unloaded = true;
+    _cancelPendingRequeue?.();
+    _cancelPendingRequeue = null;
+    _phaseUnsub?.();
+    _phaseUnsub = null;
+    _armed = false;
+    _queuing = false;
 }

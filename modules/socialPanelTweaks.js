@@ -42,6 +42,9 @@ let isSidebarToggleEnabled = false;
 let collapseMethod = 'crop'; // 'crop' or 'stretch' or `slide`
 let friendListUnsub = null;
 let champSelectPhaseUnsub = null;
+let videoSettingsUnsub = null;
+let sidebarResizeHandler = null;
+let sidebarMouseDownHandler = null;
 let liveFriendStatuses = new Map();
 let statusKeysByFriend = new Map();
 let emberHookRegistered = false;
@@ -1223,14 +1226,13 @@ function mountSidebarToggle() {
     const isCollapsed = Utils.Store.get('socialPanelTweaks', 'isCollapsed') || false;
     if (isCollapsed) setTimeout(enforceWindowSize, 1000);
 
-    if (!window.__snoozeSidebarResizeListener) {
-        window.__snoozeSidebarResizeListener = true;
-        window.addEventListener('resize', enforceWindowSize);
+    if (!sidebarResizeHandler) {
+        sidebarResizeHandler = enforceWindowSize;
+        window.addEventListener('resize', sidebarResizeHandler);
     }
 
-    if (!window.__snoozeSidebarListenerAdded) {
-        window.__snoozeSidebarListenerAdded = true;
-        document.addEventListener('mousedown', (e) => {
+    if (!sidebarMouseDownHandler) {
+        sidebarMouseDownHandler = (e) => {
             const toggleBtn = e.target.closest('#snooze-sidebar-toggle');
             if (!toggleBtn || e.button !== 0) return;
 
@@ -1244,9 +1246,8 @@ function mountSidebarToggle() {
                 isChampSelectAutoUncollapseActive = false;
                 shouldRestoreCollapseAfterChampSelect = false;
             }
-        }, {
-            capture: true
-        });
+        };
+        document.addEventListener('mousedown', sidebarMouseDownHandler, { capture: true });
     }
 }
 
@@ -1259,7 +1260,11 @@ function unmountSidebarToggle() {
         champSelectPhaseUnsub();
         champSelectPhaseUnsub = null;
     }
-    window.__snoozeSidebarGameflowListenerAdded = false;
+    window.__snoozeGameflowPhaseListenerAdded = false;
+    if (sidebarResizeHandler) window.removeEventListener('resize', sidebarResizeHandler);
+    if (sidebarMouseDownHandler) document.removeEventListener('mousedown', sidebarMouseDownHandler, { capture: true });
+    sidebarResizeHandler = null;
+    sidebarMouseDownHandler = null;
     isChampSelectAutoUncollapseActive = false;
     shouldRestoreCollapseAfterChampSelect = false;
 }
@@ -1520,7 +1525,7 @@ export function load() {
 
     // track the native client height via settings observer
     if (Utils.LCU && Utils.LCU.observe) {
-        Utils.LCU.observe('/lol-settings/v1/local/video', (event) => {
+        if (!videoSettingsUnsub) videoSettingsUnsub = Utils.LCU.observe('/lol-settings/v1/local/video', (event) => {
             if (event?.data?.Height > 0) {
                 nativeClientHeight = event.data.Height;
             }
@@ -1542,4 +1547,19 @@ export function load() {
             Utils.LCU.get('/lol-gameflow/v1/gameflow-phase').then(handleGameflowPhaseChange).catch(() => {});
         }
     }
+}
+export function unload() {
+    unmountSidebarToggle();
+    friendListUnsub?.();
+    friendListUnsub = null;
+    videoSettingsUnsub?.();
+    videoSettingsUnsub = null;
+    champSelectPhaseUnsub?.();
+    champSelectPhaseUnsub = null;
+    restoreAllStatusLines();
+    removeAllPartyBorders();
+    liveFriendStatuses.clear();
+    statusKeysByFriend.clear();
+    cachedFriendsList.clear();
+    previousFriendColors.clear();
 }

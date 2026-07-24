@@ -1398,3 +1398,6 @@ export function load() {
     if (isEnabled) mountAutoLockChampion();
     fetchCurrentSummoner();
 }
+export function unload() {
+    unmountAutoLockChampion();
+}

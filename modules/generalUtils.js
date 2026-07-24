@@ -595,6 +595,18 @@ const LCU = {
         this._uris.forEach(u => this._subscribe(u));
     },
 
+    unbind() {
+        for (const uri of [...this._subscriptions.keys()]) {
+            this._disconnectUri(uri);
+        }
+        this._listeners.clear();
+        this._uris.clear();
+        this._subscribed.clear();
+        this._subscriptions.clear();
+        this._ctx = null;
+        if (window.LCU === this) delete window.LCU;
+    },
+
     async get(url) {
         const r = await fetch(url.startsWith('/') ? url : '/' + url);
         if (!r.ok) throw new Error(r.status);
@@ -1608,6 +1620,7 @@ const Store = {
 const Panic = {
     _callbacks: new Set(),
     _installed: false,
+    _keydownHandler: null,
 
     install() {
         if (this._installed) return;
@@ -1617,7 +1630,7 @@ const Panic = {
             Store.set('global', 'panicKey', 'F2');
         }
 
-        document.addEventListener('keydown', (e) => {
+        this._keydownHandler = (e) => {
             const key = Store.get('global', 'panicKey') || 'F2';
             if (e.key.toLowerCase() === key.toLowerCase() && this._callbacks.size > 0) {
                 e.preventDefault();
@@ -1631,7 +1644,17 @@ const Panic = {
 
                 Toast.success('Auto Actions Cancelled');
             }
-        });
+        };
+        document.addEventListener('keydown', this._keydownHandler);
+    },
+
+    uninstall() {
+        if (this._keydownHandler) {
+            document.removeEventListener('keydown', this._keydownHandler);
+        }
+        this._keydownHandler = null;
+        this._callbacks.clear();
+        this._installed = false;
     },
 
     register(callback) {

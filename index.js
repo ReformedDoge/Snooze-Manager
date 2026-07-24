@@ -117,6 +117,7 @@ export async function checkForUpdates(force = false) {
 const Modal = (function() {
     let _root = null;
     let _visible = false;
+    let _keydownHandler = null;
     const _cbs = new Set();
 
     function create() {
@@ -1247,10 +1248,11 @@ const Modal = (function() {
 
     function init() {
         create();
-        document.addEventListener('keydown', (e) => {
+        if (_keydownHandler) return;
+        _keydownHandler = (e) => {
             if (window._isCapturingHotkey) return;
 
-            let shortcut = getMenuHotkey();
+            const shortcut = getMenuHotkey();
 
             if (!e.repeat &&
                 e.ctrlKey === shortcut.ctrlKey &&
@@ -1270,7 +1272,18 @@ const Modal = (function() {
                 e.preventDefault();
                 toggle();
             }
-        });
+        };
+        document.addEventListener('keydown', _keydownHandler);
+    }
+
+    function destroy() {
+        if (_keydownHandler) document.removeEventListener('keydown', _keydownHandler);
+        _keydownHandler = null;
+        _root?.remove();
+        document.getElementById('pm-styles')?.remove();
+        _root = null;
+        _visible = false;
+        _cbs.clear();
     }
 
     return {
@@ -1278,7 +1291,8 @@ const Modal = (function() {
         show,
         hide,
         toggle,
-        onChange
+        onChange,
+        destroy
     };
 })();
 
@@ -1618,10 +1632,28 @@ const WelcomeModal = (function() {
         installDocumentListeners();
     }
 
+    function destroy() {
+        if (_listenerDocument && _documentClickHandler) {
+            _listenerDocument.removeEventListener('click', _documentClickHandler, true);
+        }
+        if (_listenerDocument && _documentKeyHandler) {
+            _listenerDocument.removeEventListener('keydown', _documentKeyHandler, true);
+        }
+        _root?.remove();
+        document.getElementById('pm-welcome-styles')?.remove();
+        _root = null;
+        _visible = false;
+        _listenerDocument = null;
+        _documentClickHandler = null;
+        _documentKeyHandler = null;
+        _welcomeUpdateCallback = null;
+    }
+
     return {
         init,
         showIfNeeded,
-        hide
+        hide,
+        destroy
     };
 })();
 
@@ -1644,6 +1676,27 @@ import * as autoQueueModule from './modules/autoQueue.js';
 import * as modeSelectorTweaksModule from './modules/modeSelectorTweaks.js';
 import * as nameSpooferModule from './modules/nameSpoofer.js';
 import * as useClientDuringGameModule from './modules/useClientDuringGame.js';
+
+const MANAGED_MODULES = Object.freeze([
+    ['autoAccept', autoAcceptModule],
+    ['aramNocd', aramNocdModule],
+    ['autoLockChampion', autoLockChampionModule],
+    ['champSelectQuitButton', champSelectQuitButtonModule],
+    ['SnoozeBalanceTooltip', SnoozeBalanceTooltipModule],
+    ['gameAnalysisPopup', gameAnalysisPopupModule],
+    ['customOnlineStatus', customOnlineStatusModule],
+    ['clientWindowTweaks', clientWindowTweaksModule],
+    ['profileTweaks', profileTweaksModule],
+    ['autoHonor', autoHonorModule],
+    ['arenaGod', arenaGodModule],
+    ['socialPanelTweaks', socialPanelTweaksModule],
+    ['whaleHelper', whaleHelperModule],
+    ['lowPrioWarningSuppress', penaltyUISuppressModule],
+    ['autoQueue', autoQueueModule],
+    ['modeSelectorTweaks', modeSelectorTweaksModule],
+    ['nameSpoofer', nameSpooferModule],
+    ['useClientDuringGame', useClientDuringGameModule]
+]);
 
 const registeredModules = [];
 
@@ -1703,8 +1756,35 @@ const MODULE_INFO = {
     },
     nameSpoofer: {
         name: t('Name Spoofer')
+    },
+    useClientDuringGame: {
+        name: t('Use Client In Game')
     }
 };
+
+async function runModuleLifecycle(method, args = []) {
+    const disabledIds = getDisabledModuleIds();
+    for (const [id, module] of MANAGED_MODULES) {
+        if (disabledIds.has(id) || typeof module[method] !== 'function') continue;
+        try {
+            await module[method](...args);
+        } catch (error) {
+            Utils.Debug.error(`[Snooze-Manager] ${id}.${method} failed:`, error);
+        }
+    }
+}
+
+async function teardownModules() {
+    for (const [id, module] of [...MANAGED_MODULES].reverse()) {
+        const cleanup = typeof module.unload === 'function' ? module.unload : module.dispose;
+        if (typeof cleanup !== 'function') continue;
+        try {
+            await cleanup();
+        } catch (error) {
+            Utils.Debug.error(`[Snooze-Manager] ${id} cleanup failed:`, error);
+        }
+    }
+}
 
 
 // Init Lifecycle
@@ -1740,6 +1820,7 @@ export async function init(ctx) {
     window.SnoozeManager = {
         init,
         load,
+        unload,
         __isLoader: true, // Flag to tell modules NOT to inject into native settings
         show: () => Modal.show(),
         hide: () => Modal.hide(),
@@ -1755,31 +1836,14 @@ export async function init(ctx) {
             } catch (e) {}
         },
         registerModule: (config) => {
-            registeredModules.push(config);
+            const existingIndex = registeredModules.findIndex(module => module.id === config.id);
+            if (existingIndex >= 0) registeredModules[existingIndex] = config;
+            else registeredModules.push(config);
             Utils.Debug.log(`[Snooze-Manager] Registered module: ${config.name}`);
         }
     };
 
-    const _initDisabledIds = getDisabledModuleIds();
-
-    if (!_initDisabledIds.has('autoAccept')) autoAcceptModule.init(ctx);
-    if (!_initDisabledIds.has('aramNocd')) aramNocdModule.init(ctx);
-    if (!_initDisabledIds.has('autoLockChampion')) autoLockChampionModule.init(ctx);
-    if (!_initDisabledIds.has('champSelectQuitButton')) champSelectQuitButtonModule.init(ctx);
-    if (!_initDisabledIds.has('SnoozeBalanceTooltip')) SnoozeBalanceTooltipModule.init(ctx);
-    if (!_initDisabledIds.has('gameAnalysisPopup')) gameAnalysisPopupModule.init(ctx);
-    if (!_initDisabledIds.has('customOnlineStatus')) customOnlineStatusModule.init(ctx);
-    if (!_initDisabledIds.has('clientWindowTweaks')) clientWindowTweaksModule.init(ctx);
-    if (!_initDisabledIds.has('profileTweaks')) profileTweaksModule.init(ctx);
-    if (!_initDisabledIds.has('autoHonor')) autoHonorModule.init(ctx);
-    if (!_initDisabledIds.has('arenaGod')) arenaGodModule.init(ctx);
-    if (!_initDisabledIds.has('socialPanelTweaks')) socialPanelTweaksModule.init(ctx);
-    if (!_initDisabledIds.has('whaleHelper')) whaleHelperModule.init(ctx);
-    if (!_initDisabledIds.has('lowPrioWarningSuppress')) penaltyUISuppressModule.init(ctx);
-    if (!_initDisabledIds.has('autoQueue')) autoQueueModule.init(ctx);
-    if (!_initDisabledIds.has('modeSelectorTweaks')) modeSelectorTweaksModule.init(ctx);
-    if (!_initDisabledIds.has('nameSpoofer')) nameSpooferModule.init(ctx);
-    if (!_initDisabledIds.has('useClientDuringGame')) useClientDuringGameModule.init(ctx);
+    await runModuleLifecycle('init', [ctx]);
 }
 
 export async function load(context) {
@@ -1798,26 +1862,23 @@ export async function load(context) {
     WelcomeModal.showIfNeeded();
     checkForUpdates();
 
-    const _disabledIds = getDisabledModuleIds();
+    await runModuleLifecycle('load');
+}
 
-    if (!_disabledIds.has('autoAccept')) autoAcceptModule.load();
-    if (!_disabledIds.has('aramNocd')) aramNocdModule.load();
-    if (!_disabledIds.has('autoLockChampion')) autoLockChampionModule.load();
-    if (!_disabledIds.has('champSelectQuitButton')) champSelectQuitButtonModule.load();
-    if (!_disabledIds.has('SnoozeBalanceTooltip')) SnoozeBalanceTooltipModule.load();
-    if (!_disabledIds.has('gameAnalysisPopup')) gameAnalysisPopupModule.load();
-    if (!_disabledIds.has('customOnlineStatus')) customOnlineStatusModule.load();
-    if (!_disabledIds.has('clientWindowTweaks')) clientWindowTweaksModule.load();
-    if (!_disabledIds.has('profileTweaks')) profileTweaksModule.load();
-    if (!_disabledIds.has('autoHonor')) autoHonorModule.load();
-    if (!_disabledIds.has('arenaGod')) arenaGodModule.load();
-    if (!_disabledIds.has('socialPanelTweaks')) socialPanelTweaksModule.load();
-    if (!_disabledIds.has('whaleHelper')) whaleHelperModule.load();
-    if (!_disabledIds.has('lowPrioWarningSuppress')) penaltyUISuppressModule.load();
-    if (!_disabledIds.has('autoQueue')) autoQueueModule.load();
-    if (!_disabledIds.has('modeSelectorTweaks')) modeSelectorTweaksModule.load();
-    if (!_disabledIds.has('nameSpoofer')) nameSpooferModule.load();
-    if (!_disabledIds.has('useClientDuringGame')) useClientDuringGameModule.load();
+export async function unload() {
+    if (!_inited && !_loaded) return;
+
+    await teardownModules();
+    WelcomeModal.destroy();
+    Modal.destroy();
+    Utils.Panic.uninstall();
+    Utils.DOM.observer.disconnect();
+    Utils.LCU.unbind();
+    registeredModules.length = 0;
+
+    if (window.SnoozeManager?.unload === unload) delete window.SnoozeManager;
+    _loaded = false;
+    _inited = false;
 }
 
 const LEGACY_MIGRATION_MAP = {
