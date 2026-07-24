@@ -2428,3 +2428,15 @@ export const MatchHistoryModal = (function() {
         hide
     };
 })();
+export function unload() {
+    gameAnalysisPhaseUnsub?.();
+    gameAnalysisPhaseUnsub = null;
+    _wsCsSessionUnsub?.();
+    _wsCsSessionUnsub = null;
+    _wsGfSessionUnsub?.();
+    _wsGfSessionUnsub = null;
+    _wsCsSession = null;
+    _wsGfSession = null;
+    cleanupAnalysisPanel();
+    MatchHistoryModal.hide();
+}
