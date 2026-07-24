@@ -1055,7 +1055,17 @@ async function loadTabData(tabId) {
         Utils.Debug.error(`[WhaleHelper] Fetch failed for ${tabId}:`, err);
         if (currentTab === tabId) {
             subtitle.textContent = t('Error loading data');
-            grid.innerHTML = `<div class="sm-whale-status error">${t('Failed to load data.')}<br><span style="font-size:11px;">${err.message}</span></div>`;
+            grid.replaceChildren();
+
+            const errorStatus = document.createElement('div');
+            errorStatus.className = 'sm-whale-status error';
+            errorStatus.append(document.createTextNode(t('Failed to load data.')), document.createElement('br'));
+
+            const errorDetail = document.createElement('span');
+            errorDetail.style.fontSize = '11px';
+            errorDetail.textContent = err instanceof Error ? err.message : String(err);
+            errorStatus.appendChild(errorDetail);
+            grid.appendChild(errorStatus);
         }
     }
 }
