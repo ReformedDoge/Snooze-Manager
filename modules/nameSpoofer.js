@@ -1437,7 +1437,7 @@ function installInviteObserver() {
         const puKey = summonerId ? ('sid:' + summonerId) : undefined;
         const alias = resolveAlias(cur, puKey);
         Utils.Debug.log('[NS-DEBUG][invite] resolveAlias -> ' + alias);
-        if (alias && alias !== cur) element.innerHTML = alias;
+        if (alias && alias !== cur) element.textContent = alias;
     };
     Utils.Debug.log('[NS-DEBUG][invite] patched _summonerName');
     // Sweep existing instances (already rendered before patch) through shadow DOMs
@@ -1453,7 +1453,7 @@ function installInviteObserver() {
             if (!cfg.enabled || !cur || cur === cfg.gameName || cur === real.gameName) continue;
             const alias = resolveAlias(cur, sidKey);
             Utils.Debug.log('[NS-DEBUG][invite] sweep cur="' + cur + '" sidKey=' + sidKey + ' alias="' + alias + '"');
-            if (alias && alias !== cur) nameEl.innerHTML = alias;
+            if (alias && alias !== cur) nameEl.textContent = alias;
         }
     }
     // Deferred resweep after friend data settles (roster rebuild, conversation fetch, etc.)
@@ -1469,7 +1469,7 @@ function installInviteObserver() {
                 if (!cfg.enabled || !cur || cur === cfg.gameName || cur === real.gameName) continue;
                 const alias = resolveAlias(cur, sidKey);
                 Utils.Debug.log('[NS-DEBUG][invite] defer cur="' + cur + '" sidKey=' + sidKey + ' alias="' + alias + '"');
-                if (alias && alias !== cur && alias !== nameEl.textContent) nameEl.innerHTML = alias;
+                if (alias && alias !== cur && alias !== nameEl.textContent) nameEl.textContent = alias;
             }
         }
     }, 1500);
