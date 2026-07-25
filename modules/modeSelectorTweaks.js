@@ -13,6 +13,7 @@ let hiddenNavs = new Set();
 let hiddenModes = new Set();
 let hiddenQueues = new Set();
 let emberHookRegistered = false;
+let _hookCleanup = null;
 
 const NAME_MAP = {
     'kPvP': t('PvP'),
@@ -428,7 +429,7 @@ export function installEmberHook() {
     if (emberHookRegistered) return;
     emberHookRegistered = true;
 
-    Utils.Hooks.Ember.registerRule({
+    _hookCleanup = Utils.Hooks.Ember.registerRule({
         name: 'mode-selector-tweaks-hook',
         matcher: 'parties-view',
         mixin(Ember) {
@@ -509,4 +510,18 @@ export function init(context) {
 
 export function load() {
     installEmberHook();
+}
+
+export function unload() {
+    if (_hookCleanup) {
+        _hookCleanup();
+        _hookCleanup = null;
+    }
+    emberHookRegistered = false;
+    if (styleEl) styleEl.remove();
+    styleEl = null;
+    const modalStyle = document.getElementById('pm-mode-modal-styles');
+    if (modalStyle) modalStyle.remove();
+    const modal = document.getElementById('pm-mode-modal-overlay');
+    if (modal) modal.remove();
 }

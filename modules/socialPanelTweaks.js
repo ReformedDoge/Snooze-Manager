@@ -18,6 +18,7 @@ const CURRENT_TEXT_ATTR = 'data-sm-social-panel-status-current-text';
 let _assetsInitPromise = null;
 const PARTY_BORDER_ATTR = 'data-sm-party-border';
 const PARTY_LOCK_ATTR = 'data-sm-party-lock';
+let _hookCleanups = [];
 
 const PARTY_HUE_SEED = 200;
 const PARTY_GOLDEN_ANGLE = 137.508;
@@ -1401,7 +1402,7 @@ export function installEmberHook() {
     if (emberHookRegistered) return;
     emberHookRegistered = true;
 
-    Utils.Hooks.Ember.registerRule({
+    _hookCleanups.push(Utils.Hooks.Ember.registerRule({
         name: 'social-panel-tweaks-roster-member',
         matcher: 'lol-social-roster-member',
         hookMethods: [
@@ -1450,10 +1451,10 @@ export function installEmberHook() {
                     }
                     original(...args);
                 }
-            }
-        ]
-    });
-    Utils.Hooks.Ember.registerRule({
+        }
+    ]
+}));
+    _hookCleanups.push(Utils.Hooks.Ember.registerRule({
         name: 'social-panel-tweaks-roster-group',
         matcher: 'lol-social-roster-group',
         hookMethods: [{
@@ -1516,7 +1517,7 @@ export function installEmberHook() {
                 original(...args);
             }
         }]
-    });
+    }));
 }
 
 export function load() {
@@ -1562,4 +1563,7 @@ export function unload() {
     statusKeysByFriend.clear();
     cachedFriendsList.clear();
     previousFriendColors.clear();
+    for (const cleanup of _hookCleanups) cleanup?.();
+    _hookCleanups = [];
+    emberHookRegistered = false;
 }

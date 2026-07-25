@@ -27,6 +27,11 @@ let restrictionInfoEnabled;
 let snoozeContext = null;
 let modalManager = null;
 let bypassModalHook = false;
+let _api = null;
+let _originalApiGetModalManager = null;
+let _originalModalManagerAdd = null;
+let _hookCleanups = [];
+let _domObserverCleanup = null;
 
 function setRestrictionInfoEnabled(v) {
     restrictionInfoEnabled = v;
@@ -272,12 +277,13 @@ export function init(context) {
     context.rcp.postInit("rcp-fe-lol-uikit", (api) => {
         if (!api || typeof api.getModalManager !== 'function') return;
 
-        const originalGetModalManager = api.getModalManager;
+        _api = api;
+        _originalApiGetModalManager = api.getModalManager;
         api.getModalManager = function() {
-            modalManager = originalGetModalManager.apply(this, arguments);
+            modalManager = _originalApiGetModalManager.apply(this, arguments);
             if (modalManager && !modalManager.__snoozeWrapped) {
                 modalManager.__snoozeWrapped = true;
-                const originalAdd = modalManager.add;
+                _originalModalManagerAdd = modalManager.add;
                 modalManager.add = function(options) {
                     Utils.Debug.log('[LowPrioWarningSuppress] [ModalManager] add() intercepted options:', options);
 
@@ -292,7 +298,7 @@ export function init(context) {
                     }
 
                     Utils.Debug.log('[LowPrioWarningSuppress] [ModalManager] PERMITTED modal:', options?.data?.contents);
-                    return originalAdd.apply(this, arguments);
+                    return _originalModalManagerAdd.apply(this, arguments);
                 };
             }
             return modalManager;
@@ -303,7 +309,7 @@ export function init(context) {
     // This stops the ComponentFactory from ever being invoked.
     if (Utils.Hooks?.Ember?.registerRule) {
         Utils.Debug.log('[LowPrioWarningSuppress] Registering Matchmaking Error Monitor Hook Rule');
-        Utils.Hooks.Ember.registerRule({
+        _hookCleanups.push(Utils.Hooks.Ember.registerRule({
             name: 'matchmaking-error-monitor-suppress',
             matcher: (args) => {
                 return args.some(arg => arg && typeof arg === 'object' && 'showQueueErrorModal' in arg);
@@ -334,7 +340,7 @@ export function init(context) {
                     return original(...args);
                 }
             }]
-        });
+        }));
 
         // Fallback Ember rules for lockout dialog components
         const matchers = [
@@ -348,7 +354,7 @@ export function init(context) {
 
         matchers.forEach(matcher => {
             Utils.Debug.log(`[LowPrioWarningSuppress] Registering fallback Ember Rule for matcher: ${matcher}`);
-            Utils.Hooks.Ember.registerRule({
+            _hookCleanups.push(Utils.Hooks.Ember.registerRule({
                 name: `${matcher}-suppress`,
                 matcher: matcher,
                 mixin: (Ember) => ({
@@ -393,12 +399,12 @@ export function init(context) {
                         }
                     }
                 })
-            });
+            }));
         });
 
         // Suppress player restriction info component (warning icon + tooltip)
         Utils.Debug.log('[LowPrioWarningSuppress] Registering Ember Rule for player-restriction-info-component');
-        Utils.Hooks.Ember.registerRule({
+        _hookCleanups.push(Utils.Hooks.Ember.registerRule({
             name: 'player-restriction-info-suppress',
             matcher: 'player-restriction-info-component',
             mixin: (Ember) => ({
@@ -433,7 +439,7 @@ export function init(context) {
                     }
                 }
             })
-        });
+        }));
     }
 
     if (window.SnoozeManager && window.SnoozeManager.registerModule) {
@@ -456,7 +462,7 @@ export function init(context) {
             }]
         });
     } else {
-        Utils.DOM.observer.observe('lol-uikit-scrollable.low-prio-warning-suppress-settings', (plugin) => {
+        _domObserverCleanup = Utils.DOM.observer.observe('lol-uikit-scrollable.low-prio-warning-suppress-settings', (plugin) => {
             plugin.innerHTML = '';
             plugin.appendChild(Utils.Settings.createToggleRow(t('Low Priority Warning Suppression'), enabled, (next) => {
                 setEnabled(next);
@@ -473,4 +479,21 @@ export function load() {
     if (restrictionInfoEnabled) {
         suppressRestrictionInfo();
     }
+}
+
+export function unload() {
+    if (_api && _originalApiGetModalManager) {
+        _api.getModalManager = _originalApiGetModalManager;
+    }
+    if (modalManager && _originalModalManagerAdd) {
+        delete modalManager.__snoozeWrapped;
+        modalManager.add = _originalModalManagerAdd;
+    }
+    for (const cleanup of _hookCleanups) cleanup?.();
+    _hookCleanups = [];
+    _domObserverCleanup?.();
+    _domObserverCleanup = null;
+    delete window.SnoozeLowPrioWarningSuppress;
+    _api = null;
+    modalManager = null;
 }

@@ -664,6 +664,7 @@ function transformText(text, opts) {
 let _xhrInstalled = false;
 let _xhrFallbackUsed = false;
 let _xhrRespGet, _xhrTextGet;
+let _originalXhrOpen = null;
 const _xhrRoutes = [];
 
 function assertXhr() {
@@ -681,6 +682,7 @@ function assertXhr() {
         _xhrTextGet = textDesc.get;
     }
     const prevOpen = proto.open;
+    _originalXhrOpen = prevOpen;
     const respGet = _xhrRespGet,
         textGet = _xhrTextGet;
     const nsOpen = function(m, u, ...rest) {
@@ -793,6 +795,8 @@ function installXhr() {
 
 let _hooksInstalled = false;
 const _fetchCleanups = [];
+let _wsHookCleanups = [];
+let _phaseUnsub = null;
 
 function installHooks(context) {
     if (_hooksInstalled) return;
@@ -863,7 +867,7 @@ function installHooks(context) {
 
     Utils.Hooks.WS.install(context);
     for (const ep of ME_WS) {
-        Utils.Hooks.WS.hook(ep, (_endpoint, payload) => {
+        _wsHookCleanups.push(Utils.Hooks.WS.hook(ep, (_endpoint, payload) => {
             if (!active() || !payload || typeof payload !== 'object') return payload;
             try {
                 spoofSelf(payload, true);
@@ -871,10 +875,10 @@ function installHooks(context) {
                 Utils.Debug.warn('[NameSpoofer] WS transform failed:', e);
             }
             return payload;
-        });
+        }));
     }
     // Champ-select session WS: transform names in the session data
-    Utils.Hooks.WS.hook('/lol-champ-select/v1/session', (_endpoint, payload) => {
+    _wsHookCleanups.push(Utils.Hooks.WS.hook('/lol-champ-select/v1/session', (_endpoint, payload) => {
         if (!payload || typeof payload !== 'object') return payload;
         try {
             const teams = ['myTeam', 'theirTeam'];
@@ -900,10 +904,10 @@ function installHooks(context) {
             Utils.Debug.warn('[NameSpoofer] ChampSelect WS transform failed:', e);
         }
         return payload;
-    });
+    }));
 
     // Friends list WS: alias known friends on live updates
-    Utils.Hooks.WS.hook('/lol-chat/v1/friends', (_endpoint, payload) => {
+    _wsHookCleanups.push(Utils.Hooks.WS.hook('/lol-chat/v1/friends', (_endpoint, payload) => {
         if (!payload || typeof payload !== 'object') return payload;
         if (!cfg.enabled || !cfg.spoofFriends) return payload;
         try {
@@ -912,10 +916,10 @@ function installHooks(context) {
             Utils.Debug.warn('[NameSpoofer] WS friends transform failed:', e);
         }
         return payload;
-    });
+    }));
 
     // Conversations WS: alias participants on live updates
-    Utils.Hooks.WS.hook('/lol-chat/v1/conversations', (_endpoint, payload) => {
+    _wsHookCleanups.push(Utils.Hooks.WS.hook('/lol-chat/v1/conversations', (_endpoint, payload) => {
         if (!payload || typeof payload !== 'object') return payload;
         if (!cfg.enabled) return payload;
         if (!active() && !cfg.spoofFriends) return payload;
@@ -925,10 +929,10 @@ function installHooks(context) {
             Utils.Debug.warn('[NameSpoofer] WS conversations transform failed:', e);
         }
         return payload;
-    });
+    }));
 
     // Honor ballot WS: alias all players in post-game voting ceremony
-    Utils.Hooks.WS.hook('/lol-honor-v2/v1/ballot', (_endpoint, payload) => {
+    _wsHookCleanups.push(Utils.Hooks.WS.hook('/lol-honor-v2/v1/ballot', (_endpoint, payload) => {
         if (!payload || typeof payload !== 'object') return payload;
         if (!cfg.enabled) return payload;
         if (!active() && !aliasOthersNow() && !cfg.spoofFriends && !cfg.spoofMatchHistory) return payload;
@@ -938,10 +942,10 @@ function installHooks(context) {
             Utils.Debug.warn('[NameSpoofer] WS ballot transform failed:', e);
         }
         return payload;
-    });
+    }));
 
     // Post-game stats block WS: alias players in end-of-game stats
-    Utils.Hooks.WS.hook('/lol-end-of-game/v1/eog-stats-block', (_endpoint, payload) => {
+    _wsHookCleanups.push(Utils.Hooks.WS.hook('/lol-end-of-game/v1/eog-stats-block', (_endpoint, payload) => {
         if (!payload || typeof payload !== 'object') return payload;
         if (!cfg.enabled) return payload;
         if (!active() && !aliasOthersNow() && !cfg.spoofFriends && !cfg.spoofMatchHistory) return payload;
@@ -951,7 +955,7 @@ function installHooks(context) {
             Utils.Debug.warn('[NameSpoofer] WS eog-stats transform failed:', e);
         }
         return payload;
-    });
+    }));
 }
 
 async function refreshContext() {
@@ -2492,6 +2496,16 @@ export function dispose() {
             if (rule.name && rule.name.startsWith('ns-')) rule.enabled = false;
         }
     }
+    for (const fn of _wsHookCleanups) try {
+        fn();
+    } catch {}
+    _wsHookCleanups.length = 0;
+    _phaseUnsub?.();
+    _phaseUnsub = null;
+    if (_originalXhrOpen && XMLHttpRequest.prototype.open && XMLHttpRequest.prototype.open._nsHook) {
+        XMLHttpRequest.prototype.open = _originalXhrOpen;
+    }
+    _originalXhrOpen = null;
 }
 
 export function init(context) {
@@ -2507,7 +2521,7 @@ export function init(context) {
     refreshContext();
 
     if (Utils.LCU && Utils.LCU.observe) {
-        Utils.LCU.observe('/lol-gameflow/v1/gameflow-phase', (e) => {
+        _phaseUnsub = Utils.LCU.observe('/lol-gameflow/v1/gameflow-phase', (e) => {
             const prev = ctx.phase;
             ctx.phase = e.data || ctx.phase;
             logDebug('phase', 'phase=' + ctx.phase + ' prev=' + prev + ' enabled=' + cfg.enabled + ' aliasOthersNow=' + aliasOthersNow());

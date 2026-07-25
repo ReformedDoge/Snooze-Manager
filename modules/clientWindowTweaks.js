@@ -115,6 +115,8 @@ const PRESETS = [{
     }
 ];
 
+let _hookCleanups = [];
+let isEnabled = false;
 let isProgrammaticResize = false;
 let programmaticResizeTimeout = null;
 
@@ -151,7 +153,6 @@ async function restoreNativeVideoSettings() {
     }
 }
 
-let isEnabled = false;
 let _hooksInstalled = false;
 let _fullscreenKeyListener = null;
 
@@ -521,7 +522,7 @@ function installSettingsHooks(context) {
 
     // Inbound WS: Inject custom ZoomScale into native settings push
     // client's own zoom-application code uses our value instead of the stored one.
-    Utils.Hooks.WS.hook('/lol-settings/v1/local/video', (endpoint, payload) => {
+    _hookCleanups.push(Utils.Hooks.WS.hook('/lol-settings/v1/local/video', (endpoint, payload) => {
         const targetZoom = getCurrentTargetZoom();
         if (targetZoom !== null && payload?.data) {
             return {
@@ -533,13 +534,13 @@ function installSettingsHooks(context) {
             };
         }
         return payload;
-    });
+    }));
 
     // Outbound XHR PUT: if something in the client writes new video settings
     // (e.g. user changes a non-resolution setting), keep our ZoomScale in the body
     // so the round-trip doesn't revert the zoom.
     // No longer needed no push method. ignore
-    Utils.Hooks.Xhr.hookReq('/lol-settings/v1/local/video', (method, url, xhr, body) => {
+    _hookCleanups.push(Utils.Hooks.Xhr.hookReq('/lol-settings/v1/local/video', (method, url, xhr, body) => {
         if (method !== 'PUSH' && method !== 'push') return body;
         const targetZoom = getCurrentTargetZoom();
         if (targetZoom !== null) {
@@ -553,10 +554,10 @@ function installSettingsHooks(context) {
             return JSON.stringify(parsed);
         }
         return body;
-    });
+    }));
 
     // Outbound Fetch: same guard for any fetch-based callers.
-    Utils.Hooks.Fetch.hookRes(/\/lol-settings\/v1\/local\/video/, (text) => {
+    _hookCleanups.push(Utils.Hooks.Fetch.hookRes(/\/lol-settings\/v1\/local\/video/, (text) => {
         const targetZoom = getCurrentTargetZoom();
         if (targetZoom !== null) {
             try {
@@ -568,7 +569,7 @@ function installSettingsHooks(context) {
             } catch {}
         }
         return text;
-    });
+    }));
 }
 
 function createLabeledInput(labelText, inputElement) {
@@ -877,4 +878,11 @@ export function load() {
     if (isEnabled) {
         applySettings();
     }
+}
+
+export function unload() {
+    restoreAllNativeSettings();
+    for (const cleanup of _hookCleanups) cleanup?.();
+    _hookCleanups = [];
+    _hooksInstalled = false;
 }

@@ -16,6 +16,7 @@ let unlockBackgroundEnabled = false;
 let currentProfilePreferences = null;
 let tokenIds = ['', '', ''];
 let _inventoryHookInstalled = false;
+let _hookCleanups = [];
 const PURCHASE_DATE_WINDOW_YEARS = 10;
 const MS_PER_YEAR = 365.25 * 24 * 60 * 60 * 1000;
 
@@ -614,6 +615,12 @@ export function load() {
     if (unlockBackgroundEnabled) installChampionInventoryHook();
 }
 
+export function unload() {
+    for (const cleanup of _hookCleanups) cleanup?.();
+    _hookCleanups = [];
+    _inventoryHookInstalled = false;
+}
+
 async function installChampionInventoryHook() {
     if (_inventoryHookInstalled) return;
     try {
@@ -624,7 +631,7 @@ async function installChampionInventoryHook() {
         if (!summonerId) return;
 
         const inventoryEndpointPattern = new RegExp(`/lol-champions/v1/inventories/${summonerId}/champions`);
-        Utils.Hooks.Xhr.hookRes(inventoryEndpointPattern, (method, url, xhr, responseText) => {
+        _hookCleanups.push(Utils.Hooks.Xhr.hookRes(inventoryEndpointPattern, (method, url, xhr, responseText) => {
             if (!Utils.Store.get(MODULE_KEY, SETTINGS_KEY_UNLOCK_BACKGROUND)) return responseText;
             debugLog('champion inventory hook matched', url);
             try {
@@ -675,7 +682,7 @@ async function installChampionInventoryHook() {
             } catch (err) {
                 return responseText;
             }
-        });
+        }));
         _inventoryHookInstalled = true;
     } catch (err) {
         debugLog('installChampionInventoryHook failed', err);

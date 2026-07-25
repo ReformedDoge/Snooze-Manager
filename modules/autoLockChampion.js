@@ -561,9 +561,11 @@ async function completePendingActions() {
     }
 }
 
+let _emberTimerHookCleanup = null;
+
 function installEmberTimerHook() {
     Utils.Debug.log('[AutoSelect] installing Ember timer hook');
-    Utils.Hooks.Ember.registerRule({
+    _emberTimerHookCleanup = Utils.Hooks.Ember.registerRule({
         name: 'sm-auto-lock-timer',
         matcher: 'champion-select',
         hookMethods: [{
@@ -1400,4 +1402,8 @@ export function load() {
 }
 export function unload() {
     unmountAutoLockChampion();
+    if (_emberTimerHookCleanup) {
+        _emberTimerHookCleanup();
+        _emberTimerHookCleanup = null;
+    }
 }

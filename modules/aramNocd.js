@@ -9,6 +9,8 @@ import Utils from './generalUtils.js';
 import { t } from './i18n.js';
 
 let isEnabled = false;
+let _hookCleanups = [];
+let _domObserverCleanup = null;
 
 function toggleFeature(enabled) {
     isEnabled = enabled;
@@ -84,7 +86,7 @@ export function init(context) {
     isEnabled = Utils.Store.get('aramNocd', 'enabled') || false;
 
     // Hook the parent bench container
-    Utils.Hooks.Ember.registerRule({
+    _hookCleanups.push(Utils.Hooks.Ember.registerRule({
         name: 'aram-nocd-bench-hook',
         matcher: 'champion-bench',
         mixin(Ember) {
@@ -102,10 +104,10 @@ export function init(context) {
                 }
             };
         }
-    });
+    }));
 
     // Hook the individual bench slots
-    Utils.Hooks.Ember.registerRule({
+    _hookCleanups.push(Utils.Hooks.Ember.registerRule({
         name: 'aram-nocd-bench-item-hook',
         matcher: 'champion-bench-item',
         mixin(Ember) {
@@ -123,7 +125,7 @@ export function init(context) {
                 }
             };
         }
-    });
+    }));
 
     if (window.SnoozeManager && window.SnoozeManager.registerModule) {
         window.SnoozeManager.registerModule({
@@ -139,7 +141,7 @@ export function init(context) {
             }]
         });
     } else {
-        Utils.DOM.observer.observe("lol-uikit-scrollable.aram-nocd-settings", (plugin) => {
+        _domObserverCleanup = Utils.DOM.observer.observe("lol-uikit-scrollable.aram-nocd-settings", (plugin) => {
             plugin.appendChild(Utils.Settings.createToggleRow(t("Enable ARAM No Cooldown"), isEnabled, (next) => {
                 isEnabled = next;
                 toggleFeature(isEnabled);
@@ -150,4 +152,11 @@ export function init(context) {
 
 export function load() {
     // Managed by the Ember rules
+}
+
+export function unload() {
+    for (const cleanup of _hookCleanups) cleanup?.();
+    _hookCleanups = [];
+    if (typeof _domObserverCleanup === 'function') _domObserverCleanup();
+    _domObserverCleanup = null;
 }

@@ -34,6 +34,9 @@ let smSettingsArray = [];
 // Skin Blacklist: Set of skin/chroma IDs the user has blocked
 let skinBlacklist = new Set();
 
+// Lifecycle cleanup
+let _hookCleanups = [];
+
 function syncTogglesUI() {
     // Update pill toggle in Editor
     const knob = document.getElementById('sm-blacklist-knob');
@@ -1055,17 +1058,7 @@ async function loadTabData(tabId) {
         Utils.Debug.error(`[WhaleHelper] Fetch failed for ${tabId}:`, err);
         if (currentTab === tabId) {
             subtitle.textContent = t('Error loading data');
-            grid.replaceChildren();
-
-            const errorStatus = document.createElement('div');
-            errorStatus.className = 'sm-whale-status error';
-            errorStatus.append(document.createTextNode(t('Failed to load data.')), document.createElement('br'));
-
-            const errorDetail = document.createElement('span');
-            errorDetail.style.fontSize = '11px';
-            errorDetail.textContent = err instanceof Error ? err.message : String(err);
-            errorStatus.appendChild(errorDetail);
-            grid.appendChild(errorStatus);
+            grid.innerHTML = `<div class="sm-whale-status error">${t('Failed to load data.')}<br><span style="font-size:11px;">${err.message}</span></div>`;
         }
     }
 }
@@ -1988,14 +1981,14 @@ function installContextMenuInterceptors() {
     };
 
     // Intercept requests for context menu options
-    Utils.Hooks.Fetch.hookRes(pattern, handleResponse);
-    Utils.Hooks.Xhr.hookRes(pattern, (method, url, xhr, responseText) => {
+    _hookCleanups.push(Utils.Hooks.Fetch.hookRes(pattern, handleResponse));
+    _hookCleanups.push(Utils.Hooks.Xhr.hookRes(pattern, (method, url, xhr, responseText) => {
         return handleResponse(responseText);
-    });
+    }));
 }
 
 function installClickCapture() {
-    Utils.DOM.observer.observe('lol-uikit-context-menu', (menu) => {
+    _hookCleanups.push(Utils.DOM.observer.observe('lol-uikit-context-menu', (menu) => {
         menu.addEventListener('click', (e) => {
             const path = e.composedPath() || [];
             const item = path.find(el => el && el.classList && el.classList.contains('context-menu-item'));
@@ -2018,7 +2011,7 @@ function installClickCapture() {
                 }
             }
         }, true);
-    });
+    }));
 }
 
 // SKIN BLACKLIST UI
@@ -2421,7 +2414,7 @@ export function installEmberHook() {
     if (emberHookRegistered) return;
     emberHookRegistered = true;
 
-    Utils.Hooks.Ember.registerRule({
+    _hookCleanups.push(Utils.Hooks.Ember.registerRule({
         name: 'whale-helper-hook',
         matcher: 'loot-mass-disenchant-action-tab',
         hookMethods: [{
@@ -2439,9 +2432,9 @@ export function installEmberHook() {
                 original(...args);
             }
         }]
-    });
+    }));
 
-    Utils.Hooks.Ember.registerRule({
+    _hookCleanups.push(Utils.Hooks.Ember.registerRule({
         name: 'skin-tier-name-hook',
         matcher: 'champion-skin-name',
         mixin() {
@@ -2470,9 +2463,9 @@ export function installEmberHook() {
                 }
             };
         }
-    });
+    }));
 
-    Utils.Hooks.Ember.registerRule({
+    _hookCleanups.push(Utils.Hooks.Ember.registerRule({
         name: 'skin-select-hook',
         matcher: 'skin-select',
         wraps: [{
@@ -2523,10 +2516,10 @@ export function installEmberHook() {
                 return original.apply(this, args);
             }
         }]
-    });
+    }));
 
     // Skin randomizer dice button
-    Utils.Hooks.Ember.registerRule({
+    _hookCleanups.push(Utils.Hooks.Ember.registerRule({
         name: 'skin-randomizer-hook',
         matcher: 'skin-select',
         hookMethods: [{
@@ -2582,7 +2575,7 @@ export function installEmberHook() {
                 original(...args);
             }
         }]
-    });
+    }));
 
     Utils.Debug.log('[WhaleHelper] Ember hooks registered.');
 }
@@ -2699,7 +2692,7 @@ export function init(context) {
             settings: smSettingsArray
         });
     } else {
-        Utils.DOM.observer.observe("lol-uikit-scrollable.whale-helper-settings", (plugin) => {
+        _hookCleanups.push(Utils.DOM.observer.observe("lol-uikit-scrollable.whale-helper-settings", (plugin) => {
             plugin.innerHTML = '';
             plugin.appendChild(Utils.Settings.createToggleRow(t("Enable Whale Helper (Loot Page)"), isLootEnabled, (val) => {
                 isLootEnabled = val;
@@ -2753,7 +2746,7 @@ export function init(context) {
             const extraRow = document.createElement("div");
             renderSkinBlacklistUI(extraRow);
             plugin.appendChild(extraRow);
-        });
+        }));
     }
 }
 
@@ -2767,4 +2760,16 @@ export async function load() {
     installContextMenuInterceptors();
     installClickCapture();
     Utils.Debug.log('[WhaleHelper] Module loaded.');
+}
+
+export function unload() {
+    unmountSessionObserver();
+    removeButton();
+    closePanel();
+    for (const cleanup of _hookCleanups) cleanup?.();
+    _hookCleanups = [];
+    const styleEl = document.getElementById(STYLE_ID);
+    if (styleEl) styleEl.remove();
+    emberHookRegistered = false;
+    sessionUnsub = null;
 }

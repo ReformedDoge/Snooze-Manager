@@ -9,6 +9,8 @@ import { t } from './i18n.js';
 import Utils from './generalUtils.js';
 
 let isEnabled = false;
+let _hookCleanups = [];
+let _domObserverCleanup = null;
 
 function toggleFeature(enabled) {
     isEnabled = enabled;
@@ -51,7 +53,7 @@ export function init(context) {
 
     isEnabled = Utils.Store.get('champSelectQuitButton', 'enabled') || false;
 
-    Utils.Hooks.Ember.registerRule({
+    _hookCleanups.push(Utils.Hooks.Ember.registerRule({
         name: 'champ-select-quit-button-hook',
         matcher: 'champion-select',
         hookMethods: [{
@@ -100,7 +102,7 @@ export function init(context) {
                 original(...args);
             }
         }]
-    });
+    }));
 
     if (window.SnoozeManager && window.SnoozeManager.registerModule) {
         window.SnoozeManager.registerModule({
@@ -116,7 +118,7 @@ export function init(context) {
             }]
         });
     } else {
-        Utils.DOM.observer.observe("lol-uikit-scrollable.dodge-button-settings", (plugin) => {
+        _domObserverCleanup = Utils.DOM.observer.observe("lol-uikit-scrollable.dodge-button-settings", (plugin) => {
             plugin.appendChild(Utils.Settings.createToggleRow("Enable Dodge Button", isEnabled, (next) => {
                 isEnabled = next;
                 toggleFeature(isEnabled);
@@ -127,4 +129,11 @@ export function init(context) {
 
 export function load() {
     // Rely exclusively on Ember Hook rendering the component to manage DOM lifecycle.
+}
+
+export function unload() {
+    for (const cleanup of _hookCleanups) cleanup?.();
+    _hookCleanups = [];
+    if (typeof _domObserverCleanup === 'function') _domObserverCleanup();
+    _domObserverCleanup = null;
 }

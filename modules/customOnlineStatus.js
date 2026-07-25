@@ -27,6 +27,7 @@ async function syncAvailability() {
 // Install WS + XHR hooks so the status stays locked even when the client resets it.
 // Called once from init(). safe to call multiple times (hooks are registered once).
 let _hooksInstalled = false;
+let _apiHookCleanups = [];
 let _emberHookInstalled = false;
 let _emberHookCleanup = null;
 let _documentClickHandler = null;
@@ -38,7 +39,7 @@ function installHooks(context) {
     // Inbound WS hook 
     // Intercept server push of /lol-chat/v1/me to lock status UI.
     Utils.Hooks.WS.install(context);
-    Utils.Hooks.WS.hook('/lol-chat/v1/me', (endpoint, payload) => {
+    _apiHookCleanups.push(Utils.Hooks.WS.hook('/lol-chat/v1/me', (endpoint, payload) => {
         if (!isEnabled) return payload;
         if (!payload || typeof payload !== 'object') return payload;
 
@@ -51,12 +52,12 @@ function installHooks(context) {
         if (patched.availability !== undefined) patched.availability = desired;
         if (patched.statusMessage !== undefined) patched.statusMessage = desiredMsg;
         return patched;
-    });
+    }));
 
     // Outbound XHR hook 
     // When the client sends a PUT /lol-chat/v1/me (e.g. entering lobby, post-game),
     // rewrite the body to keep our desired availability & statusMessage.
-    Utils.Hooks.Xhr.hookReq('/lol-chat/v1/me', (method, url, xhr, body) => {
+    _apiHookCleanups.push(Utils.Hooks.Xhr.hookReq('/lol-chat/v1/me', (method, url, xhr, body) => {
         if (method !== 'PUT' && method !== 'put') return body;
         if (!isEnabled) return body;
 
@@ -73,7 +74,7 @@ function installHooks(context) {
         if (parsed.availability !== undefined) parsed.availability = desired;
         if (parsed.statusMessage !== undefined) parsed.statusMessage = desiredMsg;
         return JSON.stringify(parsed);
-    });
+    }));
 }
 
 function installEmberHook() {
@@ -448,6 +449,9 @@ export function unload() {
     _emberHookCleanup?.();
     _emberHookCleanup = null;
     _emberHookInstalled = false;
+    for (const cleanup of _apiHookCleanups) cleanup?.();
+    _apiHookCleanups = [];
+    _hooksInstalled = false;
     statusMenu?.remove();
     statusMenu = null;
     statusMsgInput = null;

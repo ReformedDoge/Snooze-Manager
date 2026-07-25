@@ -156,9 +156,15 @@ export function init(context) {
     }
 }
 
+let _phaseUnsub = null;
+let _readyCheckUnsub = null;
+let _notificationsUnsub = null;
+let _hideReadyCheckHookCleanup = null;
+let _exitOnDodgeHookCleanup = null;
+
 export function load() {
     if (Utils.LCU && Utils.LCU.observe) {
-        Utils.LCU.observe('/lol-gameflow/v1/gameflow-phase', e => {
+        _phaseUnsub = Utils.LCU.observe('/lol-gameflow/v1/gameflow-phase', e => {
             const phase = e.data;
             const exitOnDecline = Utils.Store.get('autoAccept', EXIT_ON_DECLINE_KEY);
 
@@ -201,7 +207,7 @@ export function load() {
             }
         });
 
-        Utils.LCU.observe('/lol-matchmaking/v1/ready-check', e => {
+        _readyCheckUnsub = Utils.LCU.observe('/lol-matchmaking/v1/ready-check', e => {
             if (!e.data || !Utils.Store.get('autoAccept', EXIT_ON_DECLINE_KEY)) return;
             if (e.data.state === 'StrangerNotReady' || e.data.state === 'PartyNotReady') {
                 Utils.Debug.log('[AutoAccept] Queue declined by someone. Exiting queue...');
@@ -209,7 +215,7 @@ export function load() {
             }
         });
 
-        Utils.LCU.observe('/lol-lobby/v2/notifications', e => {
+        _notificationsUnsub = Utils.LCU.observe('/lol-lobby/v2/notifications', e => {
             if (!e.data || !Utils.Store.get('autoAccept', EXIT_ON_DODGE_KEY)) return;
             const notifications = Array.isArray(e.data) ? e.data : [e.data];
             for (const n of notifications) {
@@ -225,7 +231,7 @@ export function load() {
 
 function installHideReadyCheckEmberHook() {
     if (!Utils.Hooks?.Ember?.registerRule) return;
-    Utils.Hooks.Ember.registerRule({
+    _hideReadyCheckHookCleanup = Utils.Hooks.Ember.registerRule({
         name: 'autoAccept-hideReadyCheck',
         matcher: 'ready-check-root-element',
         hookMethods: [{
@@ -250,7 +256,7 @@ function installHideReadyCheckEmberHook() {
 
 function installExitOnDodgeEmberHook() {
     if (!Utils.Hooks?.Ember?.registerRule) return;
-    Utils.Hooks.Ember.registerRule({
+    _exitOnDodgeHookCleanup = Utils.Hooks.Ember.registerRule({
         name: 'autoAccept-exitOnDodge',
         matcher: 'parties-notifications',
         hookMethods: [{
@@ -267,4 +273,14 @@ export function unload() {
     cancelPendingAccept();
     acceptedCurrentReadyCheck = false;
     wasInReadyCheck = false;
+    _phaseUnsub?.();
+    _phaseUnsub = null;
+    _readyCheckUnsub?.();
+    _readyCheckUnsub = null;
+    _notificationsUnsub?.();
+    _notificationsUnsub = null;
+    _hideReadyCheckHookCleanup?.();
+    _hideReadyCheckHookCleanup = null;
+    _exitOnDodgeHookCleanup?.();
+    _exitOnDodgeHookCleanup = null;
 }

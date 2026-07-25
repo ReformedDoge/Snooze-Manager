@@ -13,6 +13,7 @@ let _wsCsSession = null;
 let _wsCsSessionUnsub = null;
 let _wsGfSession = null;
 let _wsGfSessionUnsub = null;
+let _hookCleanups = [];
 
 let augmentsCache = {};
 let augmentsLoaded = false;
@@ -887,7 +888,7 @@ export function init(context) {
         });
     }
 
-    Utils.Hooks.Ember.registerRule({
+    _hookCleanups.push(Utils.Hooks.Ember.registerRule({
         name: 'game-analysis-lobby-member',
         matcher: 'lobby-member',
         hookMethods: [{
@@ -950,7 +951,7 @@ export function init(context) {
                 original(...args);
             }
         }]
-    });
+    }));
 
     function getCachedCsSession() {
         return _wsCsSession ? Promise.resolve(_wsCsSession) : Utils.LCU.get('/lol-champ-select/v1/session').catch(() => null);
@@ -1100,7 +1101,7 @@ export function init(context) {
         }
     }
 
-    Utils.Hooks.Ember.registerRule({
+    _hookCleanups.push(Utils.Hooks.Ember.registerRule({
         name: 'game-analysis-summoner-object',
         matcher: 'summoner-object',
         hookMethods: [{
@@ -1490,7 +1491,7 @@ export function init(context) {
                 original(...args);
             }
         }]
-    });
+    }));
 }
 
 export function load() {
@@ -2423,9 +2424,22 @@ export const MatchHistoryModal = (function() {
         }
     }
 
+    function destroy() {
+        if (_root) {
+            _root.remove();
+            _root = null;
+        }
+        if (_lazyRankObserver) {
+            _lazyRankObserver.disconnect();
+            _lazyRankObserver = null;
+        }
+        _loadedGames = [];
+    }
+
     return {
         show,
-        hide
+        hide,
+        destroy
     };
 })();
 export function unload() {
@@ -2438,5 +2452,7 @@ export function unload() {
     _wsCsSession = null;
     _wsGfSession = null;
     cleanupAnalysisPanel();
-    MatchHistoryModal.hide();
+    MatchHistoryModal.destroy();
+    for (const cleanup of _hookCleanups) cleanup?.();
+    _hookCleanups = [];
 }
