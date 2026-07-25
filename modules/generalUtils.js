@@ -105,11 +105,16 @@ const Toast = {
             `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>` :
             `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>`;
 
-        toast.innerHTML = `
-            <div style="display:flex;align-items:center;justify-content:center;">${iconSvg}</div>
-            <div style="font-weight:500;line-height:1.4;">${message}</div>
-        `;
+        const icon = document.createElement('div');
+        icon.style.cssText = 'display:flex;align-items:center;justify-content:center;';
+        icon.innerHTML = iconSvg;
 
+        const messageElement = document.createElement('div');
+        messageElement.style.cssText = 'font-weight:500;line-height:1.4;';
+        messageElement.textContent = String(message);
+
+        toast.appendChild(icon);
+        toast.appendChild(messageElement);
         container.appendChild(toast);
 
         setTimeout(() => {
