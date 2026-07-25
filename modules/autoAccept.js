@@ -19,6 +19,15 @@ const DELAY_MAX = 10;
 let isEnabled = false;
 let acceptedCurrentReadyCheck = false;
 let wasInReadyCheck = false;
+let pendingAcceptTimer = null;
+let pendingPanicUnsub = null;
+
+function cancelPendingAccept() {
+    if (pendingAcceptTimer !== null) clearTimeout(pendingAcceptTimer);
+    pendingAcceptTimer = null;
+    pendingPanicUnsub?.();
+    pendingPanicUnsub = null;
+}
 
 function toggleAutoAccept(enabled) {
     isEnabled = enabled;
@@ -164,23 +173,29 @@ export function load() {
                 if (delay <= 0) {
                     Utils.LCU.post('/lol-matchmaking/v1/ready-check/accept').catch(() => {});
                 } else {
+                    cancelPendingAccept();
                     let isCancelled = false;
-                    const unregisterPanic = Utils.Panic.register(() => {
+                    pendingPanicUnsub = Utils.Panic.register(() => {
                         isCancelled = true;
+                        cancelPendingAccept();
                     });
 
-                    setTimeout(() => {
-                        unregisterPanic();
+                    pendingAcceptTimer = setTimeout(() => {
+                        pendingAcceptTimer = null;
+                        pendingPanicUnsub?.();
+                        pendingPanicUnsub = null;
                         if (isCancelled || !isEnabled || !acceptedCurrentReadyCheck) return;
                         Utils.LCU.post('/lol-matchmaking/v1/ready-check/accept').catch(() => {});
                     }, delay * 1000);
                 }
             } else if (phase === 'Lobby' && wasInReadyCheck && exitOnDecline) {
+                cancelPendingAccept();
                 wasInReadyCheck = false;
                 acceptedCurrentReadyCheck = false;
                 Utils.Debug.log('[AutoAccept] ReadyCheck ended without accepting (decline/timeout). Exiting queue...');
                 Utils.LCU.delete('/lol-lobby/v2/lobby/matchmaking/search').catch(() => {});
             } else {
+                cancelPendingAccept();
                 wasInReadyCheck = false;
                 acceptedCurrentReadyCheck = false;
             }
@@ -247,4 +262,9 @@ function installExitOnDodgeEmberHook() {
             }
         }]
     });
+}
+export function unload() {
+    cancelPendingAccept();
+    acceptedCurrentReadyCheck = false;
+    wasInReadyCheck = false;
 }

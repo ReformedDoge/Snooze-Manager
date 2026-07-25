@@ -28,6 +28,8 @@ async function syncAvailability() {
 // Called once from init(). safe to call multiple times (hooks are registered once).
 let _hooksInstalled = false;
 let _emberHookInstalled = false;
+let _emberHookCleanup = null;
+let _documentClickHandler = null;
 
 function installHooks(context) {
     if (_hooksInstalled) return;
@@ -78,7 +80,7 @@ function installEmberHook() {
     if (_emberHookInstalled) return;
     _emberHookInstalled = true;
 
-    Utils.Hooks.Ember.registerRule({
+    _emberHookCleanup = Utils.Hooks.Ember.registerRule({
         name: 'custom-online-status-identity',
         matcher: 'lol-social-identity',
         hookMethods: [{
@@ -427,14 +429,26 @@ export function load() {
 
     if (!documentClickHandlerAttached) {
         documentClickHandlerAttached = true;
-        document.addEventListener('click', (e) => {
+        _documentClickHandler = (e) => {
             const menu = statusMenu || document.getElementById('pm-status-menu');
             if (menu && !menu.contains(e.target)) menu.style.display = 'none';
-        });
+        };
+        document.addEventListener('click', _documentClickHandler);
     }
 
     installEmberHook();
 
     // Apply saved status to the server on load
-    syncAvailability();
+    syncAvailability().catch(error => Utils.Debug.error('[CustomOnlineStatus] Initial sync failed:', error));
+}
+export function unload() {
+    if (_documentClickHandler) document.removeEventListener('click', _documentClickHandler);
+    _documentClickHandler = null;
+    documentClickHandlerAttached = false;
+    _emberHookCleanup?.();
+    _emberHookCleanup = null;
+    _emberHookInstalled = false;
+    statusMenu?.remove();
+    statusMenu = null;
+    statusMsgInput = null;
 }

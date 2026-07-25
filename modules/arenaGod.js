@@ -17,9 +17,14 @@ let isEnabled = false;
 let currentArenaMode = false;
 let progressCache = null;
 let progressPanel = null;
+let phaseUnsub = null;
+let hookCleanup = null;
+let arenaStyleSheet = null;
 
 function injectStyles() {
+    if (arenaStyleSheet) return;
     const sheet = new CSSStyleSheet();
+    arenaStyleSheet = sheet;
     sheet.replaceSync(`
     .champion-grid.sm-arena-active .grid-champion[data-sm-status] .grid-champion-overlay {
       opacity: 1 !important;
@@ -283,7 +288,7 @@ export function init(context) {
     }
 
     // Hook individual Arena champion grid cells directly
-    Utils.Hooks.Ember.registerRule({
+    hookCleanup = Utils.Hooks.Ember.registerRule({
         name: 'arena-god-grid-champion-hook',
         matcher: 'grid-champion',
         hookMethods: [{
@@ -322,6 +327,25 @@ export function init(context) {
 }
 
 export function load() {
-    Utils.LCU.observe('/lol-gameflow/v1/gameflow-phase', e => handlePhaseChange(e.data));
+    if (!phaseUnsub) {
+        phaseUnsub = Utils.LCU.observe('/lol-gameflow/v1/gameflow-phase', e => handlePhaseChange(e.data));
+    }
     Utils.LCU.get('/lol-gameflow/v1/gameflow-phase').then(handlePhaseChange).catch(() => {});
+}
+
+export function unload() {
+    phaseUnsub?.();
+    phaseUnsub = null;
+    hookCleanup?.();
+    hookCleanup = null;
+    progressPanel?.remove();
+    progressPanel = null;
+    progressCache = null;
+    currentArenaMode = false;
+    document.querySelectorAll('.champion-grid').forEach(element => element.classList.remove('sm-arena-active'));
+    document.querySelectorAll('.grid-champion[data-sm-status]').forEach(element => element.removeAttribute('data-sm-status'));
+    if (arenaStyleSheet) {
+        document.adoptedStyleSheets = document.adoptedStyleSheets.filter(sheet => sheet !== arenaStyleSheet);
+        arenaStyleSheet = null;
+    }
 }

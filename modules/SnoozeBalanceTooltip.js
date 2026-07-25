@@ -20,6 +20,7 @@ function toggleFeature(enabled) {
 let currentMode = null;
 let balanceData = {};
 let balancePhaseUnsub = null;
+let hookCleanups = [];
 
 const HOVER_COMPONENTS = [{
         name: 'champion-bench-item',
@@ -358,7 +359,7 @@ export function init(context) {
 
     // Register hover rules for all target Champion Select Ember components
     HOVER_COMPONENTS.forEach(r => {
-        Utils.Hooks.Ember.registerRule({
+        hookCleanups.push(Utils.Hooks.Ember.registerRule({
             name: `balance-tooltip-${r.name}-hook`,
             matcher: r.name,
             hookMethods: [{
@@ -381,7 +382,7 @@ export function init(context) {
                     original(...args);
                 }
             }]
-        });
+        }));
     });
 
     if (window.SnoozeManager && window.SnoozeManager.registerModule) {
@@ -412,4 +413,13 @@ export function init(context) {
 export function load() {
     fetchWikiData();
     if (isEnabled) mountSnoozeBalanceTooltip();
+}
+export function unload() {
+    unmountSnoozeBalanceTooltip();
+    for (const cleanup of hookCleanups) cleanup?.();
+    hookCleanups = [];
+    ttRoot?.remove();
+    ttRoot = null;
+    ttCaption = null;
+    ttContent = null;
 }

@@ -32,6 +32,7 @@ const BYPASS_CSS = `
 `;
 
 let _currentPhase = null;
+let _phaseUnsub = null;
 
 function injectBypass() {
     if (document.getElementById(STYLE_ID)) return;
@@ -106,11 +107,13 @@ export async function load() {
         return;
     }
 
-    Utils.LCU.observe('/lol-gameflow/v1/gameflow-phase', (e) => {
-        _currentPhase = e.data;
-        Utils.Debug.log('[UseClientInGame]', `Phase → "${_currentPhase}"`);
-        applyPhase(_currentPhase);
-    });
+    if (!_phaseUnsub) {
+        _phaseUnsub = Utils.LCU.observe('/lol-gameflow/v1/gameflow-phase', (e) => {
+            _currentPhase = e.data;
+            Utils.Debug.log('[UseClientInGame]', `Phase → "${_currentPhase}"`);
+            applyPhase(_currentPhase);
+        });
+    }
 
     // Apply the current phase on load in case a game is already in progress.
     try {
@@ -120,4 +123,10 @@ export async function load() {
     } catch (e) {
         Utils.Debug.log('[UseClientInGame]', 'Initial phase fetch failed:', e);
     }
+}
+export function unload() {
+    _phaseUnsub?.();
+    _phaseUnsub = null;
+    _currentPhase = null;
+    removeBypass();
 }
