@@ -575,6 +575,71 @@ function serializeBody(body) {
     return typeof body === 'string' ? body : JSON.stringify(body);
 }
 
+class LCURequestError extends Error {
+    constructor(method, url, message, details = {}) {
+        super(`[LCU] ${method} ${url}: ${message}`);
+        this.name = 'LCURequestError';
+        this.method = method;
+        this.url = url;
+        this.status = details.status ?? null;
+        this.statusText = details.statusText ?? '';
+        this.responseBody = details.responseBody ?? null;
+        if (details.cause) this.cause = details.cause;
+    }
+}
+
+function normalizeLCUUrl(url) {
+    if (typeof url !== 'string' || url.length === 0) {
+        throw new TypeError('[LCU] Request URL must be a non-empty string');
+    }
+    return url.startsWith('/') ? url : '/' + url;
+}
+
+async function requestLCU(method, url, options = {}) {
+    const normalizedUrl = normalizeLCUUrl(url);
+    let response;
+
+    try {
+        response = await fetch(normalizedUrl, {
+            method,
+            headers: options.headers,
+            body: options.body
+        });
+    } catch (cause) {
+        throw new LCURequestError(method, normalizedUrl, cause?.message || 'request failed before receiving a response', {
+            cause
+        });
+    }
+
+    let responseText = '';
+    try {
+        responseText = await response.text();
+    } catch (cause) {
+        throw new LCURequestError(method, normalizedUrl, 'failed to read response body', {
+            status: response.status,
+            statusText: response.statusText,
+            cause
+        });
+    }
+
+    if (!response.ok) {
+        const summary = responseText.trim().slice(0, 300);
+        const status = `${response.status}${response.statusText ? ` ${response.statusText}` : ''}`;
+        throw new LCURequestError(method, normalizedUrl, summary ? `${status} - ${summary}` : status, {
+            status: response.status,
+            statusText: response.statusText,
+            responseBody: responseText
+        });
+    }
+
+    if (!responseText) return null;
+    try {
+        return JSON.parse(responseText);
+    } catch {
+        return responseText;
+    }
+}
+
 // LCU
 const LCU = {
     _ctx: null,
@@ -596,10 +661,7 @@ const LCU = {
     },
 
     async get(url) {
-        const r = await fetch(url.startsWith('/') ? url : '/' + url);
-        if (!r.ok) throw new Error(r.status);
-        const t = await r.text();
-        return t ? JSON.parse(t) : null;
+        return requestLCU('GET', url);
     },
 
     async post(url, body, options = {}) {
@@ -615,42 +677,28 @@ const LCU = {
                 ...headers
             };
 
-        const r = await fetch(url.startsWith('/') ? url : '/' + url, {
-            method: 'POST',
+        return requestLCU('POST', url, {
             headers: finalHeaders,
             body: raw ? body : serializeBody(body)
         });
-
-        if (!r.ok) throw new Error(r.status);
-
-        const t = await r.text();
-        return t ? JSON.parse(t) : null;
     },
 
     async put(url, body) {
-        const r = await fetch(url.startsWith('/') ? url : '/' + url, {
-            method: 'PUT',
+        return requestLCU('PUT', url, {
             headers: {
                 'Content-Type': 'application/json'
             },
             body: serializeBody(body)
         });
-        if (!r.ok) throw new Error(r.status);
-        const t = await r.text();
-        return t ? JSON.parse(t) : null;
     },
 
     async patch(url, body) {
-        const r = await fetch(url.startsWith('/') ? url : '/' + url, {
-            method: 'PATCH',
+        return requestLCU('PATCH', url, {
             headers: {
                 'Content-Type': 'application/json'
             },
             body: serializeBody(body)
         });
-        if (!r.ok) throw new Error(r.status);
-        const t = await r.text();
-        return t ? JSON.parse(t) : null;
     },
 
     observe(uri, cb) {
@@ -677,9 +725,25 @@ const LCU = {
         const ctx = this._ctx;
         const listener = (data) => {
             if (this._ctx !== ctx) return;
-            (this._listeners.get(uri) || []).forEach(cb => cb(data));
+            for (const callback of this._listeners.get(uri) || []) {
+                try {
+                    const result = callback(data);
+                    if (result && typeof result.catch === 'function') {
+                        result.catch(error => Debug.error(`[LCU] Observer callback rejected for ${uri}:`, error));
+                    }
+                } catch (error) {
+                    Debug.error(`[LCU] Observer callback failed for ${uri}:`, error);
+                }
+            }
         };
-        const subscription = ctx.socket.observe(uri, listener);
+        let subscription;
+        try {
+            subscription = ctx.socket.observe(uri, listener);
+        } catch (error) {
+            this._subscribed.delete(uri);
+            Debug.error(`[LCU] Failed to subscribe to ${uri}:`, error);
+            return;
+        }
         this._subscriptions.set(uri, {
             ctx,
             listener,
@@ -706,12 +770,7 @@ const LCU = {
     },
 
     async delete(url) {
-        const r = await fetch(url.startsWith('/') ? url : '/' + url, {
-            method: 'DELETE'
-        });
-        if (!r.ok) throw new Error(r.status);
-        const t = await r.text();
-        return t ? JSON.parse(t) : null;
+        return requestLCU('DELETE', url);
     }
 };
 
