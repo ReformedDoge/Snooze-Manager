@@ -1372,6 +1372,8 @@ async function populateEmoteCache() {
 }
 
 function getLootIconUrl(lootId) {
+    const bundle = lootId.match(/^LOOTBUNDLE_(.+)$/);
+    if (bundle) return getLootIconUrl(bundle[1]);
     const m = (p) => lootId.match(p);
     let id, d;
 
@@ -1400,6 +1402,8 @@ function getLootIconUrl(lootId) {
 }
 
 function resolveLootName(raw) {
+    const bundle = raw.match(/^LOOTBUNDLE_(.+)$/);
+    if (bundle) return resolveLootName(bundle[1]);
     const patterns = [
         { re: /^EMOTE_(\d+)$/, fallback: t('Emote') },
         { re: /^CHAMPION_SKIN_RENTAL_(\d+)$/, fallback: t('Skin Shard') },
@@ -1416,6 +1420,8 @@ function resolveLootName(raw) {
 }
 
 function resolveLootNameDetailed(raw) {
+    const bundle = raw.match(/^LOOTBUNDLE_(.+)$/);
+    if (bundle) return resolveLootNameDetailed(bundle[1]);
     const patterns = [
         { re: /^EMOTE_(\d+)$/, resolver: id => { const n = emoteNameCache.get(id); return n ? { name: n } : null; }, fallback: t('Emote') },
         { re: /^CHAMPION_SKIN_RENTAL_(\d+)$/, resolver: id => Utils.GameData.Assets.getSkin(id), fallback: t('Skin Shard') },
