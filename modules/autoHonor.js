@@ -40,11 +40,13 @@ function setupObservers() {
     _observersActive = true;
 
     statsUnsub = Utils.LCU.observe('/lol-end-of-game/v1/eog-stats-block', (event) => {
+        // Stay subscribed for the whole session — the cache is cleared on every
+        // non-honor phase, so later games need this push too.
+        if (eogStatsCache) return;
         if (event.data?.teams?.length) {
             eogStatsCache = event.data;
             loadScoresMap();
             Utils.Debug.log('[AutoHonor] eogStatsBlock cached via WS push.');
-            statsUnsub();
         }
     });
 
