@@ -6,6 +6,8 @@
  * @link https://github.com/ReformedDoge
  */
 
+import { t } from './i18n.js';
+
 // Debug is exposed via Utils (Utils.Debug)
 
 const _debugState = {
@@ -1738,6 +1740,297 @@ const Store = {
     }
 };
 
+const ChampionPicker = {
+    _styleInjected: false,
+    _activePanel: null,
+    _keyHandler: null,
+
+    _injectStyles() {
+        if (this._styleInjected) return;
+        this._styleInjected = true;
+        const style = document.createElement('style');
+        style.id = 'sm-cp-styles';
+        style.textContent = `
+            .sm-cp-panel {
+                position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+                z-index: 2147483647; display: flex; opacity: 0; visibility: hidden;
+                align-items: center; justify-content: center;
+                font-family: var(--font-body), 'Segoe UI', sans-serif;
+                pointer-events: none; transition: opacity 0.2s, visibility 0.2s;
+            }
+            .sm-cp-panel.sm-show { opacity: 1; visibility: visible; pointer-events: auto; }
+            .sm-cp-overlay { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.55); backdrop-filter: blur(3px); }
+
+            .sm-cp-modal {
+                position: relative; z-index: 1; width: 720px; max-height: 78vh;
+                background: rgba(1, 10, 19, 0.94); border: 1px solid rgba(200, 170, 110, 0.25);
+                border-radius: 12px; display: flex; flex-direction: column; overflow: hidden;
+                box-shadow: 0 16px 48px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.05);
+                backdrop-filter: blur(25px) saturate(140%); color: #a09b8c;
+                transform: scale(0.95); transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+            }
+            .sm-cp-panel.sm-show .sm-cp-modal { transform: scale(1); }
+
+            .sm-cp-header {
+                display: flex; justify-content: space-between; align-items: center;
+                padding: 16px 20px; border-bottom: 1px solid rgba(255,255,255,0.06); background: rgba(0,0,0,0.2); flex-shrink: 0;
+            }
+            .sm-cp-header h2 { margin: 0; color: #c8aa6e; font-size: 16px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; }
+            .sm-cp-close { background: none; border: none; color: #a09b8c; font-size: 20px; cursor: pointer; line-height: 1; transition: color 0.15s; padding: 0; }
+            .sm-cp-close:hover { color: #f0e6d2; }
+
+            .sm-cp-toolbar {
+                display: flex; align-items: center; gap: 8px; padding: 12px 20px;
+                border-bottom: 1px solid rgba(255,255,255,0.06); flex-shrink: 0;
+            }
+            .sm-cp-search {
+                background: rgba(0,0,0,0.4); border: 1px solid rgba(200,170,110,0.3); color: #f0e6d2;
+                padding: 7px 12px; border-radius: 4px; font-size: 13px; outline: none; flex: 1;
+                transition: border-color 0.2s, background 0.2s;
+            }
+            .sm-cp-search:focus { border-color: #c8aa6e; background: rgba(0,0,0,0.6); }
+            .sm-cp-search::placeholder { color: rgba(160, 155, 140, 0.5); }
+
+            .sm-cp-fav-toggle {
+                display: flex; align-items: center; gap: 5px; padding: 6px 12px; border-radius: 4px;
+                border: 1px solid rgba(200,170,110,0.25); background: rgba(0,0,0,0.3); color: #a09b8c;
+                font-size: 12px; cursor: pointer; transition: all 0.15s; white-space: nowrap; flex-shrink: 0;
+            }
+            .sm-cp-fav-toggle:hover { border-color: #c8aa6e; color: #f0e6d2; }
+            .sm-cp-fav-toggle.active { background: rgba(200,170,110,0.18); border-color: #c8aa6e; color: #c8aa6e; font-weight: bold; }
+
+            .sm-cp-count { font-size: 11px; color: #4a6070; white-space: nowrap; flex-shrink: 0; }
+
+            .sm-cp-body { flex: 1; overflow-y: auto; padding: 16px 20px; }
+            .sm-cp-body::-webkit-scrollbar { width: 6px; }
+            .sm-cp-body::-webkit-scrollbar-track { background: transparent; }
+            .sm-cp-body::-webkit-scrollbar-thumb { background: rgba(200,170,110,0.15); border-radius: 3px; }
+
+            .sm-cp-empty { text-align: center; padding: 40px 20px; color: #4a6070; font-size: 13px; }
+
+            .sm-cp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 10px; }
+
+            .sm-cp-card {
+                position: relative; border-radius: 6px; overflow: hidden; cursor: pointer;
+                border: 1px solid rgba(255,255,255,0.06); background: rgba(255,255,255,0.02);
+                transition: border-color 0.15s, transform 0.15s; text-align: center;
+            }
+            .sm-cp-card:hover:not(.sm-cp-disabled) { border-color: #c8aa6e; transform: translateY(-2px); }
+            .sm-cp-card.sm-cp-disabled { cursor: default; opacity: 0.35; filter: grayscale(0.6); }
+            .sm-cp-card.sm-cp-favorited {
+                border-color: rgba(200,170,110,0.8);
+                box-shadow: 0 0 0 1px rgba(200,170,110,0.5), 0 0 10px 1px rgba(200,170,110,0.35);
+            }
+            .sm-cp-card.sm-cp-favorited:hover:not(.sm-cp-disabled) {
+                box-shadow: 0 0 0 1px #c8aa6e, 0 0 12px 2px rgba(200,170,110,0.5);
+            }
+            .sm-cp-card.sm-cp-favorited .sm-cp-card-name { background: rgba(60,44,10,0.75); color: #f0dcac; }
+            .sm-cp-card-img { width: 100%; aspect-ratio: 1; object-fit: cover; display: block; background: #0a0e14; }
+            .sm-cp-card-name {
+                padding: 4px 3px; background: rgba(0,0,0,0.6); font-size: 10.5px; color: #f0e6d2;
+                font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+            }
+            .sm-cp-divider {
+                grid-column: 1 / -1; display: flex; align-items: center; gap: 8px;
+                font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: #4a6070;
+                margin: 2px 0 2px; user-select: none;
+            }
+            .sm-cp-divider::before, .sm-cp-divider::after { content: ''; flex: 1; height: 1px; background: rgba(255,255,255,0.08); }
+            .sm-cp-star {
+                position: absolute; top: 3px; right: 3px; width: 20px; height: 20px; border-radius: 50%;
+                background: rgba(0,0,0,0.55); border: none; color: rgba(240,230,210,0.55); font-size: 12px;
+                cursor: pointer; display: flex; align-items: center; justify-content: center;
+                transition: color 0.15s, background 0.15s; z-index: 2; padding: 0;
+            }
+            .sm-cp-star:hover { background: rgba(0,0,0,0.8); color: #f0e6d2; }
+            .sm-cp-star.active { color: #c8aa6e; }
+        `;
+        document.head.appendChild(style);
+    },
+
+    close() {
+        if (!this._activePanel) return;
+        const panel = this._activePanel;
+        this._activePanel = null;
+        panel.classList.remove('sm-show');
+        if (this._keyHandler) {
+            document.removeEventListener('keydown', this._keyHandler);
+            this._keyHandler = null;
+        }
+        setTimeout(() => panel.remove(), 200);
+    },
+
+    async open(options = {}) {
+        const {
+            title = t('Select Champion'),
+            champions = null,
+            excludeIds = [],
+            favoritesKey = 'championPicker',
+            onSelect = () => {}
+        } = options;
+
+        this._injectStyles();
+        this.close();
+
+        let list = champions;
+        if (!list) {
+            if (!Assets._initialized) await Assets.init().catch(() => {});
+            list = Object.values(Assets.champs);
+        }
+        list = list.filter((c) => c && c.id > 0).slice().sort((a, b) => a.name.localeCompare(b.name));
+
+        const excludeSet = new Set(excludeIds.map(Number));
+        const getFavorites = () => new Set((Store.get(favoritesKey, 'favoriteIds', []) || []).map(Number));
+        let favorites = getFavorites();
+
+        let searchTerm = '';
+        let favoritesOnly = false;
+
+        const panel = document.createElement('div');
+        panel.className = 'sm-cp-panel';
+        panel.innerHTML = `
+            <div class="sm-cp-overlay"></div>
+            <div class="sm-cp-modal">
+                <div class="sm-cp-header">
+                    <h2>${title}</h2>
+                    <button type="button" class="sm-cp-close">&times;</button>
+                </div>
+                <div class="sm-cp-toolbar">
+                    <input type="text" class="sm-cp-search" placeholder="${t('Search champions...')}" />
+                    <button type="button" class="sm-cp-fav-toggle">&#9733; ${t('Favorites')}</button>
+                    <span class="sm-cp-count"></span>
+                </div>
+                <div class="sm-cp-body">
+                    <div class="sm-cp-grid"></div>
+                    <div class="sm-cp-empty" style="display:none;"></div>
+                </div>
+            </div>
+        `;
+
+        const searchInput = panel.querySelector('.sm-cp-search');
+        const favToggle = panel.querySelector('.sm-cp-fav-toggle');
+        const countEl = panel.querySelector('.sm-cp-count');
+        const grid = panel.querySelector('.sm-cp-grid');
+        const emptyEl = panel.querySelector('.sm-cp-empty');
+
+        const render = () => {
+            const term = searchTerm.trim().toLowerCase();
+            let filtered = list.filter((c) => {
+                if (favoritesOnly && !favorites.has(Number(c.id))) return false;
+                if (!term) return true;
+                return c.name.toLowerCase().includes(term) || (c.alias || '').toLowerCase().includes(term);
+            });
+
+            filtered.sort((a, b) => {
+                const fa = favorites.has(Number(a.id)) ? 0 : 1;
+                const fb = favorites.has(Number(b.id)) ? 0 : 1;
+                if (fa !== fb) return fa - fb;
+                return a.name.localeCompare(b.name);
+            });
+
+            countEl.textContent = `${filtered.length} / ${list.length}`;
+            grid.innerHTML = '';
+
+            if (filtered.length === 0) {
+                emptyEl.style.display = '';
+                emptyEl.textContent = t('No champions found.');
+                return;
+            }
+            emptyEl.style.display = 'none';
+
+            const showDivider = !term && !favoritesOnly && filtered.some((c) => favorites.has(Number(c.id))) && filtered.some((c) => !favorites.has(Number(c.id)));
+            let dividerInserted = false;
+
+            if (showDivider) {
+                const favDivider = document.createElement('div');
+                favDivider.className = 'sm-cp-divider';
+                favDivider.textContent = t('Favorites');
+                grid.appendChild(favDivider);
+            }
+
+            filtered.forEach((champ) => {
+                const id = Number(champ.id);
+                const disabled = excludeSet.has(id);
+                const isFav = favorites.has(id);
+
+                if (showDivider && !isFav && !dividerInserted) {
+                    dividerInserted = true;
+                    const divider = document.createElement('div');
+                    divider.className = 'sm-cp-divider';
+                    divider.textContent = t('All Champions');
+                    grid.appendChild(divider);
+                }
+
+                const card = document.createElement('div');
+                card.className = 'sm-cp-card' + (disabled ? ' sm-cp-disabled' : '') + (isFav ? ' sm-cp-favorited' : '');
+                card.title = champ.name;
+
+                const star = document.createElement('button');
+                star.type = 'button';
+                star.className = 'sm-cp-star' + (isFav ? ' active' : '');
+                star.innerHTML = isFav ? '&#9733;' : '&#9734;';
+                star.title = isFav ? t('Remove from favorites') : t('Add to favorites');
+                star.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (favorites.has(id)) favorites.delete(id);
+                    else favorites.add(id);
+                    Store.set(favoritesKey, 'favoriteIds', [...favorites]);
+                    render();
+                });
+
+                const img = document.createElement('img');
+                img.className = 'sm-cp-card-img';
+                img.loading = 'lazy';
+                img.src = champ.squarePortraitPath || Assets.getIcon('champs', id) || '';
+                img.onerror = () => { img.style.opacity = '0'; };
+
+                const name = document.createElement('div');
+                name.className = 'sm-cp-card-name';
+                name.textContent = champ.name;
+
+                card.appendChild(star);
+                card.appendChild(img);
+                card.appendChild(name);
+
+                if (!disabled) {
+                    card.addEventListener('click', () => {
+                        onSelect(champ);
+                        ChampionPicker.close();
+                    });
+                }
+
+                grid.appendChild(card);
+            });
+        };
+
+        searchInput.addEventListener('input', () => {
+            searchTerm = searchInput.value;
+            render();
+        });
+
+        favToggle.addEventListener('click', () => {
+            favoritesOnly = !favoritesOnly;
+            favToggle.classList.toggle('active', favoritesOnly);
+            render();
+        });
+
+        panel.querySelector('.sm-cp-close').addEventListener('click', () => ChampionPicker.close());
+        panel.querySelector('.sm-cp-overlay').addEventListener('click', () => ChampionPicker.close());
+
+        this._keyHandler = (e) => {
+            if (e.key === 'Escape') ChampionPicker.close();
+        };
+        document.addEventListener('keydown', this._keyHandler);
+
+        render();
+        document.body.appendChild(panel);
+        this._activePanel = panel;
+        requestAnimationFrame(() => panel.classList.add('sm-show'));
+        setTimeout(() => searchInput.focus(), 50);
+    }
+};
+
 const Panic = {
     _callbacks: new Set(),
     _installed: false,
@@ -2100,6 +2393,9 @@ export const Utils = {
         Assets,
         getSgpContext,
         getSgpMatchHistory
+    },
+    UI: {
+        ChampionPicker
     }
 };
 export default Utils;
