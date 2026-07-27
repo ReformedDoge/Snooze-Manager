@@ -1053,6 +1053,9 @@ const Assets = {
     spells: {},
     perks: {},
     queues: [],
+    skins: new Map(),
+    summonerIcons: new Map(),
+    wardSkins: new Map(),
     _initPromise: null,
     _initialized: false,
     _maxRetries: 15,
@@ -1063,7 +1066,7 @@ const Assets = {
 
         this._initPromise = (async () => {
             const attemptFetch = async () => {
-                const [c, i, s, p, ps, q] = await Promise.all([
+                const [c, i, s, p, ps, q, sk, si, ws] = await Promise.all([
                     LCU.get('/lol-game-data/assets/v1/champion-summary.json').catch(() => []),
                     LCU.get('/lol-game-data/assets/v1/items.json').catch(() => []),
                     LCU.get('/lol-game-data/assets/v1/summoner-spells.json').catch(() => []),
@@ -1071,7 +1074,10 @@ const Assets = {
                     LCU.get('/lol-game-data/assets/v1/perkstyles.json').catch(() => ({
                         styles: []
                     })),
-                    LCU.get('/lol-game-queues/v1/queues').catch(() => [])
+                    LCU.get('/lol-game-queues/v1/queues').catch(() => []),
+                    LCU.get('/lol-game-data/assets/v1/skins.json').catch(() => []),
+                    LCU.get('/lol-game-data/assets/v1/summoner-icons.json').catch(() => []),
+                    LCU.get('/lol-game-data/assets/v1/ward-skins.json').catch(() => [])
                 ]);
                 return {
                     c,
@@ -1079,7 +1085,10 @@ const Assets = {
                     s,
                     p,
                     ps,
-                    q
+                    q,
+                    sk,
+                    si,
+                    ws
                 };
             };
 
@@ -1091,7 +1100,10 @@ const Assets = {
                         s,
                         p,
                         ps,
-                        q
+                        q,
+                        sk,
+                        si,
+                        ws
                     } = await attemptFetch();
 
                     if (Array.isArray(c) && c.length > 0) c.forEach(x => this.champs[x.id] = x);
@@ -1114,6 +1126,42 @@ const Assets = {
                             if (ac !== bc) return ac - bc;
                             return a.name.localeCompare(b.name);
                         });
+                    }
+
+                    if (Array.isArray(sk)) {
+                        sk.forEach(x => {
+                            if (x?.id === undefined) return;
+                            const numId = Number(x.id);
+                            this.skins.set(numId, x);
+                            if (Array.isArray(x.chromas)) {
+                                x.chromas.forEach(ch => {
+                                    if (ch?.id !== undefined) this.skins.set(Number(ch.id), { ...x, id: Number(ch.id) });
+                                });
+                            }
+                        });
+                    } else if (sk && typeof sk === 'object') {
+                        Object.values(sk).forEach(x => {
+                            if (x?.id === undefined) return;
+                            const numId = Number(x.id);
+                            this.skins.set(numId, x);
+                            if (Array.isArray(x.chromas)) {
+                                x.chromas.forEach(ch => {
+                                    if (ch?.id !== undefined) this.skins.set(Number(ch.id), { ...x, id: Number(ch.id) });
+                                });
+                            }
+                        });
+                    }
+
+                    if (Array.isArray(si)) {
+                        si.forEach(x => { if (x?.id !== undefined) this.summonerIcons.set(Number(x.id), x); });
+                    } else if (si && typeof si === 'object') {
+                        Object.values(si).forEach(x => { if (x?.id !== undefined) this.summonerIcons.set(Number(x.id), x); });
+                    }
+
+                    if (Array.isArray(ws)) {
+                        ws.forEach(x => { if (x?.id !== undefined) this.wardSkins.set(Number(x.id), x); });
+                    } else if (ws && typeof ws === 'object') {
+                        Object.values(ws).forEach(x => { if (x?.id !== undefined) this.wardSkins.set(Number(x.id), x); });
                     }
 
                     if (this.queues.length > 0 && Object.keys(this.champs).length > 0) {
@@ -1147,6 +1195,15 @@ const Assets = {
         let path = obj?.iconPath || obj?.squarePortraitPath || '';
         if (path) path = path.replace('/lol-game-data/assets/', '/lol-game-data/assets/');
         return path;
+    },
+    getSkin(id) {
+        return this.skins.get(Number(id)) || null;
+    },
+    getSummonerIcon(id) {
+        return this.summonerIcons.get(Number(id)) || null;
+    },
+    getWardSkin(id) {
+        return this.wardSkins.get(Number(id)) || null;
     }
 };
 

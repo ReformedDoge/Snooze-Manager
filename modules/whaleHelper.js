@@ -91,8 +91,8 @@ function toggleSkinBlacklist(id) {
 }
 
 // Shared Cache
-let skinsCache = new Map(); // skinId → skin object
 let emberHookRegistered = false;
+let poolDetailData = []; // [{lootIds, label}] for pool view button
 
 // Loot Diffing State
 let currentTab = 'skins';
@@ -434,52 +434,6 @@ async function detectAndConfigureRarity() {
     }
 }
 
-// Shared Cache Initialization
-async function loadSkinsCache() {
-    if (skinsCache.size > 0) return;
-    try {
-        const data = await Utils.LCU.get('/lol-game-data/assets/v1/skins.json');
-
-        const processSkin = (skin) => {
-            if (skin?.id === undefined) return;
-            // On Tencent, regionRarityId > 0 = override with numeric tier; 0 = use default k-prefix
-            if (isTencentRegion && skin.regionRarityId > 0) {
-                skin.rarity = String(skin.regionRarityId);
-            }
-            skinsCache.set(Number(skin.id), skin);
-        };
-
-        if (Array.isArray(data)) {
-            data.forEach(skin => {
-                processSkin(skin);
-                if (Array.isArray(skin.chromas)) {
-                    skin.chromas.forEach(chroma => {
-                        if (chroma?.id !== undefined) skinsCache.set(Number(chroma.id), {
-                            ...skin,
-                            id: chroma.id
-                        });
-                    });
-                }
-            });
-        } else if (data && typeof data === 'object') {
-            Object.values(data).forEach(skin => {
-                processSkin(skin);
-                if (Array.isArray(skin.chromas)) {
-                    skin.chromas.forEach(chroma => {
-                        if (chroma?.id !== undefined) skinsCache.set(Number(chroma.id), {
-                            ...skin,
-                            id: chroma.id
-                        });
-                    });
-                }
-            });
-        }
-        Utils.Debug.log(`[WhaleHelper] Cached ${skinsCache.size} skins.`);
-    } catch (err) {
-        Utils.Debug.error('[WhaleHelper] Failed to load skins cache:', err);
-    }
-}
-
 // CHAMP SELECT SKIN TIER DISPLAY
 function buildBadge(rarity) {
     rarity = rarity ?? '';
@@ -520,13 +474,12 @@ function updateBadge(nameContainer, skinId) {
 
     const existingBadges = root.querySelectorAll(`[${BADGE_ATTR}]`);
 
-    if (!skinId || !skinsCache.has(skinId)) {
+    const skinObj = Utils.GameData.Assets.getSkin(skinId);
+    if (!skinObj) {
         if (existingBadges.length > 0) existingBadges.forEach(el => el.remove());
         root.classList.remove('sm-has-tier-badge');
         return;
     }
-
-    const skinObj = skinsCache.get(skinId);
     let rarity = skinObj.rarity ?? '';
     // On non-Tencent, show "Legacy" for legacy skins without a premium rarity tier
     if (!isTencentRegion && skinObj.isLegacy && (!rarity || rarity === 'kNoRarity' || rarity === 'kDefault' || rarity === 'kLegacy')) {
@@ -681,7 +634,7 @@ async function fetchUnownedSkins() {
         if (!skinId || ownedSkinIds.has(skinId)) continue;
 
         const lootItem = lootMap.get(item);
-        const skin = skinsCache.get(skinId);
+        const skin = Utils.GameData.Assets.getSkin(skinId);
         const name = skin?.name ?? t("Unknown Skin ({{id}})", { id: skinId });
 
         // Use loot system's rarity (LIMITED, EPIC, etc.) for accurate display
@@ -729,17 +682,13 @@ async function fetchUnownedIcons() {
     const inventory = await Utils.LCU.get('/lol-inventory/v2/inventory/SUMMONER_ICON').catch(() => []);
     const ownedIds = new Set(inventory.map(i => i.itemId));
 
-    const data = await Utils.LCU.get('/lol-game-data/assets/v1/summoner-icons.json').catch(() => []);
-    const dataMap = new Map();
-    if (Array.isArray(data)) data.forEach(d => dataMap.set(d.id, d));
-
     const results = [];
     for (const item of res.lootItemNames || []) {
         const match = item.match(/\d+$/);
         const id = match ? parseInt(match[0], 10) : null;
         if (!id || ownedIds.has(id)) continue;
 
-        const d = dataMap.get(id);
+        const d = Utils.GameData.Assets.getSummonerIcon(id);
         const name = d?.title || d?.name || t("Unknown Icon ({{id}})", { id: id });
         results.push({
             id: id,
@@ -768,17 +717,13 @@ async function fetchUnownedWards() {
     const inventory = await Utils.LCU.get('/lol-inventory/v2/inventory/WARD_SKIN').catch(() => []);
     const ownedIds = new Set(inventory.map(i => i.itemId));
 
-    const data = await Utils.LCU.get('/lol-game-data/assets/v1/ward-skins.json').catch(() => []);
-    const dataMap = new Map();
-    if (Array.isArray(data)) data.forEach(d => dataMap.set(d.id, d));
-
     const results = [];
     for (const item of res.lootItemNames || []) {
         const match = item.match(/\d+$/);
         const id = match ? parseInt(match[0], 10) : null;
         if (!id || ownedIds.has(id)) continue;
 
-        const d = dataMap.get(id);
+        const d = Utils.GameData.Assets.getWardSkin(id);
         const name = d?.name || t("Unknown Ward ({{id}})", { id: id });
         results.push({
             id: id,
@@ -805,10 +750,19 @@ async function fetchUnownedEmotes() {
     const res = await evaluateSgpQuery(commonBase, sessionToken, query);
 
     const catalog = await Utils.LCU.get('/lol-catalog/v1/items/EMOTE').catch(() => []);
-    const unownedMap = new Map();
     if (Array.isArray(catalog)) {
         catalog.forEach(c => {
-            if (!c.owned) unownedMap.set(c.itemId, c);
+            const id = Number(c.itemId);
+            emoteNameCache.set(id, c.name || c.itemId);
+            if (c.imagePath) emoteIconCache.set(id, c.imagePath);
+        });
+    }
+    const unownedMap = new Map();
+    const catalogOwnedIds = new Set();
+    if (Array.isArray(catalog)) {
+        catalog.forEach(c => {
+            if (c.owned) catalogOwnedIds.add(c.itemId);
+            else unownedMap.set(c.itemId, c);
         });
     }
 
@@ -816,20 +770,24 @@ async function fetchUnownedEmotes() {
     for (const item of res.lootItemNames || []) {
         const match = item.match(/\d+$/);
         const id = match ? parseInt(match[0], 10) : null;
-        if (!id || !unownedMap.has(id)) continue;
+        if (!id || catalogOwnedIds.has(id)) continue;
 
         const c = unownedMap.get(id);
-        const name = c.name || t("Unknown Emote ({{id}})", { id: id });
-        results.push({
-            id: id,
-            originalName: item,
-            name: name,
-            lowerName: name.toLowerCase(),
-            rarity: '',
-            tilePath: c.imagePath || '',
-            isRental: false,
-            isExclusive: false
-        });
+        if (c) {
+            results.push({
+                id: id,
+                originalName: item,
+                name: c.name,
+                lowerName: c.name.toLowerCase(),
+                rarity: '',
+                tilePath: c.imagePath || '',
+                isRental: false,
+                isExclusive: false
+            });
+            continue;
+        }
+
+        // No fallback data source for emotes — /lol-game-data/assets/v1/emotes.json does not exist
     }
 
     results.sort((a, b) => a.name.localeCompare(b.name));
@@ -1034,7 +992,7 @@ async function loadTabData(tabId) {
     const toolbar = document.getElementById('sm-whale-toolbar');
 
     try {
-        if (tabId === 'skins') await loadSkinsCache();
+        await Utils.GameData.Assets.init();
         data.items = await data.fetcher();
         data.loaded = true;
 
@@ -1313,6 +1271,8 @@ async function showOddsModal(item, recipeName) {
             commonBase
         } = await Utils.GameData.getSgpContext();
 
+        await Utils.GameData.Assets.init();
+
         Utils.Debug.log("[WhaleHelper Debug] Fetching SGP odds from:", `${commonBase}/loot/v2/recipes/${recipeName}/odds`);
 
         const resp = await fetch(`${commonBase}/loot/v2/recipes/${recipeName}/odds`, {
@@ -1392,9 +1352,104 @@ function flattenOddsTree(node, currentRate = 1) {
     return results;
 }
 
+const emoteNameCache = new Map();
+const emoteIconCache = new Map();
+let emoteCachePopulated = false;
+
+async function populateEmoteCache() {
+    if (emoteCachePopulated) return;
+    try {
+        const catalog = await Utils.LCU.get('/lol-catalog/v1/items/EMOTE');
+        if (Array.isArray(catalog)) {
+            catalog.forEach(c => {
+                const id = Number(c.itemId);
+                emoteNameCache.set(id, c.name || c.itemId);
+                if (c.imagePath) emoteIconCache.set(id, c.imagePath);
+            });
+            emoteCachePopulated = true;
+        }
+    } catch (_) {}
+}
+
+function getLootIconUrl(lootId) {
+    const m = (p) => lootId.match(p);
+    let id, d;
+
+    id = m(/^EMOTE_(\d+)$/);
+    if (id) return emoteIconCache.get(parseInt(id[1], 10)) || '';
+
+    id = m(/^CHAMPION_SKIN_RENTAL_(\d+)$/);
+    if (id) { d = Utils.GameData.Assets.getSkin(parseInt(id[1], 10)); return d?.tilePath || ''; }
+
+    id = m(/^CHAMPION_SKIN_(\d+)$/);
+    if (id) { d = Utils.GameData.Assets.getSkin(parseInt(id[1], 10)); return d?.tilePath || ''; }
+
+    id = m(/^WARD_SKIN_(\d+)$/);
+    if (id) { d = Utils.GameData.Assets.getWardSkin(parseInt(id[1], 10)); return d?.wardImagePath || ''; }
+
+    id = m(/^SUMMONER_ICON_(\d+)$/);
+    if (id) { d = Utils.GameData.Assets.getSummonerIcon(parseInt(id[1], 10)); return d?.iconPath || `/lol-game-data/assets/v1/profile-icons/${id[1]}.jpg`; }
+
+    id = m(/^CHAMPION_RENTAL_(\d+)$/);
+    if (id) return `/lol-game-data/assets/v1/champion-icons/${id[1]}.png`;
+
+    id = m(/^CHAMPION_(\d+)$/);
+    if (id) return `/lol-game-data/assets/v1/champion-icons/${id[1]}.png`;
+
+    return '';
+}
+
+function resolveLootName(raw) {
+    const patterns = [
+        { re: /^EMOTE_(\d+)$/, fallback: t('Emote') },
+        { re: /^CHAMPION_SKIN_RENTAL_(\d+)$/, fallback: t('Skin Shard') },
+        { re: /^CHAMPION_SKIN_(\d+)$/, fallback: t('Skin') },
+        { re: /^WARD_SKIN_(\d+)$/, fallback: t('Ward Skin') },
+        { re: /^SUMMONER_ICON_(\d+)$/, fallback: t('Summoner Icon') },
+        { re: /^CHAMPION_RENTAL_(\d+)$/, fallback: t('Champion Shard') },
+        { re: /^CHAMPION_(\d+)$/, fallback: t('Champion') },
+    ];
+    for (const p of patterns) {
+        if (raw.match(p.re)) return p.fallback;
+    }
+    return null;
+}
+
+function resolveLootNameDetailed(raw) {
+    const patterns = [
+        { re: /^EMOTE_(\d+)$/, resolver: id => { const n = emoteNameCache.get(id); return n ? { name: n } : null; }, fallback: t('Emote') },
+        { re: /^CHAMPION_SKIN_RENTAL_(\d+)$/, resolver: id => Utils.GameData.Assets.getSkin(id), fallback: t('Skin Shard') },
+        { re: /^CHAMPION_SKIN_(\d+)$/, resolver: id => Utils.GameData.Assets.getSkin(id), fallback: t('Skin') },
+        { re: /^WARD_SKIN_(\d+)$/, resolver: id => Utils.GameData.Assets.getWardSkin(id), fallback: t('Ward Skin') },
+        { re: /^SUMMONER_ICON_(\d+)$/, resolver: id => Utils.GameData.Assets.getSummonerIcon(id), fallback: t('Summoner Icon') },
+        { re: /^CHAMPION_RENTAL_(\d+)$/, resolver: null, fallback: t('Champion Shard') },
+        { re: /^CHAMPION_(\d+)$/, resolver: null, fallback: t('Champion') },
+    ];
+    for (const p of patterns) {
+        const m = raw.match(p.re);
+        if (m) {
+            const id = parseInt(m[1], 10);
+            if (p.resolver) {
+                const data = p.resolver(id);
+                if (data) {
+                    const name = data && (data.title || data.name);
+                    if (name) return name;
+                }
+            }
+            return p.fallback;
+        }
+    }
+    return null;
+}
+
 function parseQueryToFriendlyLabel(raw, quantity) {
     raw = String(raw || '').trim();
     if (!raw) return t('Unknown Item');
+
+    const resolvedName = resolveLootName(raw);
+    if (resolvedName) {
+        return quantity > 1 ? quantity + 'x ' + resolvedName : resolvedName;
+    }
 
     let isSpecific = false;
 
@@ -1607,13 +1662,16 @@ function parseOddsList(list) {
         const rate = leaf.rate * 100;
 
         if (map.has(label)) {
-            map.get(label).rate += rate;
-            map.get(label).itemsCount += 1;
+            const e = map.get(label);
+            e.rate += rate;
+            e.itemsCount += 1;
+            e.lootIds.push(leaf.lootId);
         } else {
             map.set(label, {
                 label,
                 rate: rate,
-                itemsCount: 1
+                itemsCount: 1,
+                lootIds: [leaf.lootId]
             });
         }
     }
@@ -1705,7 +1763,15 @@ function formatEntry(entry) {
     }
 
     const coloredLabel = colorizeRPAndTiers(entry.label);
-    const poolInfo = entry.itemsCount > 3 ? `<span style="color:#746e64; margin-left:6px; font-size:11px;">${t("(Pool of {{count}} items)", { count: entry.itemsCount })}</span>` : '';
+    let poolInfo = '';
+    if (entry.itemsCount > 1) {
+        const poolIdx = poolDetailData.length;
+        poolDetailData.push({ lootIds: entry.lootIds, label: entry.label });
+        poolInfo += `<span class="sm-pool-view-btn" data-pool-idx="${poolIdx}" style="margin-left:6px;color:#0ac8b9;font-size:11px;cursor:pointer;text-decoration:none;border-bottom:1px dotted #0ac8b9;">[${t('View')}]</span>`;
+    }
+    if (entry.itemsCount > 3) {
+        poolInfo += `<span style="color:#746e64; margin-left:6px; font-size:11px;">${t("(Pool of {{count}} items)", { count: entry.itemsCount })}</span>`;
+    }
 
     return `<div class="odds-row" style="display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid rgba(255,255,255,0.03); font-size:13px; transition: background 0.2s;">
         <div style="display:flex; align-items:center; flex-wrap:wrap; gap:4px;"><span style="color:#f0e6d2;">${coloredLabel}</span>${poolInfo}</div>
@@ -1713,7 +1779,61 @@ function formatEntry(entry) {
     </div>`;
 }
 
+function closePoolPanel() {
+    const modalId = 'sm-whale-odds-modal';
+    const panel = document.getElementById(modalId + '-pool');
+    if (panel) {
+        panel.style.width = '0px';
+        panel.style.opacity = '0';
+    }
+}
+
+async function showPoolDetailModal(poolIdx) {
+    await populateEmoteCache();
+    const data = poolDetailData[poolIdx];
+    if (!data) return;
+
+    const modalId = 'sm-whale-odds-modal';
+    const panel = document.getElementById(modalId + '-pool');
+    const titleEl = document.getElementById(modalId + '-pool-title');
+    const bodyEl = document.getElementById(modalId + '-pool-body');
+    const container = panel?.parentElement;
+    if (!panel || !bodyEl || !container) return;
+
+    titleEl.textContent = data.label || t('Pool Items');
+
+    bodyEl.innerHTML = '';
+    data.lootIds.forEach((lootId, i) => {
+        const resolved = resolveLootNameDetailed(lootId) || parseQueryToFriendlyLabel(lootId, 1);
+        const card = document.createElement('div');
+        card.className = 'sm-pool-card';
+        card.title = lootId;
+
+        const wrap = document.createElement('div');
+        wrap.className = 'sm-pool-card-img-wrap';
+        const img = document.createElement('img');
+        img.className = 'sm-pool-card-img';
+        img.loading = 'lazy';
+        img.decoding = 'async';
+        img.src = getLootIconUrl(lootId);
+        img.onerror = () => { img.style.opacity = '0.2'; };
+        wrap.appendChild(img);
+        card.appendChild(wrap);
+
+        const nameEl = document.createElement('div');
+        nameEl.className = 'sm-pool-card-name';
+        nameEl.textContent = resolved;
+        card.appendChild(nameEl);
+
+        bodyEl.appendChild(card);
+    });
+
+    panel.style.width = '360px';
+    panel.style.opacity = '1';
+}
+
 function renderOddsModal(item, odds) {
+    poolDetailData = [];
     const modalId = 'sm-whale-odds-modal';
     document.getElementById(modalId)?.remove();
 
@@ -1820,8 +1940,88 @@ function renderOddsModal(item, odds) {
         #${modalId} ::-webkit-scrollbar-thumb { background: rgba(200,170,110,0.15); border-radius: 3px; }
         #${modalId} ::-webkit-scrollbar-thumb:hover { background: rgba(200,170,110,0.3); }
         .odds-row:last-child { border-bottom: none !important; }
+        #${modalId}-pool-body { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; padding: 10px; align-content: start; }
+        .sm-pool-card { min-width: 0; border-radius: 6px; border: 1px solid rgba(255,255,255,0.06); background: rgba(255,255,255,0.02); transition: border-color 0.2s, transform 0.15s; cursor: default; }
+        .sm-pool-card:hover { border-color: rgba(200,170,110,0.3); transform: translateY(-2px); }
+        .sm-pool-card-img-wrap { width: 100%; position: relative; padding-bottom: 100%; background: #0a0e14; border-radius: 5px 5px 0 0; overflow: hidden; }
+        .sm-pool-card-img { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+        .sm-pool-card-name { font-size: 10px; color: #f0e6d2; font-weight: bold; line-height: 1.3; text-align: center; padding: 4px 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     `;
     body.appendChild(css);
+
+    const odsContainer = document.createElement('div');
+    Object.assign(odsContainer.style, {
+        display: 'flex',
+        flexDirection: 'row',
+        alignItems: 'center'
+    });
+
+    const poolPanel = document.createElement('div');
+    poolPanel.id = modalId + '-pool';
+    Object.assign(poolPanel.style, {
+        width: '0px',
+        minWidth: '0px',
+        overflow: 'hidden',
+        opacity: '0',
+        flexShrink: '0',
+        marginLeft: '12px',
+        transition: 'width 0.35s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.25s ease',
+        background: 'rgba(1, 10, 19, 0.75)',
+        backdropFilter: 'blur(25px) saturate(140%)',
+        border: '1px solid rgba(200, 170, 110, 0.2)',
+        borderRadius: '12px',
+        display: 'flex',
+        flexDirection: 'column',
+        maxHeight: '85vh',
+        boxShadow: '0 16px 48px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.05)',
+        color: '#a09b8c',
+        fontFamily: 'var(--font-body), "Segoe UI", sans-serif'
+    });
+
+    const poolHeader = document.createElement('div');
+    Object.assign(poolHeader.style, {
+        padding: '14px 18px',
+        borderBottom: '1px solid rgba(255,255,255,0.06)',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        flexShrink: '0',
+        whiteSpace: 'nowrap'
+    });
+
+    const poolTitle = document.createElement('div');
+    poolTitle.id = modalId + '-pool-title';
+    Object.assign(poolTitle.style, {
+        color: '#c8aa6e',
+        fontSize: '13px',
+        fontWeight: 'bold',
+        textTransform: 'uppercase',
+        letterSpacing: '0.5px',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis'
+    });
+
+    const poolClose = document.createElement('button');
+    poolClose.innerHTML = '&#x2715;';
+    Object.assign(poolClose.style, {
+        background: 'none', border: 'none', color: '#a09b8c',
+        fontSize: '18px', cursor: 'pointer', padding: '0', lineHeight: '1', marginLeft: '12px', flexShrink: '0'
+    });
+    poolClose.onmouseover = () => poolClose.style.color = '#f0e6d2';
+    poolClose.onmouseout = () => poolClose.style.color = '#a09b8c';
+    poolClose.onclick = () => closePoolPanel();
+
+    poolHeader.appendChild(poolTitle);
+    poolHeader.appendChild(poolClose);
+    poolPanel.appendChild(poolHeader);
+
+    const poolBody = document.createElement('div');
+    poolBody.id = modalId + '-pool-body';
+    Object.assign(poolBody.style, {
+        flex: '1',
+        overflowY: 'auto'
+    });
+    poolPanel.appendChild(poolBody);
 
     if (odds.message) {
         const msgEl = document.createElement('div');
@@ -1928,11 +2128,21 @@ function renderOddsModal(item, odds) {
 
     modal.appendChild(header);
     modal.appendChild(body);
-    root.appendChild(modal);
+    odsContainer.appendChild(modal);
+    odsContainer.appendChild(poolPanel);
+    root.appendChild(odsContainer);
 
     root.onclick = (e) => {
         if (e.target === root) root.remove();
     };
+
+    body.addEventListener('click', (e) => {
+        const btn = e.target.closest('.sm-pool-view-btn');
+        if (btn) {
+            const idx = parseInt(btn.dataset.poolIdx, 10);
+            if (!isNaN(idx)) showPoolDetailModal(idx);
+        }
+    });
 
     document.body.appendChild(root);
 }
@@ -2131,22 +2341,23 @@ function renderSkinBlacklistUI(container) {
     skinPanel.style.cssText = 'display:flex;flex-direction:column;gap:6px;';
     content.appendChild(skinPanel);
 
-    // Build champion map from skinsCache.
+    // Build champion map from Assets.skins.
     // Real skin objects retain their original `chromas` array from the raw data.
     // We collect all chroma IDs to properly skip them and only map parent skins.
     function buildChampMapFromCache() {
         const champMap = new Map(); // champId -> { skins: [] }
         const allChromaIds = new Set();
+        const skins = Utils.GameData.Assets.skins;
 
         // First pass: collect all chroma IDs
-        for (const skin of skinsCache.values()) {
+        for (const skin of skins.values()) {
             if (skin.chromas && Array.isArray(skin.chromas)) {
                 skin.chromas.forEach(c => allChromaIds.add(Number(c.id)));
             }
         }
 
         // Second pass: map parent skins
-        for (const [id, skin] of skinsCache.entries()) {
+        for (const [id, skin] of skins.entries()) {
             if (allChromaIds.has(id)) continue; // skip chromas
             if (!skin || !skin.id) continue;
 
@@ -2166,7 +2377,7 @@ function renderSkinBlacklistUI(container) {
     let expandedSkins = new Set(); // Set of skin IDs whose chromas are expanded
 
     async function loadAndRender() {
-        // skinsCache is already populated by load(); just use it directly
+        // Assets.skins is already populated by init(); just use it directly
         const champMap = buildChampMapFromCache();
 
         // Champion names come from Assets cache if available, otherwise fetch once
@@ -2754,7 +2965,8 @@ export function init(context) {
 export async function load() {
     await detectAndConfigureRarity().catch(() => {});
     injectStyles();
-    await loadSkinsCache().catch(() => {});
+    await Utils.GameData.Assets.init().catch(() => {});
+    await populateEmoteCache().catch(() => {});
     loadSkinBlacklist();
     if (isSkinTierEnabled) mountSessionObserver();
     installContextMenuInterceptors();
