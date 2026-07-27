@@ -165,36 +165,14 @@ function renderPriorityPicker(container, labelText, storeKey, role, champions) {
         width: '100%'
     });
 
-    const select = document.createElement('select');
-    Object.assign(select.style, {
-        background: '#111',
-        color: '#f0e6d2',
-        border: '1px solid #3e2e13',
-        padding: '6px',
-        borderRadius: '2px',
-        flex: '1',
-        outline: 'none',
-        minWidth: '0'
-    });
-
     const addBtn = document.createElement('button');
     addBtn.type = 'button';
-    addBtn.textContent = t('Add');
+    addBtn.textContent = t('Add Champion');
     styleButton(addBtn);
 
     function paint() {
         const selected = getPriorityList(storeKey, role);
         chips.innerHTML = '';
-        select.innerHTML = '';
-
-        champions
-            .filter((champ) => champ.id > 0 && !selected.includes(Number(champ.id)))
-            .forEach((champ) => {
-                const opt = document.createElement('option');
-                opt.value = champ.id;
-                opt.textContent = champ.name;
-                select.appendChild(opt);
-            });
 
         selected.forEach((id, index) => {
             const chip = document.createElement('span');
@@ -278,22 +256,31 @@ function renderPriorityPicker(container, labelText, storeKey, role, champions) {
             chips.appendChild(chip);
         });
 
-        addBtn.disabled = selected.length >= MAX_PRIORITY_CHAMPS || select.options.length === 0;
+        const availableCount = champions.filter((champ) => champ.id > 0 && !selected.includes(Number(champ.id))).length;
+        addBtn.disabled = selected.length >= MAX_PRIORITY_CHAMPS || availableCount === 0;
         addBtn.style.opacity = addBtn.disabled ? '0.45' : '1';
     }
 
     addBtn.onclick = (e) => {
         e.preventDefault();
         e.stopPropagation();
-        const id = Number(select.value);
-        if (!id) return;
         const selected = getPriorityList(storeKey, role);
-        if (selected.length >= MAX_PRIORITY_CHAMPS || selected.includes(id)) return;
-        setPriorityList(storeKey, role, [...selected, id]);
-        paint();
+        if (selected.length >= MAX_PRIORITY_CHAMPS) return;
+        Utils.UI.ChampionPicker.open({
+            title: labelText,
+            champions,
+            excludeIds: selected,
+            favoritesKey: 'autoLockChampion',
+            onSelect: (champ) => {
+                const current = getPriorityList(storeKey, role);
+                const id = Number(champ.id);
+                if (current.length >= MAX_PRIORITY_CHAMPS || current.includes(id)) return;
+                setPriorityList(storeKey, role, [...current, id]);
+                paint();
+            }
+        });
     };
 
-    controlRow.appendChild(select);
     controlRow.appendChild(addBtn);
     wrap.appendChild(label);
     wrap.appendChild(chips);
