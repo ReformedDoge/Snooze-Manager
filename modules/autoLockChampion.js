@@ -37,6 +37,7 @@ let panicActive = false;
 let teammateIntents = new Set(); // championPickIntent > 0 from teammates
 const pluginSetChampionIds = new Map(); // actionId → championId we last set via PATCH (manual pick detection)
 let manuallyOverriddenActionIds = new Set(); // action IDs the user manually changed (per-action override tracking)
+let pendingTimers = new Set(); // setTimeout IDs for cleanup on unmount
 
 const MAX_PRIORITY_CHAMPS = 3;
 const PICK_PRIORITY_KEY = 'pickIds';
@@ -114,11 +115,11 @@ function getPriorityList(key, role = 'default') {
 
 function setPriorityList(key, role, ids) {
     const actualKey = role === 'default' ? key : `${key}_${role}`;
-    Utils.Store.set('autoLockChampion', actualKey, asChampionList(ids));
+    Utils.Store.set('autoLockChampion', actualKey, ids);
 }
 
-function getChampionName(champions, id) {
-    return champions.find((champ) => Number(champ.id) === Number(id))?.name || t("Champion {{id}}", { id });
+function getChampionName(champions, id, championMap) {
+    return (championMap?.get(Number(id))?.name) || champions?.find((champ) => Number(champ.id) === Number(id))?.name || t("Champion {{id}}", { id });
 }
 
 function styleButton(button, compact = false) {
@@ -135,6 +136,7 @@ function styleButton(button, compact = false) {
 }
 
 function renderPriorityPicker(container, labelText, storeKey, role, champions) {
+    const championMap = new Map(champions.filter(c => c.id > 0).map(c => [Number(c.id), c]));
     const wrap = document.createElement('div');
     Object.assign(wrap.style, {
         display: 'flex',
@@ -165,111 +167,226 @@ function renderPriorityPicker(container, labelText, storeKey, role, champions) {
         width: '100%'
     });
 
-    const select = document.createElement('select');
-    Object.assign(select.style, {
+    const searchContainer = document.createElement('div');
+    Object.assign(searchContainer.style, {
+        position: 'relative',
+        flex: '1',
+        minWidth: '0'
+    });
+
+    const searchInput = document.createElement('input');
+    searchInput.type = 'text';
+    searchInput.placeholder = t('Search champion...');
+    searchInput.autocomplete = 'off';
+    Object.assign(searchInput.style, {
         background: '#111',
         color: '#f0e6d2',
         border: '1px solid #3e2e13',
         padding: '6px',
         borderRadius: '2px',
-        flex: '1',
+        width: '100%',
         outline: 'none',
-        minWidth: '0'
+        boxSizing: 'border-box',
+        fontSize: '12px'
     });
 
-    const addBtn = document.createElement('button');
-    addBtn.type = 'button';
-    addBtn.textContent = t('Add');
-    styleButton(addBtn);
+    const dropdown = document.createElement('div');
+    Object.assign(dropdown.style, {
+        position: 'absolute',
+        top: '100%',
+        left: '0',
+        right: '0',
+        marginTop: '2px',
+        maxHeight: '280px',
+        overflowY: 'auto',
+        background: '#1e2328',
+        border: '1px solid #785a28',
+        borderRadius: '2px',
+        zIndex: '1000',
+        display: 'none',
+        boxShadow: '0 4px 12px rgba(0,0,0,0.5)'
+    });
+    // Inject shared styles once
+    if (!document.getElementById('alc-dd-style')) {
+        const s = document.createElement('style');
+        s.id = 'alc-dd-style';
+        s.textContent = '.alc-dd-item{display:flex;align-items:center;gap:8px;padding:5px 8px;cursor:pointer;font-size:12px;color:#a09b8c;background:transparent}.alc-dd-item.hl{color:#f0e6d2;background:rgba(200,170,110,0.15)}.alc-dd-item img{width:22px;height:22px;border-radius:50%;flex-shrink:0;object-fit:cover}';
+        document.head.appendChild(s);
+    }
 
-    function paint() {
+    let activeIdx = -1;
+    let filteredChamps = champions.filter(c => c.id > 0 && !getPriorityList(storeKey, role).includes(Number(c.id)));
+    let inputTimer = null;
+
+    function highlightIndex(idx) {
+        const prev = dropdown.children[activeIdx];
+        if (prev) prev.classList.remove('hl');
+        activeIdx = idx;
+        const next = dropdown.children[activeIdx];
+        if (next) { next.classList.add('hl'); next.scrollIntoView({ block: 'nearest' }); }
+    }
+
+    dropdown.onmouseleave = () => {
+        const prev = dropdown.children[activeIdx];
+        if (prev) prev.classList.remove('hl');
+        activeIdx = -1;
+    };
+
+    function closeDropdown() {
+        dropdown.style.display = 'none';
+        activeIdx = -1;
+        if (inputTimer) { clearTimeout(inputTimer); inputTimer = null; }
+    }
+
+    function renderDropdown() {
         const selected = getPriorityList(storeKey, role);
+        const query = searchInput.value.toLowerCase().trim();
+        filteredChamps = champions.filter(c =>
+            c.id > 0 &&
+            !selected.includes(Number(c.id)) &&
+            (!query || c.name.toLowerCase().includes(query))
+        );
+
+        if (filteredChamps.length === 0) { dropdown.style.display = 'none'; dropdown.innerHTML = ''; return; }
+
+        let html = '';
+        for (let i = 0; i < filteredChamps.length; i++) {
+            const champ = filteredChamps[i];
+            html += '<div class="alc-dd-item' + (i === activeIdx ? ' hl' : '') + '" data-idx="' + i + '"><img src="/lol-game-data/assets/v1/champion-icons/' + champ.id + '.png" loading="lazy" onerror="this.style.opacity=\'0.3\'"><span>' + champ.name + '</span></div>';
+        }
+        dropdown.innerHTML = html;
+
+        // Attach event listeners to each item
+        const items = dropdown.children;
+        for (let i = 0; i < items.length; i++) {
+            const item = items[i];
+            const champ = filteredChamps[i];
+            item.onmousedown = (e) => { e.preventDefault(); e.stopPropagation(); addChampion(champ.id); };
+            item.onmouseenter = () => { if (activeIdx !== i) highlightIndex(i); };
+        }
+
+        dropdown.style.display = 'block';
+        if (activeIdx >= 0 && dropdown.children[activeIdx]) {
+            dropdown.children[activeIdx].scrollIntoView({ block: 'nearest' });
+        }
+    }
+
+    function addChampion(id) {
+        id = Number(id);
+        if (!id) return;
+        const current = getPriorityList(storeKey, role);
+        if (current.length >= MAX_PRIORITY_CHAMPS || current.includes(id)) return;
+        const next = [...current, id];
+        setPriorityList(storeKey, role, next);
+        searchInput.value = '';
+        closeDropdown();
+        paint(next);
+    }
+
+    function openDropdown() { activeIdx = -1; renderDropdown(); }
+    searchInput.onfocus = openDropdown;
+    searchInput.onclick = () => { if (dropdown.style.display !== 'block') openDropdown(); };
+
+    searchInput.oninput = () => {
+        if (inputTimer) clearTimeout(inputTimer);
+        activeIdx = -1;
+        inputTimer = setTimeout(renderDropdown, 80);
+    };
+
+    searchInput.onkeydown = (e) => {
+        if (e.key === 'ArrowDown') { e.preventDefault(); if (filteredChamps.length) highlightIndex(Math.min(activeIdx + 1, filteredChamps.length - 1)); }
+        else if (e.key === 'ArrowUp') { e.preventDefault(); highlightIndex(Math.max(activeIdx - 1, -1)); }
+        else if (e.key === 'Enter') {
+            e.preventDefault();
+            if (activeIdx >= 0 && filteredChamps[activeIdx]) addChampion(filteredChamps[activeIdx].id);
+            else if (filteredChamps.length > 0) addChampion(filteredChamps[0].id);
+        }
+        else if (e.key === 'Escape') { closeDropdown(); searchInput.blur(); }
+    };
+
+    const docHandler = (e) => {
+        if (!searchContainer.contains(e.target)) closeDropdown();
+    };
+    document.addEventListener('click', docHandler);
+
+    // Auto-cleanup when wrap is removed from DOM (role switch or modal close)
+    wrap.addEventListener('DOMNodeRemoved', () => {
+        document.removeEventListener('click', docHandler);
+        clearTimeout(inputTimer);
+    }, { once: true });
+
+    function paint(selectedList) {
+        const selected = selectedList || getPriorityList(storeKey, role);
         chips.innerHTML = '';
-        select.innerHTML = '';
-
-        champions
-            .filter((champ) => champ.id > 0 && !selected.includes(Number(champ.id)))
-            .forEach((champ) => {
-                const opt = document.createElement('option');
-                opt.value = champ.id;
-                opt.textContent = champ.name;
-                select.appendChild(opt);
-            });
-
         selected.forEach((id, index) => {
             const chip = document.createElement('span');
             Object.assign(chip.style, {
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '5px',
+                gap: '3px',
                 background: '#111',
                 color: '#f0e6d2',
                 border: '1px solid #785a28',
                 borderRadius: '2px',
-                padding: '4px 6px',
+                padding: '3px 5px',
                 fontSize: '12px',
                 maxWidth: '100%'
             });
 
+            const champ = championMap.get(Number(id));
+            const chipIcon = document.createElement('img');
+            chipIcon.src = `/lol-game-data/assets/v1/champion-icons/${id}.png`;
+            Object.assign(chipIcon.style, {
+                width: '18px', height: '18px', borderRadius: '50%',
+                flexShrink: '0', objectFit: 'cover'
+            });
+            chipIcon.onerror = () => { chipIcon.style.opacity = '0.3'; };
+
             const rank = document.createElement('strong');
             rank.textContent = `${index + 1}`;
-            Object.assign(rank.style, {
-                color: '#0ac8b9',
-                fontSize: '11px'
-            });
+            Object.assign(rank.style, { color: '#0ac8b9', fontSize: '11px', minWidth: '10px', textAlign: 'center' });
 
             const name = document.createElement('span');
-            name.textContent = getChampionName(champions, id);
-            Object.assign(name.style, {
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap'
-            });
+            name.textContent = champ?.name || getChampionName(champions, id, championMap);
+            Object.assign(name.style, { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' });
 
             const up = document.createElement('button');
-            up.type = 'button';
-            up.textContent = t('Up');
-            up.title = t('Higher priority');
+            up.type = 'button'; up.textContent = '\u25B2'; up.title = t('Higher priority');
             styleButton(up, true);
             up.disabled = index === 0;
             up.style.opacity = up.disabled ? '0.35' : '1';
             up.onclick = (e) => {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault(); e.stopPropagation();
                 const next = selected.slice();
                 [next[index - 1], next[index]] = [next[index], next[index - 1]];
                 setPriorityList(storeKey, role, next);
-                paint();
+                paint(next);
             };
 
             const down = document.createElement('button');
-            down.type = 'button';
-            down.textContent = t('Dn');
-            down.title = t('Lower priority');
+            down.type = 'button'; down.textContent = '\u25BC'; down.title = t('Lower priority');
             styleButton(down, true);
             down.disabled = index === selected.length - 1;
             down.style.opacity = down.disabled ? '0.35' : '1';
             down.onclick = (e) => {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault(); e.stopPropagation();
                 const next = selected.slice();
                 [next[index], next[index + 1]] = [next[index + 1], next[index]];
                 setPriorityList(storeKey, role, next);
-                paint();
+                paint(next);
             };
 
             const remove = document.createElement('button');
-            remove.type = 'button';
-            remove.textContent = t('x');
-            remove.title = t('Remove');
+            remove.type = 'button'; remove.textContent = '\u2715'; remove.title = t('Remove');
             styleButton(remove, true);
             remove.onclick = (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                setPriorityList(storeKey, role, selected.filter((champId) => champId !== id));
-                paint();
+                e.preventDefault(); e.stopPropagation();
+                const next = selected.filter((champId) => champId !== id);
+                setPriorityList(storeKey, role, next);
+                paint(next);
             };
 
+            chip.appendChild(chipIcon);
             chip.appendChild(rank);
             chip.appendChild(name);
             chip.appendChild(up);
@@ -277,24 +394,11 @@ function renderPriorityPicker(container, labelText, storeKey, role, champions) {
             chip.appendChild(remove);
             chips.appendChild(chip);
         });
-
-        addBtn.disabled = selected.length >= MAX_PRIORITY_CHAMPS || select.options.length === 0;
-        addBtn.style.opacity = addBtn.disabled ? '0.45' : '1';
     }
 
-    addBtn.onclick = (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        const id = Number(select.value);
-        if (!id) return;
-        const selected = getPriorityList(storeKey, role);
-        if (selected.length >= MAX_PRIORITY_CHAMPS || selected.includes(id)) return;
-        setPriorityList(storeKey, role, [...selected, id]);
-        paint();
-    };
-
-    controlRow.appendChild(select);
-    controlRow.appendChild(addBtn);
+    searchContainer.appendChild(searchInput);
+    searchContainer.appendChild(dropdown);
+    controlRow.appendChild(searchContainer);
     wrap.appendChild(label);
     wrap.appendChild(chips);
     wrap.appendChild(controlRow);
@@ -745,50 +849,36 @@ async function processChampSelectSession(s) {
     const allActions = s.actions ? s.actions.flat(2) : [];
     logBanSessionState(s, allActions, myPosition);
 
-    Utils.Debug.log('[AutoSelect] all my actions:', allActions.filter(a => a.actorCellId === s.localPlayerCellId).map(a => ({
-        id: a.id, type: a.type, completed: a.completed, active: isActionActive(a, s), championId: a.championId
-    })));
+    // === CACHE: compute once per push ===
+    const activeActionIds = new Set(getCurrentActiveActions(s).map(a => a.id));
+    const bannedIds = getBannedChampionIds(s);
+    const pickedIds = getPickedChampionIds(s);
 
     const myActions = allActions.filter(a => {
         if (a.actorCellId !== s.localPlayerCellId || a.completed) return false;
         if (a.type !== 'pick' && a.type !== 'ban') return false;
-
-        if (isActionActive(a, s)) return true;
-        if (a.type === 'pick' && getChampSelectPhase(s) === 'PLANNING') return true;
-
-        return false;
+        return activeActionIds.has(a.id) || (a.type === 'pick' && getChampSelectPhase(s) === 'PLANNING');
     });
 
     if (myActions.length === 0) {
-        Utils.Debug.log('[AutoSelect] no myActions — clearing start times (phase:', getChampSelectPhase(s), ')');
         lastAutoLockKeys.clear();
         actionActiveStartTimes.clear();
         actionHoverStartTimes.clear();
         actionInitialTimers.clear();
-        lastActiveActionIds = new Set(
-            (s?.actions ? s.actions.flat(2) : [])
-                .filter(a => isActionActive(a, s))
-                .map(a => a.id)
-        );
+        lastActiveActionIds = activeActionIds;
         return;
     }
 
-    if (manuallyOverriddenActionIds.size > 0) {
-        const ids = [...manuallyOverriddenActionIds].join(',');
-        Utils.Debug.log(`[AutoSelect] manually overridden action ids: ${ids}`);
-    }
-
-    // Update emberTimerMs from current session data (handles both fresh WS pushes and stale lastSessionData from setTimeout)
+    // Update emberTimerMs from current session data
     if (s?.timer && s.timer.adjustedTimeLeftInPhase !== undefined && s.timer.internalNowInEpochMs !== undefined) {
         emberTimerMs = Math.max(s.timer.adjustedTimeLeftInPhase - (Date.now() - s.timer.internalNowInEpochMs), 0);
     }
 
-    // Detect ceremony padding: when totalTimeInPhase increases mid-phase (e.g. ban→pick adds ceremony time)
+    // Detect ceremony padding
     const currentPhase = getChampSelectPhase(s);
     const newTotal = s?.timer?.totalTimeInPhase;
     if (lastTotalTimeInPhase !== null && lastProcessPhase === currentPhase && newTotal > lastTotalTimeInPhase && newTotal !== undefined) {
         ceremonyPadding = newTotal - lastTotalTimeInPhase;
-        Utils.Debug.log(`[AutoSelect] ceremony padding: ${ceremonyPadding}ms (total ${lastTotalTimeInPhase}→${newTotal})`);
     } else if (currentPhase !== lastProcessPhase) {
         ceremonyPadding = 0;
     }
@@ -800,23 +890,6 @@ async function processChampSelectSession(s) {
     const lockSettings = getLockSettings();
     const hoverDelayMs = getHoverDelayMs();
     const now = Date.now();
-
-    const totalTime = s?.timer?.totalTimeInPhase ?? 0;
-    const phaseElapsed = totalTime && emberTimerMs !== null ? totalTime - emberTimerMs : null;
-    const actionTimingInfo = myActions.map(a => ({
-        id: a.id,
-        type: a.type,
-        initTmr: actionInitialTimers.get(a.id),
-        active: isActionActive(a, s),
-        initElapsed: (actionInitialTimers.has(a.id) && emberTimerMs !== null) ? actionInitialTimers.get(a.id) - emberTimerMs : null
-    }));
-    Utils.Debug.log(`[AutoSelect] [TIMING] phase=${getChampSelectPhase(s)} total=${totalTime}ms ember=${emberTimerMs}ms phaseElapsed=${phaseElapsed}ms ceremonyPad=${ceremonyPadding}ms mode=${lockSettings.mode} timeMs=${lockSettings.timeMs} actions=${JSON.stringify(actionTimingInfo)}`);
-
-    Utils.Debug.log('[AutoSelect] processing actions:', myActions.map(a => ({
-        id: a.id, type: a.type, completed: a.completed, active: isActionActive(a, s), championId: a.championId
-    })));
-    Utils.Debug.log(`[AutoSelect] [DEBUG-pick-lock] actionActiveStartTimes state: ${JSON.stringify([...actionActiveStartTimes.entries()].map(([k,v]) => `${k}:${v}`))}`);
-    Utils.Debug.log(`[AutoSelect] [DEBUG-pick-lock] lastActiveActionIds: [${[...lastActiveActionIds].join(',')}]`);
 
     for (const action of myActions) {
         if (manuallyOverriddenActionIds.has(action.id)) {
@@ -834,10 +907,9 @@ async function processChampSelectSession(s) {
         }
 
         const phase = getChampSelectPhase(s);
-        const isActionTrulyActive = isActionActive(action, s);
+        const isActionTrulyActive = activeActionIds.has(action.id);
 
         // === HOVER HANDLING ===
-        // Independent from lock timing. Works during PLANNING for pre-hover (picks only).
         const isReadyForHover =
             (action.type === 'pick' && (isActionTrulyActive || phase === 'PLANNING')) ||
             (action.type === 'ban' && isActionTrulyActive && phase === 'BAN_PICK');
@@ -845,16 +917,18 @@ async function processChampSelectSession(s) {
         if (isReadyForHover && hoverDelayMs > 0) {
             if (!actionHoverStartTimes.has(action.id)) {
                 actionHoverStartTimes.set(action.id, now);
-                const hoverTimer = setTimeout(async () => {
+                const hTimer = setTimeout(async () => {
+                    pendingTimers.delete(hTimer);
                     if (!isEnabled || panicActive || !lastSessionData) return;
                     inSetTimeout = true;
                     try { await processChampSelectSession(lastSessionData); }
                     finally { inSetTimeout = false; }
                 }, hoverDelayMs + 50);
+                pendingTimers.add(hTimer);
             }
             const hoverElapsed = now - actionHoverStartTimes.get(action.id);
             if (hoverElapsed >= hoverDelayMs) {
-                const champId = chooseChampionForAction(s, action, myPosition);
+                const champId = chooseChampionForAction(s, action, myPosition, bannedIds, pickedIds);
                 if (champId && action.championId !== champId) {
                     const lastHoverPatchTime = lastAutoLockKeys.get(action.id + '_hover_time') || 0;
                     if (now - lastHoverPatchTime >= 1500) {
@@ -879,28 +953,11 @@ async function processChampSelectSession(s) {
         }
 
         // === LOCK HANDLING ===
-        // Only processes when the action is truly active and NOT during PLANNING.
-        // isActionActive returns true for the first pending action even during PLANNING,
-        // so we must explicitly exclude PLANNING here.
-        if (!isActionTrulyActive || phase === 'PLANNING') {
-            continue;
-        }
+        if (!isActionTrulyActive || phase === 'PLANNING') continue;
 
-        // ----- DEBUG: trace pick lock timing when it becomes active -----
-        if (action.type === 'pick') {
-            const existingStart = actionActiveStartTimes.get(action.id);
-            const wasInLastActive = lastActiveActionIds.has(action.id);
-            Utils.Debug.log(`[AutoSelect] [DEBUG-pick-lock] action ${action.id}: isActionTrulyActive=${isActionTrulyActive} phase=${phase} inSetTimeout=${inSetTimeout} existingStart=${existingStart} wasInLastActive=${wasInLastActive}`);
-        }
-
-        // Detect newly-active transition: action was not active in the previous call
-        // but is active now. Reset lock timer to start counting from when the action
-        // truly becomes active. Hover timer is NOT reset — it carries over from
-        // PLANNING pre-hover or the hover section's previous push.
+        // Detect newly-active transition
         if (!inSetTimeout && !lastActiveActionIds.has(action.id)) {
             if (actionActiveStartTimes.has(action.id)) {
-                const existingStart = actionActiveStartTimes.get(action.id);
-                Utils.Debug.log(`[AutoSelect] action loop: action ${action.id} (${action.type}) newly active — resetting lock timer (existingStart=${existingStart})`);
                 actionActiveStartTimes.delete(action.id);
             }
         }
@@ -910,104 +967,50 @@ async function processChampSelectSession(s) {
             if (emberTimerMs !== null && emberTimerMs !== undefined) {
                 actionInitialTimers.set(action.id, emberTimerMs - ceremonyPadding);
             }
-            Utils.Debug.log(`[AutoSelect] [DEBUG-pick-lock] action ${action.id}: setting actionActiveStartTimes=${now} initialTimer=${actionInitialTimers.get(action.id) ?? 'N/A'} ceremonyPadding=${ceremonyPadding} mode=${lockSettings.mode} timeMs=${lockSettings.timeMs}`);
-            
-            const timerActionId = action.id;
+
             const lockDelay = ceremonyPadding + lockSettings.timeMs;
             if (lockSettings.mode === 'after' && lockSettings.timeMs > 0) {
-                setTimeout(async () => {
-                    Utils.Debug.log(`[AutoSelect] [DEBUG-pick-lock] setTimeout callback firing for action ${timerActionId}, inSetTimeout=${inSetTimeout} lastSessionData exists=${!!lastSessionData}`);
+                const lTimer = setTimeout(async () => {
+                    pendingTimers.delete(lTimer);
                     if (!isEnabled || panicActive || !lastSessionData) return;
                     inSetTimeout = true;
                     try { await processChampSelectSession(lastSessionData); }
                     finally { inSetTimeout = false; }
                 }, lockDelay + 50);
-            }
-        } else {
-            if (action.type === 'pick') {
-                const existingStart = actionActiveStartTimes.get(action.id);
-                const initTimer = actionInitialTimers.get(action.id);
-                const timerElapsed = (initTimer !== undefined && emberTimerMs !== null) ? initTimer - emberTimerMs : null;
-                Utils.Debug.log(`[AutoSelect] [DEBUG-pick-lock] action ${action.id}: actionActiveStartTimes ALREADY SET (existing=${existingStart} timerElapsed=${timerElapsed}ms)`);
+                pendingTimers.add(lTimer);
             }
         }
 
-        const champId = chooseChampionForAction(s, action, myPosition);
-        if (!champId) {
-            Utils.Debug.log(`[AutoSelect] action loop: action ${action.id} (${action.type}) skipped — no valid champion chosen from priorities`);
-            continue;
-        }
+        const champId = chooseChampionForAction(s, action, myPosition, bannedIds, pickedIds);
+        if (!champId) continue;
 
-        const shouldComplete = shouldCompleteAction(s, action, instantPick, instantBan, lockSettings);
+        const shouldComplete = shouldCompleteAction(s, action, instantPick, instantBan, lockSettings, isActionTrulyActive);
 
-        // Wait for lock timer to elapse before completing
-        if (!shouldComplete) {
-            if (action.type === 'pick') {
-                const startTs = actionActiveStartTimes.get(action.id);
-                Utils.Debug.log(`[AutoSelect] [DEBUG-pick-lock] action ${action.id}: shouldComplete=false startTs=${startTs} elapsed=${startTs ? Date.now() - startTs : 'N/A'}ms threshold=${lockSettings.timeMs}ms`);
-            }
-            continue;
-        }
+        if (!shouldComplete) continue;
 
-        if (action.championId === champId && action.completed === shouldComplete) {
-            Utils.Debug.log(`[AutoSelect] action loop: action ${action.id} (${action.type}) already has championId=${champId} completed=${action.completed} — no-op`);
-            continue;
-        }
+        if (action.championId === champId && action.completed === shouldComplete) continue;
 
         const lockNow = Date.now();
         const lastLockPatchTime = lastAutoLockKeys.get(action.id + '_lock_time') || 0;
-        const cooldownMs = 1500;
 
-        if (lockNow - lastLockPatchTime < cooldownMs) {
-            Utils.Debug.log(`[AutoSelect] action loop: action ${action.id} (${action.type}) — ${lockNow - lastLockPatchTime}ms since last lock patch < ${cooldownMs}ms cooldown, skipping`);
-            continue;
-        }
-
-        if (action.type === 'pick') {
-            Utils.Debug.log(`[AutoSelect] [DEBUG-pick-lock] action ${action.id}: about to LOCK — shouldComplete=${shouldComplete} lockNow=${lockNow} lastLockPatchTime=${lastLockPatchTime} lockElapsedMs=${lockNow - lastLockPatchTime}`);
-        }
+        if (lockNow - lastLockPatchTime < 1500) continue;
 
         lastAutoLockKeys.set(action.id + '_lock_time', lockNow);
 
-        const payload = {
-            championId: champId,
-            completed: shouldComplete
-        };
-
-        const lockStartTs = actionActiveStartTimes.get(action.id);
-        const lockElapsedMs = lockStartTs ? Date.now() - lockStartTs : 0;
         try {
-            Utils.Debug.log(`[AutoSelect] ${action.type} lock patch`, {
-                actionId: action.id,
-                phase: getChampSelectPhase(s),
-                active: isActionTrulyActive,
-                payload,
-                actionChampionId: action.championId,
-                lockElapsedMs,
-                lockTimeSetting: lockSettings.timeMs
+            await Utils.LCU.patch(`/lol-champ-select/v1/session/actions/${action.id}`, {
+                championId: champId,
+                completed: shouldComplete
             });
-
-            await Utils.LCU.patch(`/lol-champ-select/v1/session/actions/${action.id}`, payload);
-            Utils.Debug.log(`[AutoSelect] ${action.type} lock patch sent for action=${action.id}`);
             pluginSetChampionIds.set(action.id, champId);
         } catch (err) {
             Utils.Debug.warn(`[AutoSelect] ${action.type} lock patch failed`, {
-                actionId: action.id,
-                phase: getChampSelectPhase(s),
-                payload,
-                err: err?.message ?? err
+                actionId: action.id, err: err?.message ?? err
             });
         }
     }
 
-    // Track which action IDs were active for newly-active detection next call
-    const activeIds = new Set(
-        (s?.actions ? s.actions.flat(2) : [])
-            .filter(a => isActionActive(a, s))
-            .map(a => a.id)
-    );
-    Utils.Debug.log(`[AutoSelect] [DEBUG-pick-lock] lastActiveActionIds updated: phase=${getChampSelectPhase(s)} ids=[${[...activeIds].join(',')}]`);
-    lastActiveActionIds = activeIds;
+    lastActiveActionIds = activeActionIds;
 }
 
 /**
@@ -1051,8 +1054,8 @@ function getChampSelectPhase(session) {
     return session?.timer?.phase || session?.phase || 'unknown';
 }
 
-function shouldCompleteAction(session, action, instantPick, instantBan, lockSettings) {
-    if (!isActionActive(action, session)) return false;
+function shouldCompleteAction(session, action, instantPick, instantBan, lockSettings, _isActive) {
+    if (_isActive !== true && !isActionActive(action, session)) return false;
 
     const phase = getChampSelectPhase(session);
     
@@ -1215,39 +1218,21 @@ function getPickedChampionIds(session) {
     return picked;
 }
 
-function isChampionAvailableForAction(actionType, championId, session) {
-    const bannedIds = getBannedChampionIds(session, 'isChampionAvailableForAction');
-    if (bannedIds.has(championId)) {
-        Utils.Debug.log(`[AutoSelect] isChampionAvailableForAction(${actionType}, ${championId}): blocked by bannedIds=[${[...bannedIds]}]`);
-        return false;
-    }
+function isChampionAvailableForAction(actionType, championId, session, bannedIds, pickedIds) {
+    const b = bannedIds || getBannedChampionIds(session);
+    if (b.has(championId)) return false;
 
-    const pickedIds = getPickedChampionIds(session);
-    if (actionType === 'pick' && pickedIds.has(championId)) {
-        Utils.Debug.log(`[AutoSelect] isChampionAvailableForAction(${actionType}, ${championId}): blocked by pickedIds=[${[...pickedIds]}]`);
-        return false;
-    }
+    const p = pickedIds || getPickedChampionIds(session);
+    if (actionType === 'pick' && p.has(championId)) return false;
 
-    // Server-pushed bannable set may shrink as bans happen (guessing)
-    if (actionType === 'ban') {
-        if (bannableChampionSet && !bannableChampionSet.has(championId)) {
-            Utils.Debug.log(`[AutoSelect] isChampionAvailableForAction(${actionType}, ${championId}): blocked by bannableChampionSet (not in set, size=${bannableChampionSet.size})`);
-            return false;
-        }
-    }
+    if (actionType === 'ban' && bannableChampionSet && !bannableChampionSet.has(championId)) return false;
 
-    // Team intent awareness: don't ban a champion a teammate is hovering
-    if (actionType === 'ban' && Utils.Store.get('autoLockChampion', 'respectTeamIntent') !== false) {
-        if (teammateIntents.has(championId)) {
-            Utils.Debug.log(`[AutoSelect] isChampionAvailableForAction(${actionType}, ${championId}): blocked by teammate championPickIntent`);
-            return false;
-        }
-    }
+    if (actionType === 'ban' && Utils.Store.get('autoLockChampion', 'respectTeamIntent') !== false && teammateIntents.has(championId)) return false;
 
     return true;
 }
 
-function chooseChampionForAction(session, action, role) {
+function chooseChampionForAction(session, action, role, bannedIds, pickedIds) {
     const actionType = action.type;
 
     let priorities = getPriorityList(actionType === 'ban' ? BAN_PRIORITY_KEY : PICK_PRIORITY_KEY, role);
@@ -1255,31 +1240,15 @@ function chooseChampionForAction(session, action, role) {
         priorities = getPriorityList(actionType === 'ban' ? BAN_PRIORITY_KEY : PICK_PRIORITY_KEY, 'default');
     }
 
-    if (priorities.length === 0) {
-        Utils.Debug.log(`[AutoSelect] chooseForAction(${actionType}): no priorities for role="${role}"`);
-        return null;
-    }
+    if (priorities.length === 0) return null;
 
     const currentChampionId = Number(action.championId || 0);
 
     if (currentChampionId && priorities.includes(currentChampionId)) {
-        if (isChampionAvailableForAction(actionType, currentChampionId, session)) {
-            Utils.Debug.log(`[AutoSelect] chooseForAction(${actionType}): using current championId=${currentChampionId} (still available in priorities)`);
-            return currentChampionId;
-        }
-        Utils.Debug.log(`[AutoSelect] chooseForAction(${actionType}): skipping current ${currentChampionId} (unavailable), falling through to priority iteration`);
+        if (isChampionAvailableForAction(actionType, currentChampionId, session, bannedIds, pickedIds)) return currentChampionId;
     }
 
-    const chosen = priorities.find((championId) => {
-        const available = isChampionAvailableForAction(actionType, championId, session);
-        Utils.Debug.log(`[AutoSelect] chooseForAction(${actionType}): checking priority champ ${championId} => ${available ? 'AVAILABLE' : 'BLOCKED'}`);
-        return available;
-    }) || null;
-
-    const bannedIds = getBannedChampionIds(session);
-    const pickedIds = getPickedChampionIds(session);
-    Utils.Debug.log(`[AutoSelect] chooseForAction(${actionType}): priorities=[${priorities}] banned=[${[...bannedIds]}] picked=[${[...pickedIds]}] bannableSet=${bannableChampionSet?.size ?? 'N/A'} pickableSet=${pickableChampionSet?.size ?? 'N/A'} => chosen=${chosen}`);
-    return chosen;
+    return priorities.find((championId) => isChampionAvailableForAction(actionType, championId, session, bannedIds, pickedIds)) || null;
 }
 
 function panic() {
@@ -1386,6 +1355,8 @@ function unmountAutoLockChampion() {
         pickableChampUnsub();
         pickableChampUnsub = null;
     }
+    pendingTimers.forEach(id => clearTimeout(id));
+    pendingTimers.clear();
     bannableChampionSet = null;
     pickableChampionSet = null;
     lastAutoLockKeys.clear();
