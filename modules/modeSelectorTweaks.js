@@ -65,6 +65,11 @@ function refreshCSS() {
     hiddenModes.forEach(mode => css += `div[data-game-mode="${mode}"] { display: none !important; }\n`);
     hiddenQueues.forEach(qId => css += `div.parties-game-type-card-category-div:has([data-queue-id="${qId}"]) { display: none !important; }\n`);
 
+    // re-center remaining cards when modes are hidden (compact layout uses space-between)
+    if (hiddenModes.size > 0) {
+        css += `.parties-game-select-screen.compact .parties-game-type-select-wrapper { justify-content: space-evenly !important; }\n`;
+    }
+
     // hide the separator logic
     const leftHidden = hiddenNavs.has('kPvP') && hiddenNavs.has('kVersusAI') && hiddenNavs.has('kTraining');
     const rightHidden = hiddenNavs.has('CreateCustom') && hiddenNavs.has('JoinCustom');
