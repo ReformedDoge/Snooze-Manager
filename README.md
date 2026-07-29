@@ -43,6 +43,6 @@ Everything is built to be lightweight and event driven: no embedded React applic
 
 ### Contributors
 
-<img src="https://gist.githubusercontent.com/ReformedDoge/bd2de93ddd28d00206dcc094e83c7aca/raw/41869270e732bc9e690aaa7c2453a3d1c3d6e102/contributors.svg" alt="Contributor statistics" width="584" />
+<img src="https://gist.githubusercontent.com/ReformedDoge/bd2de93ddd28d00206dcc094e83c7aca/raw/2c2d8140f12144d25b3890802b2c614f4c5b9f6c/contributors.svg" alt="Contributor statistics" width="584" />
 
 <!-- CONTRIBUTORS:END -->

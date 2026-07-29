@@ -24,6 +24,9 @@ const NAME_MAP = {
     'CLASSIC': t("Summoner's Rift"),
     'ARAM': t('ARAM'),
     'CHERRY': t('Arena'),
+    'KIWI': t('ARAM: Mayhem'),
+    'KIWI_JADE': t('Mayhem (Classic)'),
+    'JADE': t('SR (Classic)'),
     'TFT': t('Teamfight Tactics'),
     'TUTORIAL': t('Tutorial'),
     'PRACTICETOOL': t('Practice Tool')

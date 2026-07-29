@@ -563,10 +563,12 @@ function getFallbackQueueName(lol) {
     if (gameMode === 'CHERRY') return t('Arena');
     if (gameMode === 'TFT') return t('TFT');
     if (gameMode === 'KIWI') return t('ARAM: Mayhem');
+    if (gameMode === 'KIWI_JADE') return t('Mayhem (Classic)');
+    if (gameMode === 'JADE') return t('SR (Classic)');
     if (gameMode === 'SWIFTPLAY') return t('Swiftplay');
     if (gameMode === 'ARAM') return t('ARAM');
-    if (gameMode && gameMode !== 'CLASSIC') return gameMode;
-    return t('League');
+    if (gameMode) return gameMode;
+    return '';
 }
 
 function buildActivity(friend) {
@@ -645,7 +647,9 @@ function getKnownQueueLabel(activity) {
     const mode = String(activity.gameMode || '').toUpperCase();
 
     if ([1700, 1710, 1750].includes(queueId) || queueType === 'CHERRY' || mode === 'CHERRY') return t('Arena');
+    if (queueId === 2450 || queueType === 'KIWI_JADE' || mode === 'KIWI_JADE') return t('Mayhem (Classic)');
     if (queueId === 2400 || queueType === 'KIWI' || mode === 'KIWI') return t('ARAM: Mayhem');
+    if (queueId === 4310 || queueType === 'JADE_RANKED_SOLO_5X5' || mode === 'JADE') return t('SR (Classic)');
     if (queueId === 420 || queueType === 'RANKED_SOLO_5X5') return t('Solo/Duo');
     if (queueId === 440 || queueType === 'RANKED_FLEX_SR') return t('Flex');
     if (queueId === 450 || queueType === 'ARAM_UNRANKED_5X5' || mode === 'ARAM') return t('ARAM');
@@ -653,6 +657,7 @@ function getKnownQueueLabel(activity) {
     if (queueId === 490 || queueType === 'QUICKPLAY') return t('Quickplay');
     if (queueId === 400 || queueType === 'NORMAL_DRAFT') return t('Draft');
     if (queueId === 430 || queueType === 'NORMAL_BLIND') return t('Blind');
+    if (queueId === 200 || queueType === 'NORMAL_5X5_CLASSIC') return t('Normal');
     if ([1090, 1100, 1130, 1160].includes(queueId) || queueType.includes('TFT') || mode === 'TFT') {
         if (queueType.includes('DOUBLE_UP') || queueId === 1160) return t('TFT Double Up');
         if (queueType.includes('TURBO') || queueType.includes('HYPER') || queueId === 1130) return t('TFT Hyper Roll');
@@ -680,12 +685,18 @@ function abbreviateQueueLabel(label, activity) {
     if (lower === 'swiftplay') return t('Swiftplay');
     if (lower === 'cherry') return t('Arena');
     if (lower === 'kiwi') return t('ARAM: Mayhem');
-    if (lower === 'league') return t('League');
+    if (lower === 'kiwi_jade') return t('Mayhem (Classic)');
+    if (lower === 'jade') return t('SR (Classic)');
+    if (lower === 'jade_ranked_solo_5x5') return t('SR (Classic)');
+    if (lower === 'league') return t('Normal');
     if (lower.includes('ranked solo')) return t('Solo/Duo');
     if (lower.includes('ranked flex')) return t('Flex');
     if (lower.includes('normal draft')) return t('Draft');
     if (lower.includes('normal blind')) return t('Blind');
     if (lower.includes('quickplay')) return t('Quickplay');
+    if (lower.includes('mayhem classic')) return t('Mayhem (Classic)');
+    if (lower.includes('mayhem')) return t('ARAM: Mayhem');
+    if (lower.includes('jade')) return t('SR (Classic)');
     if (lower.includes('aram')) return text.replace(/^aram:?\s*/i, 'ARAM: ');
     if (lower.includes('arena')) return text.replace(/^arena:?\s*/i, 'Arena ');
 

@@ -623,9 +623,8 @@ async function fetchUnownedSkins() {
     const exclusiveSet = new Set(resExclusive.lootItemNames || []);
     const combined = [...new Set([...(resNonExclusive.lootItemNames || []), ...exclusiveSet])];
 
-    const summoner = await Utils.LCU.get('/lol-summoner/v1/current-summoner');
-    const lcuSkins = await Utils.LCU.get(`/lol-champions/v1/inventories/${summoner.summonerId}/skins-minimal`);
-    const ownedSkinIds = new Set(lcuSkins.filter(skin => skin.owned ?? skin.ownership?.owned ?? true).map(skin => skin.id));
+    const lcuSkins = await Utils.LCU.get('/lol-inventory/v2/inventory/CHAMPION_SKIN').catch(() => []);
+    const ownedSkinIds = new Set(lcuSkins.map(skin => skin.itemId));
 
     const results = [];
     for (const item of combined) {

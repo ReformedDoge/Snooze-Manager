@@ -1529,12 +1529,23 @@ export function formatTime(ts) {
     }) + ' ' + time;
 }
 
+function normalizeModeName(name, gameMode) {
+    const lower = (name || '').toLowerCase();
+    const gm = (gameMode || '').toUpperCase();
+    if (gm === 'KIWI_JADE') return t('Mayhem (Classic)');
+    if (gm === 'KIWI') return t('ARAM: Mayhem');
+    if (lower.includes('mayhem classic')) return t('Mayhem (Classic)');
+    if (lower.includes('mayhem')) return t('ARAM: Mayhem');
+    if (lower.includes('jade') || gm === 'JADE') return t('SR (Classic)');
+    return name;
+}
+
 export function buildMatchRow(g, player, globalIdx) {
     const p = g.json.participants.find(x => x.puuid === player.puuid) || g.json.participants[0];
     if (!p) return '';
     const win = p.win !== undefined ? p.win : g.json.teams.find(t => t.teamId === p.teamId)?.win;
     const qData = Utils.GameData.Assets.queues?.find(q => Number(q.id) === g.json.queueId);
-    const mode = qData ? qData.name : (g.json.gameMode || 'UNKNOWN');
+    const mode = normalizeModeName(qData ? qData.name : (g.json.gameMode || 'UNKNOWN'), g.json.gameMode);
     const isRemake = g.json.gameDuration < 240 && mode !== 'PRACTICETOOL';
 
     const statusClass = isRemake ? '#746e64' : (win ? '#0ac8b9' : '#e84057');
@@ -2049,7 +2060,7 @@ export const MatchHistoryModal = (function() {
     function buildMatchDetailHtml(game) {
         const participants = game.json.participants || [];
         const qData = Utils.GameData.Assets.queues?.find(q => Number(q.id) === game.json.queueId);
-        const mode = qData ? qData.name : (game.json.gameMode || 'UNKNOWN');
+        const mode = normalizeModeName(qData ? qData.name : (game.json.gameMode || 'UNKNOWN'), game.json.gameMode);
         const durationMin = Math.floor(game.json.gameDuration / 60);
         const durationSec = game.json.gameDuration % 60;
         const dateStr = formatTime(game.json.gameCreation || 0);
@@ -2397,6 +2408,11 @@ export const MatchHistoryModal = (function() {
 
         if (select) {
             select.innerHTML = `<option value="">${t("All Modes")}</option>`;
+            const knownFallbackQueues = [
+                { id: 2450, name: 'Mayhem (Classic)' },
+                { id: 4310, name: 'SR (Classic)' }
+            ];
+            const seenTags = new Set();
             if (Utils.GameData.Assets.queues && Utils.GameData.Assets.queues.length > 0) {
                 const queueList = includeAllQueues ?
                     Utils.GameData.Assets.queues :
@@ -2404,10 +2420,21 @@ export const MatchHistoryModal = (function() {
                 queueList.forEach(q => {
                     const opt = document.createElement('option');
                     opt.value = q.tag;
-                    opt.textContent = q.name;
+                    opt.textContent = normalizeModeName(q.name, '');
+                    seenTags.add(q.tag);
                     select.appendChild(opt);
                 });
             }
+            knownFallbackQueues.forEach(({ id, name }) => {
+                const tag = 'q_' + id;
+                if (!seenTags.has(tag)) {
+                    const opt = document.createElement('option');
+                    opt.value = tag;
+                    opt.textContent = name;
+                    select.appendChild(opt);
+                    seenTags.add(tag);
+                }
+            });
             const exactMatch = Array.from(select.options).some(o => o.value === _currentTag);
             select.value = exactMatch ? _currentTag : '';
             if (!exactMatch) _currentTag = '';
