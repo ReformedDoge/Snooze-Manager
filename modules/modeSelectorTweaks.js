@@ -66,6 +66,8 @@ function refreshCSS() {
     hiddenQueues.forEach(qId => css += `div.parties-game-type-card-category-div:has([data-queue-id="${qId}"]) { display: none !important; }\n`);
 
     css += `.game-type-card.compact { width: 220px !important; }\n`;
+    css += `.game-type-card.compact .parties-game-type-icon .icon-frame { height: 105px !important; width: 105px !important; }\n`;
+    css += `.game-type-card.compact .parties-game-type-icon .icon-frame .icon-bg { height: 105px !important; width: 105px !important; background-size: 95px !important; }\n`;
 
     // adapt spacing to how many cards are visible in compact layout
     if (hiddenModes.size > 0) {
