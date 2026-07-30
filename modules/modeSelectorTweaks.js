@@ -65,9 +65,25 @@ function refreshCSS() {
     hiddenModes.forEach(mode => css += `div[data-game-mode="${mode}"] { display: none !important; }\n`);
     hiddenQueues.forEach(qId => css += `div.parties-game-type-card-category-div:has([data-queue-id="${qId}"]) { display: none !important; }\n`);
 
-    // re-center remaining cards when modes are hidden (compact layout uses space-between)
+    css += `.game-type-card.compact { width: 220px !important; }\n`;
+
+    // adapt spacing to how many cards are visible in compact layout
     if (hiddenModes.size > 0) {
-        css += `.parties-game-select-screen.compact .parties-game-type-select-wrapper { justify-content: space-evenly !important; }\n`;
+        let visibleCount = 0;
+        if (partiesViewInstance && partiesViewInstance.element) {
+            const cards = partiesViewInstance.element.querySelectorAll('.game-type-card');
+            visibleCount = Array.from(cards).filter(
+                card => !hiddenModes.has(card.getAttribute('data-game-mode'))
+            ).length;
+        }
+
+        if (visibleCount <= 1) {
+            css += `.parties-game-select-screen.compact .parties-game-type-select-wrapper { justify-content: center !important; }\n`;
+        } else if (visibleCount === 2) {
+            css += `.parties-game-select-screen.compact .parties-game-type-select-wrapper { justify-content: center !important; gap: 48px !important; }\n`;
+        } else {
+            css += `.parties-game-select-screen.compact .parties-game-type-select-wrapper { justify-content: space-evenly !important; }\n`;
+        }
     }
 
     // hide the separator logic
