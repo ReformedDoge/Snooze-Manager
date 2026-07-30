@@ -219,20 +219,20 @@ function injectStyles() {
         .sm-whale-status.error { color: #e84057; }
         .sm-whale-status.empty { color: #4a6070; }
 
-        #sm-whale-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+        #sm-whale-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 5px; }
 
         .sm-whale-card { 
-            position: relative; border-radius: 6px; overflow: hidden; 
-            border: 1px solid rgba(255,255,255,0.06); background: rgba(255,255,255,0.02); 
+            position: relative; border-radius: 6px; 
+            border: 1px solid rgba(255,255,255,0.06); background: #0a0e14; 
             transition: border-color 0.2s, transform 0.15s; 
             content-visibility: auto; 
-            contain-intrinsic-size: 150px 200px;
+            contain-intrinsic-size: 150px 150px;
         }
         .sm-whale-card:hover { border-color: rgba(200,170,110,0.3); transform: translateY(-2px); }
-        .sm-whale-card-img { width: 100%; aspect-ratio: 1; object-fit: cover; display: block; background: #0a0e14; }
-        .sm-whale-card-info { padding: 8px; background: rgba(0,0,0,0.6); }
-        .sm-whale-card-name { font-size: 11px; color: #f0e6d2; font-weight: bold; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .sm-whale-card-rarity { font-size: 10px; margin-top: 3px; display: flex; align-items: center; gap: 4px; }
+        .sm-whale-card-img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 6px 6px 0 0; }
+        .sm-whale-card-info { position: absolute; bottom: 0; left: 0; right: 0; padding: 8px 8px 7px; border-radius: 0 0 6px 6px; background: rgba(0,0,0,0.82); backdrop-filter: blur(4px); }
+        .sm-whale-card-name { font-size: 11px; color: #f0e6d2; font-weight: bold; line-height: 1.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 1px 3px rgba(0,0,0,0.7); }
+        .sm-whale-card-rarity { font-size: 10px; margin-top: 2px; display: flex; align-items: center; gap: 4px; text-shadow: 0 1px 2px rgba(0,0,0,0.7); }
         .sm-whale-card-rarity img { width: 12px; height: 12px; object-fit: contain; }
         
         #sm-whale-tabs-container {
