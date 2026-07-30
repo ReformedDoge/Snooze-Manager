@@ -647,6 +647,11 @@ function getKnownQueueLabel(activity) {
     const mode = String(activity.gameMode || '').toUpperCase();
 
     if ([1700, 1710, 1750].includes(queueId) || queueType === 'CHERRY' || mode === 'CHERRY') return t('Arena');
+    if (queueId === 3280) return t('Custom Mayhem (Classic)');
+    if (queueId === 3270) return t('Custom Mayhem');
+    if (queueId === 3262) return t('Custom Draft (Classic)');
+    if (queueId === 3260) return t('Custom Blind (Classic)');
+    if (queueId === 4320) return t('CO-OP SR (Classic)');
     if (queueId === 2450 || queueType === 'KIWI_JADE' || mode === 'KIWI_JADE') return t('Mayhem (Classic)');
     if (queueId === 2400 || queueType === 'KIWI' || mode === 'KIWI') return t('ARAM: Mayhem');
     if (queueId === 4310 || queueType === 'JADE_RANKED_SOLO_5X5' || mode === 'JADE') return t('SR (Classic)');
@@ -694,6 +699,11 @@ function abbreviateQueueLabel(label, activity) {
     if (lower.includes('normal draft')) return t('Draft');
     if (lower.includes('normal blind')) return t('Blind');
     if (lower.includes('quickplay')) return t('Quickplay');
+    if (lower.includes('custom mayhem classic')) return t('Custom Mayhem (Classic)');
+    if (lower.includes('custom mayhem')) return t('Custom Mayhem');
+    if (lower.includes('custom draft')) return t('Custom Draft (Classic)');
+    if (lower.includes('custom blind')) return t('Custom Blind (Classic)');
+    if (lower.includes('co-op sr') || lower.includes('coop vs ai')) return t('CO-OP SR (Classic)');
     if (lower.includes('mayhem classic')) return t('Mayhem (Classic)');
     if (lower.includes('mayhem')) return t('ARAM: Mayhem');
     if (lower.includes('jade')) return t('SR (Classic)');
