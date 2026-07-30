@@ -65,9 +65,7 @@ function refreshCSS() {
     hiddenModes.forEach(mode => css += `div[data-game-mode="${mode}"] { display: none !important; }\n`);
     hiddenQueues.forEach(qId => css += `div.parties-game-type-card-category-div:has([data-queue-id="${qId}"]) { display: none !important; }\n`);
 
-    css += `.game-type-card.compact { width: 220px !important; }\n`;
-    css += `.game-type-card.compact .parties-game-type-icon .icon-frame { height: 105px !important; width: 105px !important; }\n`;
-    css += `.game-type-card.compact .parties-game-type-icon .icon-frame .icon-bg { height: 105px !important; width: 105px !important; background-size: 95px !important; }\n`;
+    css += `.parties-game-select-screen.compact .parties-game-type-select-wrapper .game-type-card { width: 220px !important; }\n`;
 
     // adapt spacing to how many cards are visible in compact layout
     if (hiddenModes.size > 0) {
@@ -97,8 +95,16 @@ function refreshCSS() {
 
     styleEl.textContent = css;
     if (EmberRef && partiesViewInstance) {
-        EmberRef.run.scheduleOnce('afterRender', null, enforceValidSelection);
+        EmberRef.run.scheduleOnce('afterRender', null, () => {
+            stripCompactClass();
+            enforceValidSelection();
+        });
     }
+}
+
+function stripCompactClass() {
+    if (!isEnabled) return;
+    document.querySelectorAll('.game-type-card.compact').forEach(el => el.classList.remove('compact'));
 }
 
 function findComponentByElementId(view, id) {
@@ -474,7 +480,10 @@ export function installEmberHook() {
                 checkHiddenSelectionChange() {
                     if (!isEnabled) return;
                     partiesViewInstance = this;
-                    Ember.run.scheduleOnce('afterRender', null, enforceValidSelection);
+                    Ember.run.scheduleOnce('afterRender', null, () => {
+                        stripCompactClass();
+                        enforceValidSelection();
+                    });
                 },
                 didRender() {
                     partiesViewInstance = this;
@@ -483,6 +492,7 @@ export function installEmberHook() {
                     if (!isEnabled) return;
 
                     refreshCSS();
+                    stripCompactClass();
                     injectButton();
                     Ember.run.scheduleOnce('afterRender', null, enforceValidSelection);
                 },
