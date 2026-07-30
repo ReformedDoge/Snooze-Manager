@@ -2102,4 +2102,5 @@ export const Utils = {
         getSgpMatchHistory
     }
 };
+window.Utils = Utils;
 export default Utils;
