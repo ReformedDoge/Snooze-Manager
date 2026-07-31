@@ -46,14 +46,25 @@ const HOVER_COMPONENTS = [{
 
 function getModeKey(gameMode) {
     const mode = (gameMode || '').toLowerCase();
-    if (mode === 'nexusblitz' || mode === 'nb') return 'nexusblitz';
-    if (mode === 'cherry' || mode === 'arena' || mode === 'ar') return 'arena';
+    if (mode === 'nexusblitz' || mode === 'nb') return 'nb';
+    if (mode === 'cherry' || mode === 'arena' || mode === 'ar') return 'ar';
     if (mode === 'urf' || mode === 'arurf') return 'urf';
-    if (mode === 'oneforall' || mode === 'ofa') return 'oneforall';
-    if (mode === 'ultbook' || mode === 'usb') return 'ultbook';
+    if (mode === 'oneforall' || mode === 'ofa') return 'ofa';
+    if (mode === 'ultbook' || mode === 'usb') return 'usb';
     if (mode === 'aram' || mode === 'kiwi') return 'aram';
+    if (mode === 'swift' || mode === 'swiftplay') return 'swift';
     return null;
 }
+
+const MODE_NAMES = {
+    aram: 'ARAM',
+    ar: 'ARENA',
+    nb: 'NEXUS BLITZ',
+    ofa: 'ONE FOR ALL',
+    urf: 'URF',
+    usb: 'ULTIMATE SPELLBOOK',
+    swift: 'SWIFTPLAY'
+};
 
 const getLabels = () => ({
     dmg_dealt: t('Damage Dealt'),
@@ -61,15 +72,30 @@ const getLabels = () => ({
     healing: t('Healing'),
     shielding: t('Shielding'),
     ability_haste: t('Ability Haste'),
-    attack_speed: t('Attack Speed'),
     total_as: t('Total Attack Speed'),
-    energy_regen: t('Energy Regen'),
-    mana_regen: t('Mana Regen'),
     energyregen_mod: t('Energy Regen'),
     manaregen_mod: t('Mana Regen'),
-    movement_speed: t('Movement Speed'),
+    ms_mod: t('Movement Speed'),
     tenacity: t('Tenacity'),
-    crit_mod: t('Critical Damage')
+    crit_mod: t('Critical Damage'),
+    hp_base: t('Base Health'),
+    hp_lvl: t('Health per Level'),
+    mp_base: t('Base Resource'),
+    mp_lvl: t('Resource per Level'),
+    arm_base: t('Base Armor'),
+    arm_lvl: t('Armor per Level'),
+    mr_base: t('Base Magic Resist'),
+    mr_lvl: t('Magic Resist per Level'),
+    hp5_base: t('Base Health Regen'),
+    hp5_lvl: t('Health Regen per Level'),
+    mp5_base: t('Base Resource Regen'),
+    mp5_lvl: t('Resource Regen per Level'),
+    dam_base: t('Base Attack Damage'),
+    dam_lvl: t('Attack Damage per Level'),
+    as_base: t('Base Attack Speed'),
+    as_lvl: t('Attack Speed per Level'),
+    as_ratio: t('Attack Speed Ratio'),
+    ms: t('Base Movement Speed')
 });
 
 // Custom SVGs
@@ -88,20 +114,39 @@ const ICONS = {
 
 // Aliases and Regen icons mapping
 ICONS.total_as = ICONS.attack_speed;
+ICONS.ms_mod = ICONS.movement_speed;
 ICONS.energyregen_mod = ICONS.mana_regen;
 ICONS.manaregen_mod = ICONS.mana_regen;
 ICONS.energy_regen = ICONS.mana_regen;
 
-const DISPLAY_ORDER = ['dmg_dealt', 'dmg_taken', 'healing', 'shielding', 'attack_speed', 'total_as', 'ability_haste', 'movement_speed', 'tenacity', 'crit_mod', 'energyregen_mod', 'manaregen_mod'];
+// Stat overrides (addends) appear only in Arena (ar) and Swiftplay (swift) tables
+const STAT_OVERRIDE_KEYS = new Set([
+    'hp_base', 'hp_lvl', 'mp_base', 'mp_lvl',
+    'arm_base', 'arm_lvl', 'mr_base', 'mr_lvl',
+    'hp5_base', 'hp5_lvl', 'mp5_base', 'mp5_lvl',
+    'dam_base', 'dam_lvl', 'as_base', 'as_ratio', 'as_lvl', 'ms'
+]);
+
+const DISPLAY_ORDER = [
+    'dmg_dealt', 'dmg_taken', 'healing', 'shielding', 'total_as', 'ability_haste', 'ms_mod', 'tenacity', 'crit_mod', 'energyregen_mod', 'manaregen_mod',
+    'hp_base', 'hp_lvl', 'mp_base', 'mp_lvl', 'arm_base', 'arm_lvl', 'mr_base', 'mr_lvl',
+    'hp5_base', 'hp5_lvl', 'mp5_base', 'mp5_lvl', 'dam_base', 'dam_lvl', 'as_base', 'as_lvl', 'as_ratio', 'ms'
+];
 
 function buildStatsHtml(stats) {
     const entries = [];
     for (const key of DISPLAY_ORDER) {
         const val = stats[key];
-        if (typeof val === 'number') {
-            if (key === 'ability_haste' && val === 0) continue;
-            if (key !== 'ability_haste' && val === 1.0) continue;
-            entries.push([key, val]);
+        if (typeof val !== 'number') continue;
+        if (STAT_OVERRIDE_KEYS.has(key)) {
+            if (val === 0) continue;
+            entries.push([key, val, 'addend']);
+        } else if (key === 'ability_haste') {
+            if (val === 0) continue;
+            entries.push([key, val, 'haste']);
+        } else {
+            if (val === 1.0) continue;
+            entries.push([key, val, 'multiplier']);
         }
     }
 
@@ -109,14 +154,17 @@ function buildStatsHtml(stats) {
         return '<div style="color:#746e64;font-style:italic;font-size:12px;margin-top:4px;">' + t('No balance adjustments') + '</div>';
     }
 
-    return entries.map(([key, value]) => {
+    return entries.map(([key, value, kind]) => {
         const label = getLabels()[key] ?? key;
         const iconSvg = ICONS[key] || ICONS['dmg_dealt'];
 
         let isBuff = false;
         let displayValue = '';
 
-        if (key === 'ability_haste') {
+        if (kind === 'addend') {
+            isBuff = value > 0;
+            displayValue = (value > 0 ? '+' : '') + value;
+        } else if (kind === 'haste') {
             isBuff = value > 0;
             displayValue = (value > 0 ? '+' : '') + value;
         } else {
@@ -201,12 +249,12 @@ function showBalanceTooltip(component, position) {
     }
 
     const stats = balanceData[champId]?.stats?.[currentMode] || {};
-    showTT(component.element, position, t("{{mode}} BALANCE", { mode: currentMode.toUpperCase() }), buildStatsHtml(stats));
+    showTT(component.element, position, t("{{mode}} BALANCE", { mode: MODE_NAMES[currentMode] || currentMode.toUpperCase() }), buildStatsHtml(stats));
 }
 
 function parseStatsBlock(content) {
     const stats = {};
-    const modes = ['aram', 'ar', 'nb', 'ofa', 'urf', 'usb'];
+    const modes = ['aram', 'ar', 'nb', 'ofa', 'urf', 'usb', 'swift'];
     const keyRegex = /\["([^"]+)"\]\s*=\s*(-?\d+\.?\d*)/g;
     modes.forEach(mode => {
         const modeStartIdx = content.indexOf(`["${mode}"] = {`);
