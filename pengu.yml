@@ -1,0 +1,16 @@
+id: snooze-manager
+name: Snooze-Manager
+description: Modular plugin manager
+version: 1.0.2
+
+repo: https://github.com/ReformedDoge/Snooze-Manager
+
+author:
+  name: SnoozeFest
+  github: ReformedDoge
+
+theme: false
+tags: [plugin, manager, toolkit]
+
+install:
+  release: "Snooze-Manager-*.zip"
