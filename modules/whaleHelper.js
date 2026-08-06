@@ -163,7 +163,7 @@ function injectStyles() {
             pointer-events: none; transition: opacity 0.25s, visibility 0.25s;
         }
         #${PANEL_ID}.sm-show { opacity: 1; visibility: visible; pointer-events: auto; }
-        #sm-whale-overlay { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.5); backdrop-filter: blur(3px); }
+        #sm-whale-overlay { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.5); backdrop-filter: blur(2px); }
 
         #sm-whale-modal {
             position: relative; z-index: 1; width: 860px; max-height: 80vh;
@@ -230,7 +230,7 @@ function injectStyles() {
         }
         .sm-whale-card:hover { border-color: rgba(200,170,110,0.3); transform: translateY(-2px); }
         .sm-whale-card-img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 6px 6px 0 0; }
-        .sm-whale-card-info { position: absolute; bottom: 0; left: 0; right: 0; padding: 8px 8px 7px; border-radius: 0 0 6px 6px; background: rgba(0,0,0,0.82); backdrop-filter: blur(4px); }
+        .sm-whale-card-info { position: absolute; bottom: 0; left: 0; right: 0; padding: 8px 8px 7px; border-radius: 0 0 6px 6px; background: rgba(0,0,0,0.82); backdrop-filter: blur(2px); }
         .sm-whale-card-name { font-size: 11px; color: #f0e6d2; font-weight: bold; line-height: 1.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 1px 3px rgba(0,0,0,0.7); }
         .sm-whale-card-rarity { font-size: 10px; margin-top: 2px; display: flex; align-items: center; gap: 4px; text-shadow: 0 1px 2px rgba(0,0,0,0.7); }
         .sm-whale-card-rarity img { width: 12px; height: 12px; object-fit: contain; }

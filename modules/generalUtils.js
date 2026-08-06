@@ -70,7 +70,7 @@ const Toast = {
                     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
                     border-radius: 6px;
                     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
-                    backdrop-filter: blur(10px);
+                    backdrop-filter: blur(2px);
                     color: #f0e6d2;
                     padding: 12px 18px;
                     font-family: var(--font-body), "Segoe UI", sans-serif;

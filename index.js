@@ -131,7 +131,7 @@ const Modal = (function() {
             style.textContent = `
       #pm-root { position: fixed; inset: 0; z-index: 2147483647; display: none; align-items: center; justify-content: center; font-family: var(--font-body), "Segoe UI", sans-serif; }
       #pm-root.pm-show { display: flex; }
-      #pm-overlay { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.45); backdrop-filter: blur(3px); pointer-events: auto; }
+      #pm-overlay { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.45); backdrop-filter: blur(2px); pointer-events: auto; }
       #pm-modal { position: relative; z-index: 1; width: 850px; height: 600px; max-height: 85vh; background: rgba(1, 10, 19, 0.75); border: 1px solid rgba(200, 170, 110, 0.2); border-radius: 12px; display: flex; flex-direction: column; overflow: hidden; color: #a09b8c; box-shadow: 0 16px 48px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.05); backdrop-filter: blur(25px) saturate(140%); pointer-events: auto; }
       .pm-header { display: flex; justify-content: space-between; align-items: center; padding: 20px 24px; border-bottom: 1px solid rgba(255, 255, 255, 0.06); background: rgba(0, 0, 0, 0.2); flex-shrink: 0; }
       .pm-title { color: #f0e6d2; font-size: 20px; font-weight: bold; margin: 0; text-transform: uppercase; letter-spacing: 1px; }
@@ -1372,7 +1372,7 @@ const WelcomeModal = (function() {
             style.textContent = `
       #pm-welcome-root { position: fixed; inset: 0; z-index: 2147483647; display: none; align-items: center; justify-content: center; padding: 24px; font-family: var(--font-body), "Segoe UI", sans-serif; color: #a09b8c; }
       #pm-welcome-root.pm-welcome-show { display: flex; }
-      #pm-welcome-overlay { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.58); backdrop-filter: blur(5px); pointer-events: auto; }
+      #pm-welcome-overlay { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.58); backdrop-filter: blur(2px); pointer-events: auto; }
       #pm-welcome-modal { position: relative; z-index: 1; width: min(760px, calc(100vw - 48px)); max-height: calc(100vh - 48px); overflow: hidden; display: flex; flex-direction: column; background: radial-gradient(circle at 50% 0%, rgba(10, 200, 185, 0.14), transparent 32%), linear-gradient(180deg, rgba(1, 10, 19, 0.96), rgba(1, 10, 19, 0.88)); border: 1px solid rgba(200, 170, 110, 0.32); border-radius: 12px; box-shadow: 0 22px 60px rgba(0, 0, 0, 0.78), inset 0 1px 0 rgba(255, 255, 255, 0.06); backdrop-filter: blur(24px) saturate(140%); pointer-events: auto; }
       .pm-welcome-header { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 16px 22px 14px; border-bottom: 1px solid rgba(255, 255, 255, 0.06); background: rgba(0, 0, 0, 0.18); }
       .pm-welcome-kicker { color: #c8aa6e; font-size: 12px; font-weight: 700; text-transform: uppercase; margin-bottom: 5px; }
