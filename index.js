@@ -876,7 +876,7 @@ const Modal = (function() {
                 } else {
                     const span = document.createElement('span');
                     span.style.color = '#3a5060';
-                    span.textContent = t("Current version: v{{version}} — up to date", { version: CURRENT_VERSION });
+                    span.textContent = t("Current version: v{{version}} - up to date", { version: CURRENT_VERSION });
                     updateStatusEl.appendChild(span);
                 }
             }

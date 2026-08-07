@@ -122,6 +122,10 @@ function getChampionName(champions, id, championMap) {
     return (championMap?.get(Number(id))?.name) || champions?.find((champ) => Number(champ.id) === Number(id))?.name || t("Champion {{id}}", { id });
 }
 
+function displayChampionName(champ) {
+    return Utils.GameData.Assets.getChampionName(champ.id, { enabled: true });
+}
+
 function styleButton(button, compact = false) {
     Object.assign(button.style, {
         background: '#1e2328',
@@ -244,7 +248,7 @@ function renderPriorityPicker(container, labelText, storeKey, role, champions) {
         filteredChamps = champions.filter(c =>
             c.id > 0 &&
             !selected.includes(Number(c.id)) &&
-            (!query || c.name.toLowerCase().includes(query))
+            (!query || displayChampionName(c).toLowerCase().includes(query))
         );
 
         if (filteredChamps.length === 0) { dropdown.style.display = 'none'; dropdown.innerHTML = ''; return; }
@@ -252,7 +256,7 @@ function renderPriorityPicker(container, labelText, storeKey, role, champions) {
         let html = '';
         for (let i = 0; i < filteredChamps.length; i++) {
             const champ = filteredChamps[i];
-            html += '<div class="alc-dd-item' + (i === activeIdx ? ' hl' : '') + '" data-idx="' + i + '"><img src="/lol-game-data/assets/v1/champion-icons/' + champ.id + '.png" loading="lazy" onerror="this.style.opacity=\'0.3\'"><span>' + champ.name + '</span></div>';
+            html += '<div class="alc-dd-item' + (i === activeIdx ? ' hl' : '') + '" data-idx="' + i + '"><img src="/lol-game-data/assets/v1/champion-icons/' + champ.id + '.png" loading="lazy" onerror="this.style.opacity=\'0.3\'"><span>' + displayChampionName(champ) + '</span></div>';
         }
         dropdown.innerHTML = html;
 
@@ -347,7 +351,7 @@ function renderPriorityPicker(container, labelText, storeKey, role, champions) {
             Object.assign(rank.style, { color: '#0ac8b9', fontSize: '11px', minWidth: '10px', textAlign: 'center' });
 
             const name = document.createElement('span');
-            name.textContent = champ?.name || getChampionName(champions, id, championMap);
+            name.textContent = champ ? displayChampionName(champ) : getChampionName(champions, id, championMap);
             Object.assign(name.style, { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' });
 
             const up = document.createElement('button');
@@ -560,14 +564,16 @@ function renderExtraSettings(container) {
         Utils.Store.set('autoLockChampion', HOVER_DELAY_KEY, v);
     }));
 
-    if (Utils.LCU) {
-        Utils.LCU.get('/lol-game-data/assets/v1/champion-summary.json').then(champs => {
-            if (champs && champs.length) {
-                cachedChamps = champs.filter(c => c.id > 0).sort((a, b) => a.name.localeCompare(b.name));
-                updatePickers();
-            }
-        }).catch(() => {});
-    }
+    const assets = Utils.GameData.Assets;
+    (async () => {
+        try {
+            if (!Object.keys(assets.champs).length) await assets.init();
+            cachedChamps = Object.values(assets.champs)
+                .filter(c => c.id > 0)
+                .sort((a, b) => displayChampionName(a).localeCompare(displayChampionName(b)));
+            updatePickers();
+        } catch (e) {}
+    })();
 
     const pickToggleRow = document.createElement('div');
     Object.assign(pickToggleRow.style, {
@@ -1259,7 +1265,7 @@ function panic() {
     actionActiveStartTimes.clear();
     actionHoverStartTimes.clear();
 
-    Utils.Toast.info(t('Auto Lock Override — Next champ select will re-enable'));
+    Utils.Toast.info(t('Auto Lock Override - Next champ select will re-enable'));
 }
 
 function mountAutoLockChampion() {

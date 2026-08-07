@@ -1322,13 +1322,6 @@ export function init(context) {
                 },
                 {
                     type: 'toggle',
-                    id: 'sm:sidebarToggle',
-                    label: t('Enable Sidebar Collapse Toggle'),
-                    value: isSidebarToggleEnabled,
-                    onChange: (val) => toggleSidebarFeature(val),
-                },
-                {
-                    type: 'toggle',
                     id: 'sm:partyGroup',
                     label: t('Highlight Friends In The Same Lobby'),
                     value: isPartyGroupEnabled,
@@ -1340,6 +1333,13 @@ export function init(context) {
                     label: t('Enable Group Folder Invite Option'),
                     value: isFolderInviteEnabled,
                     onChange: (val) => toggleFolderInvite(val),
+                },
+                {
+                    type: 'toggle',
+                    id: 'sm:sidebarToggle',
+                    label: t('Enable Sidebar Collapse Toggle'),
+                    value: isSidebarToggleEnabled,
+                    onChange: (val) => toggleSidebarFeature(val),
                 },
                 {
                     type: 'select',
@@ -1377,7 +1377,7 @@ export function init(context) {
                             fontSize: '12px',
                             lineHeight: '1.5'
                         });
-                        note.innerHTML = `<span style="color:#c8aa6e;font-weight:600;">${t('Slide mode note:')}</span> ${t('Unlike Crop and Stretch, this method shifts interface elements without resizing the window — the original client background stays visible in the uncovered sidebar area. For the cleanest look, pair it with a custom theme that removes or replaces that background.')}`;
+                        note.innerHTML = `<span style="color:#c8aa6e;font-weight:600;">${t('Slide mode note:')}</span> ${t('Unlike Crop and Stretch, this method shifts interface elements without resizing the window - the original client background stays visible in the uncovered sidebar area. For the cleanest look, pair it with a custom theme that removes or replaces that background.')}`;
                         row.appendChild(note);
                     }
                 }
@@ -1394,9 +1394,9 @@ export function init(context) {
             };
 
             plugin.appendChild(createFlatCheckbox(t('Enable Better Friends Status'), isEnabled, toggleFeature));
-            plugin.appendChild(createFlatCheckbox(t('Enable Sidebar Collapse Toggle'), isSidebarToggleEnabled, toggleSidebarFeature));
             plugin.appendChild(createFlatCheckbox(t('Highlight friends in the same lobby'), isPartyGroupEnabled, togglePartyGroup));
             plugin.appendChild(createFlatCheckbox(t('Enable Group Folder Invite Option'), isFolderInviteEnabled, toggleFolderInvite));
+            plugin.appendChild(createFlatCheckbox(t('Enable Sidebar Collapse Toggle'), isSidebarToggleEnabled, toggleSidebarFeature));
 
             plugin.appendChild(Utils.Settings.createSelectRow(t('Collapse Method'), [{
                     value: 'crop',
@@ -1414,7 +1414,7 @@ export function init(context) {
                 toggleCollapseMethod(v);
             }));
 
-            plugin.appendChild(Utils.Settings.createInfoBox(`<span style="color:#c8aa6e;font-weight:600;">${t('Slide mode note:')}</span> ${t('Unlike Crop and Stretch, this method shifts interface elements without resizing the window — the original client background stays visible in the uncovered sidebar area. For the cleanest look, pair it with a custom theme that removes or replaces that background.')}`));
+            plugin.appendChild(Utils.Settings.createInfoBox(`<span style="color:#c8aa6e;font-weight:600;">${t('Slide mode note:')}</span> ${t('Unlike Crop and Stretch, this method shifts interface elements without resizing the window - the original client background stays visible in the uncovered sidebar area. For the cleanest look, pair it with a custom theme that removes or replaces that background.')}`));
         });
     }
 }

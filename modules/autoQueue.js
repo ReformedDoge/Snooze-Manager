@@ -61,7 +61,7 @@ async function fetchQueues() {
 
 async function reQueue() {
     if (_queuing) {
-        Utils.Debug.log('[AutoQueue]', 'reQueue() called but already queuing — skipped.');
+        Utils.Debug.log('[AutoQueue]', 'reQueue() called but already queuing - skipped.');
         return;
     }
     _queuing = true;
@@ -70,10 +70,10 @@ async function reQueue() {
         const delay = Utils.Store.get('autoQueue', 'delay') || 5;
         const enabled = Utils.Store.get('autoQueue', 'enabled');
 
-        Utils.Debug.log('[AutoQueue]', `reQueue() — enabled=${enabled}, queueId=${queueId}, delay=${delay}s`);
+        Utils.Debug.log('[AutoQueue]', `reQueue() - enabled=${enabled}, queueId=${queueId}, delay=${delay}s`);
 
         if (!queueId) {
-            Utils.Debug.log('[AutoQueue]', 'No queue selected in settings — aborting re-queue.');
+            Utils.Debug.log('[AutoQueue]', 'No queue selected in settings - aborting re-queue.');
             return;
         }
 
@@ -139,7 +139,7 @@ async function reQueue() {
         Utils.Debug.log('[AutoQueue]', 'POST /lol-lobby/v2/lobby/matchmaking/search');
         try {
             await Utils.LCU.post('/lol-lobby/v2/lobby/matchmaking/search');
-            Utils.Debug.log('[AutoQueue]', 'Matchmaking search started — waiting for ready check.');
+            Utils.Debug.log('[AutoQueue]', 'Matchmaking search started - waiting for ready check.');
         } catch (e) {
             Utils.Debug.log('[AutoQueue]', 'ERROR starting matchmaking search:', e?.message ?? e);
         }
@@ -189,7 +189,7 @@ function renderSettings(container) {
     async function populateQueueSelect() {
         queueSelect.innerHTML = '';
         const savedId = Utils.Store.get('autoQueue', 'queueId');
-        Utils.Debug.log('[AutoQueue]', `Populating queue select — savedId=${savedId}, availableQueues=${_availableQueues}`);
+        Utils.Debug.log('[AutoQueue]', `Populating queue select - savedId=${savedId}, availableQueues=${_availableQueues}`);
         if (_availableQueues.length === 0) {
             Utils.Debug.log('[AutoQueue]', 'No available queues yet; waiting for queue load.');
             const opt = document.createElement('option');
@@ -292,11 +292,11 @@ export function init(context) {
 
 export async function load() {
     _unloaded = false;
-    Utils.Debug.log('[AutoQueue]', 'load() called — loading queues and subscribing to gameflow phase.');
+    Utils.Debug.log('[AutoQueue]', 'load() called - loading queues and subscribing to gameflow phase.');
     await fetchQueues();
 
     if (!Utils.LCU || !Utils.LCU.observe) {
-        Utils.Debug.log('[AutoQueue]', 'ERROR: Utils.LCU.observe not available — module inactive.');
+        Utils.Debug.log('[AutoQueue]', 'ERROR: Utils.LCU.observe not available - module inactive.');
         return;
     }
 
@@ -321,13 +321,13 @@ export async function load() {
         if (phase === 'EndOfGame') {
             if (!_armed) Utils.Debug.log('[AutoQueue]', 'Arming on "EndOfGame".');
             _armed = true;
-            Utils.Debug.log('[AutoQueue]', '"EndOfGame" reached while armed — triggering re-queue.');
+            Utils.Debug.log('[AutoQueue]', '"EndOfGame" reached while armed - triggering re-queue.');
             _armed = false;
             reQueue();
             return;
         }
 
-        if (_armed) Utils.Debug.log('[AutoQueue]', `Phase "${phase}" — disarming.`);
+        if (_armed) Utils.Debug.log('[AutoQueue]', `Phase "${phase}" - disarming.`);
         _armed = false;
         _queuing = false;
     });

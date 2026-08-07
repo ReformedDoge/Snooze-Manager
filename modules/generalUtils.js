@@ -6,6 +6,8 @@
  * @link https://github.com/ReformedDoge
  */
 
+import { t } from './i18n.js';
+
 // Debug is exposed via Utils (Utils.Debug)
 
 const _debugState = {
@@ -1059,6 +1061,45 @@ const Assets = {
     _initPromise: null,
     _initialized: false,
     _maxRetries: 15,
+
+    // Champion variant name support - appends a suffix to distinguish alternate
+    // mode-specific versions of the same champion (e.g. "Classic" "Swarm" "Doombots"
+    // variants) in UI selectors. Each rule matches by alias prefix first; the ID
+    // set/range below is ONLY a fallback in case the alias prefix ever fails.
+    // New variants = new rule entry via registerChampionVariants(); display names
+    // are precomputed once per data load in _refreshChampionNames(). Suffixes are
+    // routed through t() so locale files can translate them (Classic/Swarm/Doombots).
+    // The suffix values MUST be capitalized to match/lookup the locale keys as-is.
+    _championVariantRules: [
+        {
+            suffix: 'Classic',
+            matches(champ) {
+                if (/^jade_/i.test(champ?.alias || '')) return true;
+                // fallback ids: the "classic" variant set (Jade_*) lives at 60001-60117
+                const id = Number(champ?.id);
+                return id >= 60001 && id <= 60117;
+            }
+        },
+        {
+            suffix: 'Swarm',
+            swarmIds: new Set([3147, 3151, 3152, 3153, 3156, 3157, 3159, 3678, 3947]),
+            matches(champ) {
+                if (/^strawberry_/i.test(champ?.alias || '')) return true;
+                // fallback ids: this.swarmIds - sparse set, not a contiguous range
+                return this.swarmIds.has(Number(champ?.id));
+            }
+        },
+        {
+            suffix: 'Doombots',
+            matches(champ) {
+                if (/^ruby_/i.test(champ?.alias || '')) return true;
+                // fallback ids: the DoomBots set (Ruby_*) lives at 66600-66619
+                const id = Number(champ?.id);
+                return id >= 66600 && id <= 66619;
+            }
+        }
+    ],
+    _champDisplayNames: new Map(), // champ.id -> variant-aware display name
     async init() {
         if (!LCU) return;
         if (this._initialized) return;
@@ -1107,6 +1148,7 @@ const Assets = {
                     } = await attemptFetch();
 
                     if (Array.isArray(c) && c.length > 0) c.forEach(x => this.champs[x.id] = x);
+                    this._refreshChampionNames();
                     if (Array.isArray(i) && i.length > 0) i.forEach(x => this.items[x.id] = x);
                     if (Array.isArray(s) && s.length > 0) s.forEach(x => this.spells[x.id] = x);
                     if (Array.isArray(p) && p.length > 0) p.forEach(x => this.perks[x.id] = x);
@@ -1204,6 +1246,36 @@ const Assets = {
     },
     getWardSkin(id) {
         return this.wardSkins.get(Number(id)) || null;
+    },
+
+    // Champion variant display names
+    _buildChampionName(champ) {
+        const rule = this._championVariantRules.find(r => r.matches(champ));
+        return rule ? `${champ.name} (${t(rule.suffix)})` : champ.name;
+    },
+    _refreshChampionNames() {
+        this._champDisplayNames = new Map();
+        Object.values(this.champs || {}).forEach(c => {
+            if (c && c.id > 0) this._champDisplayNames.set(c.id, this._buildChampionName(c));
+        });
+    },
+    registerChampionVariant(rule) {
+        this._championVariantRules.push(rule);
+        this._refreshChampionNames();
+        return this;
+    },
+    registerChampionVariants(rules) {
+        if (!Array.isArray(rules)) return this;
+        this._championVariantRules.push(...rules);
+        this._refreshChampionNames();
+        return this;
+    },
+    getChampionName(id, opts = {}) {
+        const champ = this.champs[Number(id)];
+        if (!champ) return '';
+        const useVariants = opts.enabled !== undefined ? opts.enabled : true;
+        if (!useVariants) return champ.name;
+        return this._champDisplayNames.get(champ.id) || champ.name;
     }
 };
 
@@ -1863,7 +1935,7 @@ function createHotkeyRow(labelText, currentKey, onChange, descriptionText) {
 }
 
 /**
- * Performance scoring utility — normalizes player stats from different sources
+ * Performance scoring utility - normalizes player stats from different sources
  * and computes z-score rated performance (1-10 scale).
  *
  * Usage:

@@ -205,7 +205,7 @@ function _mhAliasFromComponent(comp) {
         }
         return cfg.gameName;
     }
-    // Use component-derived context only — never read from realToAlias
+    // Use component-derived context only - never read from realToAlias
     if (ctx.selfTeamId == null || pTeamId == null) return null;
     // Local cache prevents double-counting on rerender triggered by the self
     // detection microtask above
@@ -338,7 +338,7 @@ const POST_GAME_ENDPOINTS = [
     '/lol-honor-v2/v1/ballot'
 ];
 
-// Champ-select data endpoints — names flow through here to the chat iframe override JSON
+// Champ-select data endpoints - names flow through here to the chat iframe override JSON
 const CHAMPSELECT_ENDPOINTS = [
     '/lol-champ-select/v1/session',
     '/lol-champ-select/v1/summoners/'
@@ -674,7 +674,7 @@ function assertXhr() {
         const respDesc = Object.getOwnPropertyDescriptor(proto, 'response');
         const textDesc = Object.getOwnPropertyDescriptor(proto, 'responseText');
         if (!respDesc || !textDesc) {
-            Utils.Debug.warn('[NameSpoofer] XHR getters unavailable — another plugin mangled XMLHttpRequest.prototype. Falling back to Utils.Hooks.Xhr.');
+            Utils.Debug.warn('[NameSpoofer] XHR getters unavailable - another plugin mangled XMLHttpRequest.prototype. Falling back to Utils.Hooks.Xhr.');
             installXhrFallback();
             return;
         }
@@ -1308,7 +1308,7 @@ function installChatObserver() {
         const els = _queryAllShadow(CHAT_NAME_SELECTORS);
         Utils.Debug.log('[NS-DEBUG][chat] sweep found ' + els.length + ' elements');
         for (const el of els) {
-            // Skip conversation titles in the initial sweep — let deferred sweep
+            // Skip conversation titles in the initial sweep - let deferred sweep
             // handle them after roster rebuild assigns stable realToAlias numbers.
             if (el.matches('.conversation-title')) continue;
             const cur = (el.textContent || '').replace(/[⁦-⁩‎‏]/g, '').trim();
@@ -2360,7 +2360,7 @@ function installEmberHook() {
         'postgame-scoreboard-player-honor-flair', 'scoreboard-honor-flair-component',
         'postgame-tft-player', 'postgame-player-buttons',
         'winners-roster-component', 'honor-panel-component',
-        // arena (strawberry/cherry) — completely uncovered previously
+        // arena (strawberry/cherry) - completely uncovered previously
         'strawberry-postgame-root-component', 'strawberry-scoreboard-root-component',
         'strawberry-scoreboard-row-component', 'cherry-player-level-display',
         // profiles
@@ -2428,7 +2428,7 @@ function installEmberHook() {
 
     }
 
-    // Special: postgame-component — reads postgame.player.summonerName, needs puuid from postgame model
+    // Special: postgame-component - reads postgame.player.summonerName, needs puuid from postgame model
     _hookCleanups.push(Utils.Hooks.Ember.registerRule({
         name: 'ns-postgame-component',
         matcher: 'postgame-component',

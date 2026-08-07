@@ -37,7 +37,7 @@ const DIV_ORDER = {
     III: 2,
     IV: 1
 };
-const HIGH_ELO_COMPARE_SCALE = 100000; // solo vs flex pick only — not for display
+const HIGH_ELO_COMPARE_SCALE = 100000; // solo vs flex pick only - not for display
 
 function formatTierName(tierName) {
     return tierName.charAt(0) + tierName.slice(1).toLowerCase();
@@ -123,17 +123,17 @@ function computeTeamAvgLabel(bests) {
             return tierLabel ? `${tierLabel} ${t("~{{lp}} LP", { lp: avgLp })}` : null;
     };
 
-    // All Master+ — average tier + LP across everyone
+    // All Master+ - average tier + LP across everyone
     if (highElo.length === ranked.length) {
         return formatHighEloAvg(highElo);
     }
 
-    // Mixed lobby but mostly Master+ — tier/LP from high-elo players only
+    // Mixed lobby but mostly Master+ - tier/LP from high-elo players only
     if (highElo.length > 0 && highElo.length >= Math.ceil(ranked.length / 2)) {
         return formatHighEloAvg(highElo);
     }
 
-    // Mostly below Master — division averaging (Master+ collapsed to Diamond I step)
+    // Mostly below Master - division averaging (Master+ collapsed to Diamond I step)
     const values = ranked.map(b => {
         if (isHighEloTier(b.tier)) return divisionScore('DIAMOND', 'I');
         return divisionScore(b.tier, b.division);
@@ -630,7 +630,7 @@ const showGameAnalysis = async () => {
     let session;
     try {
         session = await Utils.LCU.get('/lol-gameflow/v1/session');
-        // If the game ID matches the last seen game, the session is stale — retry once.
+        // If the game ID matches the last seen game, the session is stale - retry once.
         const gid = session?.gameData?.gameId;
         if (gid && gid === lastGameId) {
             Utils.Debug.log('[GameAnalysis] Stale gameflow session detected. Retrying in 500ms...');
@@ -2084,7 +2084,7 @@ export const MatchHistoryModal = (function() {
         } = computePerformanceScores(participants, game.json.gameDuration);
 
         if (window.managerdebug) {
-            Utils.Debug.log(`[SnoozeManager Debug] Match ${game.json.gameId} — ${mode} ${durationMin}m${durationSec}s`);
+            Utils.Debug.log(`[SnoozeManager Debug] Match ${game.json.gameId} - ${mode} ${durationMin}m${durationSec}s`);
             Utils.Debug.log(debugTable.map(r => ({
                 '#': r.rank,
                 score: r.score,

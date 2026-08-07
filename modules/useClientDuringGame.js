@@ -103,7 +103,7 @@ export function init(context) {
 
 export async function load() {
     if (!Utils.LCU || !Utils.LCU.observe) {
-        Utils.Debug.log('[UseClientInGame]', 'ERROR: Utils.LCU.observe unavailable — module inactive.');
+        Utils.Debug.log('[UseClientInGame]', 'ERROR: Utils.LCU.observe unavailable - module inactive.');
         return;
     }
 

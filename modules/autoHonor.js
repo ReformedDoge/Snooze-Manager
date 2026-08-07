@@ -40,7 +40,7 @@ function setupObservers() {
     _observersActive = true;
 
     statsUnsub = Utils.LCU.observe('/lol-end-of-game/v1/eog-stats-block', (event) => {
-        // Stay subscribed for the whole session — the cache is cleared on every
+        // Stay subscribed for the whole session - the cache is cleared on every
         // non-honor phase, so later games need this push too.
         if (eogStatsCache) return;
         if (event.data?.teams?.length) {
@@ -192,7 +192,7 @@ function renderExtraSettings(container) {
     prioRow.classList.add('ah-prioritize-toggle');
     container.appendChild(prioRow);
 
-    // Prefer Friends toggle — honor friends first out of the current mode's candidates
+    // Prefer Friends toggle - honor friends first out of the current mode's candidates
     const preferRow = Utils.Settings.createToggleRow(t('Prefer Friends'), Utils.Store.get('autoHonor', 'preferFriends') || false, (next) => {
         Utils.Store.set('autoHonor', 'preferFriends', next);
         if (next) {
@@ -509,7 +509,7 @@ async function autoHonorTeammate() {
 
             await Utils.LCU.post('/lol-honor-v2/v1/level-change/ack').catch(() => {});
         } else {
-            Utils.Debug.log('[AutoHonor] No votes staged — skipped finalize and ack.');
+            Utils.Debug.log('[AutoHonor] No votes staged - skipped finalize and ack.');
         }
 
     } catch (err) {
@@ -618,7 +618,7 @@ export function load() {
         setupObservers();
     }
 
-    // Register Ember hook for honor-card badges — score and/or friend marker
+    // Register Ember hook for honor-card badges - score and/or friend marker
     if (Utils.Hooks?.Ember?.registerRule) {
         const cleanup = Utils.Hooks.Ember.registerRule({
             name: 'ah-honor-card-badges',
