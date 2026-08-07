@@ -398,9 +398,9 @@ export function init(context) {
     Utils.Settings.inject(context, {
         name: "balance-tooltip-settings",
         titleKey: "snooze_balance-tooltip",
-        titleName: t("Balance Tooltip"),
+        titleName: t("Mode Balance Info"),
         capitalTitleKey: "snooze_balance-tooltip_capital",
-        capitalTitleName: t("BALANCE TOOLTIP"),
+        capitalTitleName: t("MODE BALANCE INFO"),
         class: "balance-tooltip-settings"
     });
     isEnabled = Utils.Store.get('SnoozeBalanceTooltip', 'enabled') || false;
@@ -436,12 +436,12 @@ export function init(context) {
     if (window.SnoozeManager && window.SnoozeManager.registerModule) {
         window.SnoozeManager.registerModule({
             id: 'SnoozeBalanceTooltip',
-            name: 'Balance Tooltip',
-            description: t('Hover over champions in special modes (ARAM/URF/Arena) to see balance info/nerfs natively.'),
+            name: t('Mode Balance Info'),
+            description: t('Hover over champions in special modes (ARAM/URF/Arena) to see balance info/nerfs.'),
             settings: [{
                 type: 'toggle',
                 id: 'sm:SnoozeBalanceTooltip',
-                label: t('Enable Balance Tooltip'),
+                label: t('Enable Mode Balance Info'),
                 value: isEnabled,
                 onChange: (val) => toggleFeature(val)
             }]
@@ -449,7 +449,7 @@ export function init(context) {
     } else {
         Utils.DOM.observer.observe("lol-uikit-scrollable.balance-tooltip-settings", (plugin) => {
             plugin.innerHTML = '';
-            plugin.appendChild(Utils.Settings.createToggleRow(t("Enable Balance Tooltip"), isEnabled, (next) => {
+            plugin.appendChild(Utils.Settings.createToggleRow(t("Enable Mode Balance Info"), isEnabled, (next) => {
                 isEnabled = next;
                 Utils.Store.set('SnoozeBalanceTooltip', 'enabled', isEnabled);
                 toggleFeature(isEnabled);

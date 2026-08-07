@@ -1512,7 +1512,7 @@ const WelcomeModal = (function() {
             t('Auto features for re-queue, auto accept, champion select, and honor'),
             t('Champion select quality-of-life options, Dodge Button'),
             t('Client window, profile, social panel, and mode selector tweaks'),
-            t('Whale Helper loot and skin collection utilities'),
+            t('Whales Helper loot and skin collection utilities'),
             t('And more...'),
         ].forEach(feature => {
             const item = document.createElement('li');
@@ -1719,7 +1719,7 @@ const MODULE_INFO = {
         name: t('Champ Select Quit Button')
     },
     SnoozeBalanceTooltip: {
-        name: t('Balance Tooltip')
+        name: t('Mode Balance Info')
     },
     gameAnalysisPopup: {
         name: t('Game Analysis Popup')
@@ -1743,7 +1743,7 @@ const MODULE_INFO = {
         name: t('Social Panel Tweaks')
     },
     whaleHelper: {
-        name: t('Whale Helper')
+        name: t('Whales Helper')
     },
     lowPrioWarningSuppress: {
         name: t('Low Prio Warning Suppress')
