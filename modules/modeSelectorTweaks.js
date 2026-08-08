@@ -5,8 +5,7 @@
  * @description Mode Selector Tweaks:Mode Selector Tweaks: Declutters and cleans up the play screen by hiding unwanted navigation categories, game modes and queues.
  * @link https://github.com/ReformedDoge/Snooze-Manager
  */
-import { t } from './i18n.js';
-import Utils from './generalUtils.js';
+import Utils, { t } from './generalUtils.js';
 
 let isEnabled = false;
 let hiddenNavs = new Set();

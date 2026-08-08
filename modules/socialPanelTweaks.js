@@ -5,8 +5,7 @@
  * @description Improves friend list status display, same-party visuals, and adds a collapsible sidebar.
  * @link https://github.com/ReformedDoge
  */
-import { t } from './i18n.js';
-import Utils from './generalUtils.js';
+import Utils, { t } from './generalUtils.js';
 
 const FRIENDS_URI = '/lol-chat/v1/friends';
 const ACTIVE_ATTR = 'data-sm-social-panel-status';

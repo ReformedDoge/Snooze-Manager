@@ -5,8 +5,7 @@
  * @description Automatically accept ready checks with optional delay and decline handling.
  * @link https://github.com/ReformedDoge
  */
-import Utils from './generalUtils.js';
-import { t } from './i18n.js';
+import Utils, { t } from './generalUtils.js';
 
 const SETTINGS_KEY = 'enabled';
 const DELAY_KEY = 'delay';

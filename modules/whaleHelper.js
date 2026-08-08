@@ -5,8 +5,7 @@
  * @description Whale Helper: Rerollable Pool Button (Loot page), Drop Chance viewer (Loot page), Skin Tier Badges (Champ Select), Hide Unowned Skins/Chromas (Champion Select), Skin Randomizer (Champ Select).
  * @link https://github.com/ReformedDoge/Snooze-Manager
  */
-import { t } from './i18n.js';
-import Utils from './generalUtils.js';
+import Utils, { t } from './generalUtils.js';
 
 // Config
 const STYLE_ID = 'sm-whale-helper-styles';

@@ -5,8 +5,7 @@
  * @description Adds game analysis enhancements with player rank, recent match history and game in progress player history analysis.
  * @link https://github.com/ReformedDoge
  */
-import { t } from './i18n.js';
-import Utils from './generalUtils.js';
+import Utils, { t } from './generalUtils.js';
 
 // WS-cached session data (no HTTP GET needed)
 let _wsCsSession = null;

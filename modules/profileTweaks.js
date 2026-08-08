@@ -5,8 +5,7 @@
  * @description Profile customization utilities: remove banner/border, manage tokens, and unlock profile background.
  * @link https://github.com/ReformedDoge
  */
-import { t } from './i18n.js';
-import Utils from './generalUtils.js';
+import Utils, { t } from './generalUtils.js';
 
 const MODULE_KEY = 'profileTweaks';
 const SETTINGS_KEY_UNLOCK_BACKGROUND = 'unlockProfileBackground';

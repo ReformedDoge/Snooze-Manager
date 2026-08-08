@@ -5,8 +5,7 @@
  * @description Automatically honor players after matches, with optional prioritization of friends or selection based on contributions, and score display on honor cards.
  * @link https://github.com/ReformedDoge
  */
-import { t } from './i18n.js';
-import Utils from './generalUtils.js';
+import Utils, { t } from './generalUtils.js';
 
 let isEnabled = false;
 let honorAttemptedForCurrentGame = false;

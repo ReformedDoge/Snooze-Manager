@@ -5,8 +5,7 @@
  * @description Auto-locks priority champions during champ select with role-specific picks and bans.
  * @link https://github.com/ReformedDoge
  */
-import Utils from './generalUtils.js';
-import { t } from './i18n.js';
+import Utils, { t } from './generalUtils.js';
 
 let isEnabled = false;
 let autoLockSessionUnsub = null;

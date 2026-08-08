@@ -107,6 +107,12 @@ export async function checkForUpdates(force = false) {
         }
         if (_updateBadgeCallback) _updateBadgeCallback(_latestRelease);
         if (_welcomeUpdateCallback) _welcomeUpdateCallback(_latestRelease);
+        if (_latestRelease) {
+            Utils.Toast.warning(
+                t('Snooze-Manager update available: v{{version}} — check Settings > Updates!', { version: _latestRelease.version }),
+                { duration: 10000, closable: true, position: 'bottom-right' }
+            );
+        }
     } catch (err) {
         Utils.Debug.warn('[Snooze-Manager] Update check failed:', err);
     } finally {
@@ -1857,10 +1863,24 @@ export async function load(context) {
     Modal.init();
     WelcomeModal.init();
 
-    // Sync version from @version tag then check for updates if enabled
+    // Sync version from @version tag
     await syncVersionWithMetadata();
     WelcomeModal.showIfNeeded();
-    checkForUpdates();
+
+    // Run the update check once the client UI shell is fully loaded.
+    const runUpdateCheck = (path) => {
+        Utils.Debug.log(`[Snooze-Manager] Update check: ${path}`);
+        checkForUpdates();
+    };
+    const rcp = (context && context.rcp) || window.rcp;
+    if (rcp && typeof rcp.whenReady === "function") {
+        rcp.whenReady("rcp-fe-lol-social").then(
+            () => runUpdateCheck("rcp-fe-lol-social ready"),
+            () => runUpdateCheck("rcp-fe-lol-social rejected"),
+        );
+    } else {
+        runUpdateCheck("no rcp available (immediate)");
+    }
 
     await runModuleLifecycle('load');
 }

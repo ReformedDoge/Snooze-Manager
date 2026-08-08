@@ -5,8 +5,7 @@
  * @description Locally spoofs your displayed Riot ID by rewriting the identity fields. Cosmetic only: others still see your real name.
  * @link https://github.com/iIlusion
  */
-import { t } from './i18n.js';
-import Utils from './generalUtils.js';
+import Utils, { t } from './generalUtils.js';
 
 const MODULE = 'nameSpoofer';
 

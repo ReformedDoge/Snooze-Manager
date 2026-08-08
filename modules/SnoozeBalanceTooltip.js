@@ -5,8 +5,7 @@
  * @description Shows balance adjustment tooltips on champion hover.
  * @link https://github.com/ReformedDoge
  */
-import { t } from './i18n.js';
-import Utils from './generalUtils.js';
+import Utils, { t } from './generalUtils.js';
 
 let isEnabled = false;
 

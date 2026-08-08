@@ -5,8 +5,7 @@
  * @description Automatically re-queues after a game ends using your chosen queue and delay.
  * @link https://github.com/ReformedDoge
  */
-import Utils from './generalUtils.js';
-import { t } from './i18n.js';
+import Utils, { t } from './generalUtils.js';
 
 // Arm on WaitingForStats/PreEndOfGame, fire on EndOfGame
 let _armed = false;

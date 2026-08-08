@@ -5,8 +5,7 @@
  * @description Adds a dodge button in champion select for quick lobby exit.
  * @link https://github.com/ReformedDoge
  */
-import { t } from './i18n.js';
-import Utils from './generalUtils.js';
+import Utils, { t } from './generalUtils.js';
 
 let isEnabled = false;
 let _hookCleanups = [];

@@ -5,8 +5,7 @@
  * @description Suppresses low priority queue / leaverbuster warnings and player restriction info tooltips in the Ember layer.
  * @link https://github.com/ReformedDoge
  */
-import { t } from './i18n.js';
-import Utils from './generalUtils.js';
+import Utils, { t } from './generalUtils.js';
 
 const MODULE_KEY = 'lowPrioWarningSuppress';
 

@@ -1,12 +1,192 @@
 /**
  * @name Snooze-GeneralUtils
- * @version 1.0.1
+ * @version 1.1.0
  * @author SnoozeFest - github@ReformedDoge
- * @description Shared helper utilities used by Snooze modules.
+ * @description Shared helper utilities used by Snooze modules. Standalone —
+ * ships without external dependencies; locale files are optional.
  * @link https://github.com/ReformedDoge
  */
 
-import { t } from './i18n.js';
+/**
+ * i18n API
+ * Configuration is per-plugin: call initI18n({ storageKey, supportedLanguages }) with your own settings (keep them in a tiny i18n.js config file in the plugin).
+ * If never configured, t() still works — it falls back to the English keys.
+ */
+const DEFAULT_LANG = 'en';
+
+let currentLanguage = DEFAULT_LANG;
+let translations = {};
+let isInitialized = false;
+let supportedLanguages = null;
+let storageKey = null;
+
+/**
+ * Configures and initializes the i18n API with plugin-specific settings.
+ * Should be called once during plugin bootstrap.
+ * @param {Object} [config]
+ * @param {string} [config.storageKey] - localStorage key for the saved language (per plugin)
+ * @param {string} [config.defaultLang] - fallback language code (default 'en')
+ * @param {Object} [config.supportedLanguages] - map of code -> display name; keys must match the .json filenames in /locales/
+ * @returns {Promise<void>}
+ */
+export async function initI18n(config = {}) {
+    if (config.storageKey) storageKey = config.storageKey;
+    if (config.supportedLanguages) supportedLanguages = config.supportedLanguages;
+    if (config.defaultLang) currentLanguage = config.defaultLang;
+
+    if (isInitialized) return;
+
+    // No per-plugin config provided (plugin doesn't call initI18n): nothing to persist or load
+    if (!storageKey) {
+        translations = {};
+        isInitialized = true;
+        return;
+    }
+
+    try {
+        const savedLang = localStorage.getItem(storageKey);
+        if (savedLang && (!supportedLanguages || Object.prototype.hasOwnProperty.call(supportedLanguages, savedLang))) {
+            currentLanguage = savedLang;
+        }
+    } catch (e) {
+        console.warn('[i18n] Failed to access localStorage:', e);
+    }
+
+    await loadDictionary(currentLanguage);
+    isInitialized = true;
+}
+
+/**
+ * Internal function to fetch the JSON dictionary.
+ * @param {string} lang
+ */
+async function loadDictionary(lang) {
+    if (lang === 'en') {
+        // English is the base language (keys are the English text).
+        // load an en.json if it exists,
+        // but if it fails, fall back to an empty object.
+        translations = {};
+    }
+
+    try {
+        // Resolve the exact path in the Pengu CEF environment. generalUtils may be
+        // shipped inside a plugin's /modules/, at the plugin root, or elsewhere —
+        // so we probe a few candidates relative to this module's own location.
+        const normalized = import.meta.url.replace(/\\/g, "/");
+        const moduleDir = normalized.substring(0, normalized.lastIndexOf("/") + 1);
+        // generalUtils.js is inside /modules/, so we step back one folder to the plugin root
+        const pluginRoot = moduleDir.replace(/\/modules\/$/, "/");
+
+        const candidateDirs = [...new Set([pluginRoot, moduleDir])];
+
+        let data = null;
+        let lastError = null;
+        for (const dir of candidateDirs) {
+            const fileUrl = dir + `locales/${lang}.json`;
+            try {
+                const response = await fetch(fileUrl);
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status} - ${response.statusText} (${fileUrl})`);
+                }
+                data = await response.json();
+                break;
+            } catch (error) {
+                lastError = error;
+            }
+        }
+
+        if (typeof data === 'object' && data !== null) {
+            translations = data;
+            console.debug(`[i18n] Successfully loaded locale: ${lang}`);
+        } else if (lastError) {
+            throw lastError;
+        }
+    } catch (error) {
+        // If en.json fails, it's totally fine since the keys are English.
+        if (lang !== 'en') {
+            console.warn(`[i18n] Failed to load translations for '${lang}', falling back to default keys. Error:`, error);
+        }
+        translations = {}; // Reset to prevent mixing languages if a fetch fails
+    }
+}
+
+/**
+ * Translates a string and interpolates variables.
+ *
+ * @param {string} key - The English string, e.g., "Hello {{name}}"
+ * @param {Object} [params] - Variables to interpolate, e.g., { name: "Player" }
+ * @returns {string} The translated string safely parsed
+ */
+export function t(key, params = {}) {
+    if (typeof key !== 'string') {
+        console.warn('[i18n] t() called with non-string key:', key);
+        return String(key);
+    }
+
+    // Get translation or fallback to the English key
+    let str = Object.prototype.hasOwnProperty.call(translations, key)
+        ? translations[key]
+        : key;
+
+    // Interpolate variables if provided
+    if (params && typeof params === 'object') {
+        for (const [paramKey, value] of Object.entries(params)) {
+            // Safely convert value to string to avoid [object Object] or null errors
+            const safeValue = (value !== null && value !== undefined) ? String(value) : '';
+            // Replace all instances of {{paramKey}} globally
+            const regex = new RegExp(`{{${paramKey}}}`, 'g');
+            str = str.replace(regex, safeValue);
+        }
+    }
+
+    return str;
+}
+
+/**
+ * Changes the language, saves preference, and reloads the client.
+ * Only works if the engine was configured with a storageKey via initI18n().
+ * @param {string} lang - The language code (e.g., 'es')
+ * @returns {boolean} True if successful, false otherwise
+ */
+export async function setLanguage(lang) {
+    if (supportedLanguages && !Object.prototype.hasOwnProperty.call(supportedLanguages, lang)) {
+        console.error(`[i18n] Attempted to set unsupported language: ${lang}`);
+        return false;
+    }
+
+    if (lang === currentLanguage) return true; // No change needed
+
+    if (!storageKey) {
+        console.warn('[i18n] setLanguage() called before initI18n() with a storageKey — nothing saved');
+        return false;
+    }
+
+    try {
+        localStorage.setItem(storageKey, lang);
+        console.log(`[i18n] Language saved as ${lang}. Reloading...`);
+        fetch("/riotclient/kill-and-restart-ux", { method: "POST" });
+        return true;
+    } catch (e) {
+        console.error('[i18n] Failed to save language preference:', e);
+        return false;
+    }
+}
+
+/**
+ * Gets the current active language code.
+ * @returns {string}
+ */
+export function getCurrentLanguage() {
+    return currentLanguage;
+}
+
+/**
+ * Gets the languages this plugin configured via initI18n().
+ * @returns {Object|null}
+ */
+export function getSupportedLanguages() {
+    return supportedLanguages;
+}
 
 // Debug is exposed via Utils (Utils.Debug)
 
@@ -37,27 +217,53 @@ const Debug = {
     }
 };
 
-const Toast = {
-    _ensureContainer() {
-        let container = document.getElementById('snooze-toast-container');
-        if (!container) {
-            container = document.createElement('div');
-            container.id = 'snooze-toast-container';
-            Object.assign(container.style, {
-                position: 'fixed',
-                top: '24px',
-                left: '24px',
-                zIndex: '2147483647',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '10px',
-                pointerEvents: 'none'
-            });
+const ToastPositions = {
+    'top-left':     { top: '24px',  left: '24px',  dir: 'left'  },
+    'bottom-left':  { bottom: '24px', left: '24px',  dir: 'left'  },
+    'bottom-right': { bottom: '24px', right: '24px', dir: 'right' },
+    'top-right':    { top: '24px',  right: '24px', dir: 'right' }
+};
 
-            const style = document.createElement('style');
-            style.textContent = `
+const Toast = {
+    _position: 'top-left',
+    _container: null,
+    _containers: {},
+
+    /**
+     * Pick the default corner toasts live in: top-left (default), top-right,
+     * bottom-left or bottom-right. Existing toasts move immediately.
+     * Individual toasts can override this per-call via show(..., { position }).
+     */
+    setPosition(position) {
+        if (!ToastPositions[position]) return;
+        this._position = position;
+        if (this._container) this._applyPosition();
+    },
+
+    getPosition() {
+        return this._position;
+    },
+
+    _applyPosition() {
+        const style = this._container.style;
+        style.top = '';
+        style.right = '';
+        style.bottom = '';
+        style.left = '';
+        Object.assign(style, ToastPositions[this._position]);
+    },
+
+    _injectStyles() {
+        if (document.getElementById('snooze-toast-styles')) return;
+        const style = document.createElement('style');
+        style.id = 'snooze-toast-styles';
+        style.textContent = `
                 @keyframes snoozeToastSlideIn {
                     from { transform: translateX(-120%); opacity: 0; filter: blur(4px); }
+                    to { transform: translateX(0); opacity: 1; filter: blur(0); }
+                }
+                @keyframes snoozeToastSlideInRight {
+                    from { transform: translateX(120%); opacity: 0; filter: blur(4px); }
                     to { transform: translateX(0); opacity: 1; filter: blur(0); }
                 }
                 @keyframes snoozeToastFadeOut {
@@ -66,6 +272,7 @@ const Toast = {
                 }
                 .snooze-toast {
                     background: rgba(1, 10, 19, 0.9);
+                    pointer-events: auto;
                     border-left: 4px solid #0ac8b9;
                     border-top: 1px solid rgba(255, 255, 255, 0.05);
                     border-right: 1px solid rgba(255, 255, 255, 0.05);
@@ -83,29 +290,105 @@ const Toast = {
                     animation: snoozeToastSlideIn 0.35s cubic-bezier(0.2, 0.85, 0.32, 1.2) forwards;
                     transition: all 0.3s ease;
                 }
+                .snooze-toast.snooze-toast-right {
+                    animation-name: snoozeToastSlideInRight;
+                }
                 .snooze-toast.hiding {
                     animation: snoozeToastFadeOut 0.3s forwards;
                 }
+                .snooze-toast-close {
+                    margin-left: auto;
+                    background: none;
+                    border: none;
+                    padding: 2px;
+                    color: rgba(240, 230, 210, 0.55);
+                    cursor: pointer;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    transition: color 0.15s ease;
+                }
+                .snooze-toast-close:hover {
+                    color: #f0e6d2;
+                }
             `;
-            document.head.appendChild(style);
-            document.body.appendChild(container);
-        }
-        return container;
+        document.head.appendChild(style);
     },
 
-    show(message, type = 'success', duration = 3000) {
-        const container = this._ensureContainer();
+    _ensureContainer(position) {
+        if (!position) position = this._position;
+
+        // Default corner: reuse the classic single container (find by id so
+        // hot-reloads pick up an existing instance).
+        if (position === this._position) {
+            let container = document.getElementById('snooze-toast-container');
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'snooze-toast-container';
+                Object.assign(container.style, {
+                    position: 'fixed',
+                    zIndex: '2147483647',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '10px',
+                    pointerEvents: 'none'
+                });
+                this._injectStyles();
+                document.body.appendChild(container);
+            }
+            this._container = container;
+            this._applyPosition();
+            return container;
+        }
+
+        // Override corner: dedicated container per position so both corners coexist.
+        if (!this._containers[position]) {
+            const container = document.createElement('div');
+            container.className = 'snooze-toast-container-' + position.replace('-', '');
+            Object.assign(container.style, {
+                position: 'fixed',
+                zIndex: '2147483647',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '10px',
+                pointerEvents: 'none'
+            });
+            Object.assign(container.style, ToastPositions[position]);
+            this._injectStyles();
+            document.body.appendChild(container);
+            this._containers[position] = container;
+        }
+        return this._containers[position];
+    },
+
+    show(message, type = 'success', options) {
+        const opts = (options && typeof options === 'object') ? options : {};
+        const position = opts.position && ToastPositions[opts.position] ? opts.position : this._position;
+        const container = this._ensureContainer(position);
+        const isRight = ToastPositions[position].dir === 'right';
         const toast = document.createElement('div');
-        toast.className = 'snooze-toast';
+        toast.className = 'snooze-toast' + (isRight ? ' snooze-toast-right' : '');
+
+        // options may be a legacy number (duration) or an object
+        let duration = 3000;
+        let closable = false;
+        if (typeof options === 'number') {
+            duration = options;
+        } else if (options && typeof options === 'object') {
+            if (typeof options.duration === 'number') duration = options.duration;
+            if (options.closable) closable = true;
+        }
 
         // Colors match Snooze styling
-        const color = type === 'success' ? '#0ac8b9' : (type === 'error' ? '#e84057' : '#c8aa6e');
+        const color = type === 'success' ? '#0ac8b9' : (type === 'error' ? '#e84057' : (type === 'warning' ? '#e8b339' : '#c8aa6e'));
         toast.style.borderLeftColor = color;
 
         // Custom SVGs based on type
         const iconSvg = type === 'success' ?
             `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>` :
-            `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>`;
+            (type === 'warning' ?
+                `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>` :
+                `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>`);
 
         const icon = document.createElement('div');
         icon.style.cssText = 'display:flex;align-items:center;justify-content:center;';
@@ -117,22 +400,70 @@ const Toast = {
 
         toast.appendChild(icon);
         toast.appendChild(messageElement);
-        container.appendChild(toast);
 
-        setTimeout(() => {
+        let hideTimer = null;
+        let onDocClick = null;
+
+        const dismiss = () => {
+            if (toast.classList.contains('hiding')) return;
             toast.classList.add('hiding');
-            toast.addEventListener('animationend', () => toast.remove());
-        }, duration);
+            toast.style.pointerEvents = 'none';
+            if (onDocClick) document.removeEventListener('click', onDocClick);
+            // animationend may never fire (reduced motion, throttled client) -
+            // always fall back to a plain timeout so dismiss never dead-ends.
+            const removeTimer = setTimeout(() => toast.remove(), 400);
+            toast.addEventListener('animationend', () => {
+                clearTimeout(removeTimer);
+                toast.remove();
+            }, { once: true });
+        };
+
+        if (closable) {
+            // Whole toast is a click target; the X is handled via document-level delegation
+            toast.style.pointerEvents = 'auto';
+            toast.style.cursor = 'pointer';
+
+            const closeBtn = document.createElement('button');
+            closeBtn.type = 'button';
+            closeBtn.className = 'snooze-toast-close';
+            closeBtn.setAttribute('aria-label', 'Dismiss');
+            closeBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>';
+            // Direct binding -dismiss() is idempotent.
+            closeBtn.onclick = (e) => {
+                e.stopPropagation();
+                clearTimeout(hideTimer);
+                dismiss();
+            };
+            toast.appendChild(closeBtn);
+            Debug.log('[Snooze-Toast] closable toast ready');
+
+            onDocClick = (e) => {
+                const hit = e.target && e.target.closest
+                    ? e.target.closest('.snooze-toast-close')
+                    : null;
+                if (hit && toast.contains(hit)) {
+                    clearTimeout(hideTimer);
+                    dismiss();
+                }
+            };
+            document.addEventListener('click', onDocClick);
+        }
+
+        container.appendChild(toast);
+        hideTimer = setTimeout(dismiss, duration);
     },
 
-    success(message, duration) {
-        this.show(message, 'success', duration);
+    success(message, options) {
+        this.show(message, 'success', options);
     },
-    error(message, duration) {
-        this.show(message, 'error', duration);
+    error(message, options) {
+        this.show(message, 'error', options);
     },
-    info(message, duration) {
-        this.show(message, 'info', duration);
+    info(message, options) {
+        this.show(message, 'info', options);
+    },
+    warning(message, options) {
+        this.show(message, 'warning', options);
     }
 };
 
@@ -2144,6 +2475,13 @@ const Scoring = {
 };
 
 export const Utils = {
+    I18n: {
+        initI18n,
+        t,
+        setLanguage,
+        getCurrentLanguage,
+        getSupportedLanguages
+    },
     Scoring,
     DOM: {
         createSmartObserver,
