@@ -24,7 +24,7 @@ let storageKey = null;
  * Configures and initializes the i18n API with plugin-specific settings.
  * Should be called once during plugin bootstrap.
  * @param {Object} [config]
- * @param {string} [config.storageKey] - localStorage key for the saved language (per plugin)
+ * @param {string} [config.storageKey] - per-plugin Store namespace for the saved language
  * @param {string} [config.defaultLang] - fallback language code (default 'en')
  * @param {Object} [config.supportedLanguages] - map of code -> display name; keys must match the .json filenames in /locales/
  * @returns {Promise<void>}
@@ -43,14 +43,19 @@ export async function initI18n(config = {}) {
         return;
     }
 
-    try {
-        const savedLang = localStorage.getItem(storageKey);
-        if (savedLang && (!supportedLanguages || Object.prototype.hasOwnProperty.call(supportedLanguages, savedLang))) {
-            currentLanguage = savedLang;
+    let savedLang = Store.get(storageKey, 'language');
+    if (savedLang === undefined) {
+        savedLang = localStorage.getItem(storageKey);
+        if (savedLang !== null) {
+            if (supportedLanguages && !Object.prototype.hasOwnProperty.call(supportedLanguages, savedLang)) {
+                savedLang = undefined;
+            } else {
+                Store.set(storageKey, 'language', savedLang);
+            }
+            localStorage.removeItem(storageKey);
         }
-    } catch (e) {
-        console.warn('[i18n] Failed to access localStorage:', e);
     }
+    if (savedLang) currentLanguage = savedLang;
 
     await loadDictionary(currentLanguage);
     isInitialized = true;
@@ -162,7 +167,7 @@ export async function setLanguage(lang) {
     }
 
     try {
-        localStorage.setItem(storageKey, lang);
+        Store.set(storageKey, 'language', lang);
         console.log(`[i18n] Language saved as ${lang}. Reloading...`);
         fetch("/riotclient/kill-and-restart-ux", { method: "POST" });
         return true;
