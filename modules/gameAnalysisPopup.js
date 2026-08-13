@@ -1735,7 +1735,7 @@ export const MatchHistoryModal = (function() {
             width: '100%',
             height: '100%',
             background: 'rgba(0, 0, 0, 0.45)',
-            backdropFilter: 'blur(10px)',
+            backdropFilter: 'blur(2px)',
             pointerEvents: 'auto'
         });
         overlay.addEventListener('click', hide);

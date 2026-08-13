@@ -1851,7 +1851,7 @@ function renderOddsModal(item, odds) {
         alignItems: 'center',
         justifyContent: 'center',
         backgroundColor: 'rgba(0,0,0,0.45)',
-        backdropFilter: 'blur(3px)'
+        backdropFilter: 'blur(2px)'
     });
 
     const modal = document.createElement('div');
