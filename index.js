@@ -1853,9 +1853,29 @@ export async function init(ctx) {
 }
 
 export async function load(context) {
+    // Run client-dependent UI (welcome modal + update check) once the client
+    // UI shell is fully loaded. Firing these earlier renders them into the boot
+    // window, where the shell's startup work / hang can orphan them.
+    const runWhenClientReady = (path) => {
+        Utils.Debug.log(`[Snooze-Manager] Client shell ready: ${path}`);
+        WelcomeModal.showIfNeeded();
+        checkForUpdates();
+    };
+    const gateOnClientReady = () => {
+        const rcp = (context && context.rcp) || window.rcp;
+        if (rcp && typeof rcp.whenReady === "function") {
+            rcp.whenReady("rcp-fe-lol-social").then(
+                () => runWhenClientReady("rcp-fe-lol-social ready"),
+                () => runWhenClientReady("rcp-fe-lol-social rejected"),
+            );
+        } else {
+            runWhenClientReady("no rcp available (immediate)");
+        }
+    };
+
     if (_loaded) {
         WelcomeModal.init();
-        WelcomeModal.showIfNeeded();
+        gateOnClientReady();
         return;
     }
     _loaded = true;
@@ -1865,22 +1885,7 @@ export async function load(context) {
 
     // Sync version from @version tag
     await syncVersionWithMetadata();
-    WelcomeModal.showIfNeeded();
-
-    // Run the update check once the client UI shell is fully loaded.
-    const runUpdateCheck = (path) => {
-        Utils.Debug.log(`[Snooze-Manager] Update check: ${path}`);
-        checkForUpdates();
-    };
-    const rcp = (context && context.rcp) || window.rcp;
-    if (rcp && typeof rcp.whenReady === "function") {
-        rcp.whenReady("rcp-fe-lol-social").then(
-            () => runUpdateCheck("rcp-fe-lol-social ready"),
-            () => runUpdateCheck("rcp-fe-lol-social rejected"),
-        );
-    } else {
-        runUpdateCheck("no rcp available (immediate)");
-    }
+    gateOnClientReady();
 
     await runModuleLifecycle('load');
 }
