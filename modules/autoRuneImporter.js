@@ -1946,4 +1946,7 @@ export function unload() {
     if (gameflowUnsub) gameflowUnsub();
     gameflowUnsub = null;
     removeWidget();
+    currentChampionId = 0;
+    currentSession = null;
+    buildsCache.clear();
 }
