@@ -1,8 +1,8 @@
 /**
  * @name Snooze-AutoRuneImporter
- * @version 2.1.0
+ * @version 2.2.0
  * @author SnoozeFest - github@ReformedDoge
- * @description Advanced Multi-Source Auto Rune & Spells Importer featuring 12 sources with 100% transparent vector brand logos, position memory, widget scaling & opacity, smart auto-collapse, Hextech audio chime, jungler Smite auto-handling, and ARAM/Arena mode awareness.
+ * @description Advanced Multi-Source Auto Rune & Spells Importer featuring 12 sources with authentic vector brand logos (official Riot LoL Crest and Blitz Hexagon), position memory, widget scaling & opacity, smart auto-collapse, Hextech audio chime, jungler Smite auto-handling, and ARAM/Arena mode awareness.
  * @link https://github.com/ReformedDoge
  */
 import Utils, { t } from './generalUtils.js';
@@ -63,19 +63,31 @@ const SUMMONER_SPELLS = {
     32: { id: 32, name: 'Mark', icon: '/lol-game-data/assets/v1/summoner-spells/32.png', cdn: 'https://ddragon.leagueoflegends.com/cdn/14.18.1/img/spell/SummonerSnowball.png' }
 };
 
-// 100% Transparent, crisp SVG vector icons for all 12 providers (zero white box backgrounds)
+// 100% Authentic, distinct, transparent vector brand icons
 const SOURCE_SVGS = {
-    riot: `<svg viewBox="0 0 24 24" width="13" height="13" fill="none"><path d="M13.5 2L3 14h7v8l10.5-12h-7z" fill="#eb0029"/></svg>`,
+    // Official Riot Games Fist / LoL Gold Crest Logo
+    riot: `<svg viewBox="0 0 24 24" width="13" height="13" fill="none"><path d="M4 3h4.5v13.5H19V21H4V3z" fill="#c8aa6e"/><path d="M7 6h2v11h7.5V19H7V6z" fill="#f0e6d2"/></svg>`,
+    // OP.GG Signature Double-O Badge
     opgg: `<svg viewBox="0 0 24 24" width="13" height="13" fill="none"><rect width="20" height="20" x="2" y="2" rx="6" fill="#5383e8"/><path fill="#fff" d="M7.5 7a3 3 0 000 6 3 3 0 000-6zm0 1.6a1.4 1.4 0 110 2.8 1.4 1.4 0 010-2.8zm6.5-1.6a3 3 0 000 6 3 3 0 000-6zm0 1.6a1.4 1.4 0 110 2.8 1.4 1.4 0 010-2.8z"/></svg>`,
+    // U.GG Purple Shield
     ugg: `<svg viewBox="0 0 24 24" width="13" height="13" fill="none"><rect width="20" height="20" x="2" y="2" rx="6" fill="#805ad5"/><path fill="#fff" d="M7 6v6a5 5 0 0010 0V6h-2.8v6a2.2 2.2 0 01-4.4 0V6H7z"/></svg>`,
+    // Porofessor Golden Poro Face
     porofessor: `<svg viewBox="0 0 24 24" width="13" height="13" fill="none"><circle cx="12" cy="12" r="10" fill="#e2a738"/><path fill="#111" d="M8 9a1.5 1.5 0 113 0 1.5 1.5 0 01-3 0zm5 0a1.5 1.5 0 113 0 1.5 1.5 0 01-3 0zm-5 5c1.5 2 4.5 2 6 0"/></svg>`,
-    blitz: `<svg viewBox="0 0 24 24" width="13" height="13" fill="none"><path d="M12 2L4 7v10l8 5 8-5V7l-8-5zm1 5.5l-5 6.5h4v5l5-6.5h-4v-5z" fill="#f03838"/></svg>`,
+    // Blitz.gg Hexagonal Shield with Lightning Bolt
+    blitz: `<svg viewBox="0 0 24 24" width="13" height="13" fill="none"><path d="M12 2l7.5 4.3v11.4L12 22l-7.5-4.3V6.3L12 2z" stroke="#f03838" stroke-width="2" fill="rgba(240,56,56,0.15)"/><path d="M13 6l-4.5 6h3.5v6l4.5-6h-3.5V6z" fill="#f03838"/></svg>`,
+    // LoLalytics Beaker
     lolalytics: `<svg viewBox="0 0 24 24" width="13" height="13" fill="none"><path d="M9 3v2h1v5l-4.5 7.5A2 2 0 007.2 21h9.6a2 2 0 001.7-3.5L14 10V5h1V3H9zm2 2h2v5.5l.3.5 3.7 6.2a.5.5 0 01-.4.8H7.4a.5.5 0 01-.4-.8l3.7-6.2.3-.5V5z" fill="#0ac8b9"/></svg>`,
+    // Mobalytics Blue Diamond Hex
     mobalytics: `<svg viewBox="0 0 24 24" width="13" height="13" fill="none"><path d="M12 2l8 4.5v11L12 22l-8-4.5v-11L12 2zm0 3.2L6 8.6v6.8l6 3.4 6-3.4V8.6L12 5.2z" fill="#3182ce"/></svg>`,
+    // ProBuilds Gold Trophy
     probuilds: `<svg viewBox="0 0 24 24" width="13" height="13" fill="none"><path d="M6 3h12v3h2a3 3 0 013 3v2a3 3 0 01-3 3h-1.2A7 7 0 0113 18.8V21h3v2H8v-2h3v-2.2A7 7 0 015.2 14H4a3 3 0 01-3-3V9a3 3 0 013-3h2V3zm-2 5H4a1 1 0 00-1 1v2a1 1 0 001 1h2V8zm16 0h-2v4h2a1 1 0 001-1V9a1 1 0 00-1-1z" fill="#c8aa6e"/></svg>`,
+    // MetaSRC Orange Radar
     metasrc: `<svg viewBox="0 0 24 24" width="13" height="13" fill="none"><circle cx="12" cy="12" r="10" stroke="#dd6b20" stroke-width="2"/><circle cx="12" cy="12" r="6" stroke="#dd6b20" stroke-width="2"/><circle cx="12" cy="12" r="2.5" fill="#dd6b20"/></svg>`,
+    // Champion.gg Knight Crest
     championgg: `<svg viewBox="0 0 24 24" width="13" height="13" fill="none"><path d="M12 2a9 9 0 00-9 9c0 7 9 11 9 11s9-4 9-11a9 9 0 00-9-9zm0 4a3 3 0 013 3v2h-6V9a3 3 0 013-3zm-5 8v-1h10v1c0 3.3-2.7 6-5 6.8-2.3-.8-5-3.5-5-6.8z" fill="#38a169"/></svg>`,
+    // Runes.lol Gem Crystal
     runeslol: `<svg viewBox="0 0 24 24" width="13" height="13" fill="none"><path d="M12 2l7 7-7 13L5 9l7-7zm0 3.5L7.5 9.5 12 18l4.5-8.5L12 5.5z" fill="#9f7aea"/></svg>`,
+    // ZAR.gg Red Crosshair
     zargg: `<svg viewBox="0 0 24 24" width="13" height="13" fill="none"><path d="M12 2L4 7v10l8 5 8-5V7l-8-5zm0 3.5l5 3.2v6.6l-5 3.2-5-3.2V8.7l5-3.2zM11 8v3H8v2h3v3h2v-3h3v-2h-3V8h-2z" fill="#f56565"/></svg>`
 };
 
