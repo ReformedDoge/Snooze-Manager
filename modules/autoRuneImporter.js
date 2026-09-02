@@ -21,7 +21,7 @@ let showWidget = true;
 // QoL Options
 let widgetScale = 1.0; // 0.85 | 1.0 | 1.15
 let widgetOpacity = 0.96; // 0.60 - 1.0
-let autoCollapseOnApply = true;
+let autoCollapseOnApply = false;
 let playApplySound = true;
 let junglerSmiteHandling = true;
 let aramModeHandling = true;
@@ -208,7 +208,7 @@ function loadSettings() {
     // QoL settings
     widgetScale = Number(Utils.Store.get(MODULE_KEY, 'widgetScale')) || 1.0;
     widgetOpacity = Number(Utils.Store.get(MODULE_KEY, 'widgetOpacity')) || 0.96;
-    autoCollapseOnApply = Utils.Store.get(MODULE_KEY, 'autoCollapseOnApply') ?? true;
+    autoCollapseOnApply = Utils.Store.get(MODULE_KEY, 'autoCollapseOnApply') ?? false;
     playApplySound = Utils.Store.get(MODULE_KEY, 'playApplySound') ?? true;
     junglerSmiteHandling = Utils.Store.get(MODULE_KEY, 'junglerSmiteHandling') ?? true;
     aramModeHandling = Utils.Store.get(MODULE_KEY, 'aramModeHandling') ?? true;
@@ -1593,7 +1593,26 @@ function renderExtraSettings(container) {
                 </div>
             </div>
 
-            <!-- Row 3: Source Customizer -->
+            <!-- Row 3: Auto-Collapse on Apply & Audio Chime -->
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(200,170,110,0.15);border-radius:8px;padding:12px;display:flex;align-items:center;justify-content:space-between;">
+                    <div>
+                        <div style="font-size:13px;font-weight:700;color:#c8aa6e;margin-bottom:2px;">${t('Auto-Collapse on Apply')}</div>
+                        <div style="font-size:11px;color:#8a9aaa;">${t('Automatically collapse the widget to a mini badge after applying runes.')}</div>
+                    </div>
+                    <input type="checkbox" id="srw-auto-collapse-cb" ${autoCollapseOnApply ? 'checked' : ''} style="accent-color:#0ac8b9;width:18px;height:18px;cursor:pointer;">
+                </div>
+
+                <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(200,170,110,0.15);border-radius:8px;padding:12px;display:flex;align-items:center;justify-content:space-between;">
+                    <div>
+                        <div style="font-size:13px;font-weight:700;color:#c8aa6e;margin-bottom:2px;">${t('Audio Notification')}</div>
+                        <div style="font-size:11px;color:#8a9aaa;">${t('Play subtle chime when runes & spells are imported.')}</div>
+                    </div>
+                    <input type="checkbox" id="srw-sound-cb" ${playApplySound ? 'checked' : ''} style="accent-color:#0ac8b9;width:18px;height:18px;cursor:pointer;">
+                </div>
+            </div>
+
+            <!-- Row 4: Source Customizer -->
             <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(200,170,110,0.15);border-radius:8px;padding:12px;">
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
                     <div>
@@ -1611,6 +1630,18 @@ function renderExtraSettings(container) {
             </div>
         </div>
     `;
+
+    const collapseCb = container.querySelector('#srw-auto-collapse-cb');
+    collapseCb?.addEventListener('change', (e) => {
+        autoCollapseOnApply = e.target.checked;
+        Utils.Store.set(MODULE_KEY, 'autoCollapseOnApply', e.target.checked);
+    });
+
+    const soundCb = container.querySelector('#srw-sound-cb');
+    soundCb?.addEventListener('change', (e) => {
+        playApplySound = e.target.checked;
+        Utils.Store.set(MODULE_KEY, 'playApplySound', e.target.checked);
+    });
 
     const flashSel = container.querySelector('#srw-flash-key-select');
     flashSel?.addEventListener('change', (e) => {
