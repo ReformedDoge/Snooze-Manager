@@ -589,6 +589,7 @@ function injectFriendBadge(element, puuid) {
 
 export function load() {
     Utils.Debug.log('[AutoHonor] Module loaded.');
+    isEnabled = Utils.Store.get('autoHonor', 'enabled') || false;
 
     // Inject badge font to resist theme font overrides
     if (!document.getElementById('ah-badge-font')) {
@@ -668,26 +669,6 @@ export function load() {
         });
         hookCleanups.push(cleanup);
         Utils.Debug.log('[AutoHonor] Honor card badge hook registered.');
-    }
-}
-
-export function load() {
-    isEnabled = Utils.Store.get('autoHonor', 'enabled') || false;
-    const scoreOnCard = Utils.Store.get('autoHonor', 'showScoreOnCard') || false;
-    if (isEnabled || scoreOnCard) {
-        setupObservers();
-    }
-    const preferFriends = Utils.Store.get('autoHonor', 'preferFriends') || false;
-    if (Utils.LCU?.get && preferFriends) {
-        Utils.LCU.get('/lol-chat/v1/friends').then(friends => {
-            const set = new Set();
-            if (Array.isArray(friends)) {
-                for (const f of friends) {
-                    if (f?.puuid) set.add(f.puuid);
-                }
-            }
-            friendPuuidsCache = set;
-        }).catch(() => {});
     }
 }
 
