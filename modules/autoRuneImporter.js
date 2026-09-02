@@ -1,8 +1,8 @@
 /**
  * @name Snooze-AutoRuneImporter
- * @version 1.4.0
+ * @version 1.5.0
  * @author SnoozeFest - github@ReformedDoge
- * @description Comprehensive Multi-Source Auto Rune & Spells Importer supporting Riot, OP.GG, U.GG, Porofessor, Blitz.gg, LoLalytics, Mobalytics, ProBuilds, MetaSRC, Champion.gg, Runes.lol, and ZAR.gg with authentic brand logos and vector fallbacks.
+ * @description Comprehensive Multi-Source Auto Rune & Spells Importer supporting Riot, OP.GG, U.GG, Porofessor, Blitz.gg, LoLalytics, Mobalytics, ProBuilds, MetaSRC, Champion.gg, Runes.lol, and ZAR.gg with source customization and robust spell icons.
  * @link https://github.com/ReformedDoge
  */
 import Utils, { t } from './generalUtils.js';
@@ -15,6 +15,7 @@ let autoApplyOnLock = false;
 let importSpells = true;
 let flashKeyPreference = 'D'; // 'D' | 'F' | 'keep'
 let defaultSource = 'riot';
+let enabledSources = ['riot', 'opgg', 'ugg', 'porofessor', 'blitz', 'lolalytics', 'mobalytics', 'probuilds', 'metasrc', 'championgg', 'runeslol', 'zargg'];
 let showWidget = true;
 
 let sessionUnsub = null;
@@ -40,16 +41,16 @@ const PERK_STYLES = {
 };
 
 const SUMMONER_SPELLS = {
-    1: { id: 1, name: 'Cleanse', icon: '/lol-game-data/assets/v1/summoner-spells/1.png' },
-    3: { id: 3, name: 'Exhaust', icon: '/lol-game-data/assets/v1/summoner-spells/3.png' },
-    4: { id: 4, name: 'Flash', icon: '/lol-game-data/assets/v1/summoner-spells/4.png' },
-    6: { id: 6, name: 'Ghost', icon: '/lol-game-data/assets/v1/summoner-spells/6.png' },
-    7: { id: 7, name: 'Heal', icon: '/lol-game-data/assets/v1/summoner-spells/7.png' },
-    11: { id: 11, name: 'Smite', icon: '/lol-game-data/assets/v1/summoner-spells/11.png' },
-    12: { id: 12, name: 'Teleport', icon: '/lol-game-data/assets/v1/summoner-spells/12.png' },
-    14: { id: 14, name: 'Ignite', icon: '/lol-game-data/assets/v1/summoner-spells/14.png' },
-    21: { id: 21, name: 'Barrier', icon: '/lol-game-data/assets/v1/summoner-spells/21.png' },
-    32: { id: 32, name: 'Mark', icon: '/lol-game-data/assets/v1/summoner-spells/32.png' }
+    1: { id: 1, name: 'Cleanse', icon: '/lol-game-data/assets/v1/summoner-spells/1.png', cdn: 'https://ddragon.leagueoflegends.com/cdn/14.18.1/img/spell/SummonerBoost.png' },
+    3: { id: 3, name: 'Exhaust', icon: '/lol-game-data/assets/v1/summoner-spells/3.png', cdn: 'https://ddragon.leagueoflegends.com/cdn/14.18.1/img/spell/SummonerExhaust.png' },
+    4: { id: 4, name: 'Flash', icon: '/lol-game-data/assets/v1/summoner-spells/4.png', cdn: 'https://ddragon.leagueoflegends.com/cdn/14.18.1/img/spell/SummonerFlash.png' },
+    6: { id: 6, name: 'Ghost', icon: '/lol-game-data/assets/v1/summoner-spells/6.png', cdn: 'https://ddragon.leagueoflegends.com/cdn/14.18.1/img/spell/SummonerHaste.png' },
+    7: { id: 7, name: 'Heal', icon: '/lol-game-data/assets/v1/summoner-spells/7.png', cdn: 'https://ddragon.leagueoflegends.com/cdn/14.18.1/img/spell/SummonerHeal.png' },
+    11: { id: 11, name: 'Smite', icon: '/lol-game-data/assets/v1/summoner-spells/11.png', cdn: 'https://ddragon.leagueoflegends.com/cdn/14.18.1/img/spell/SummonerSmite.png' },
+    12: { id: 12, name: 'Teleport', icon: '/lol-game-data/assets/v1/summoner-spells/12.png', cdn: 'https://ddragon.leagueoflegends.com/cdn/14.18.1/img/spell/SummonerTeleport.png' },
+    14: { id: 14, name: 'Ignite', icon: '/lol-game-data/assets/v1/summoner-spells/14.png', cdn: 'https://ddragon.leagueoflegends.com/cdn/14.18.1/img/spell/SummonerDot.png' },
+    21: { id: 21, name: 'Barrier', icon: '/lol-game-data/assets/v1/summoner-spells/21.png', cdn: 'https://ddragon.leagueoflegends.com/cdn/14.18.1/img/spell/SummonerBarrier.png' },
+    32: { id: 32, name: 'Mark', icon: '/lol-game-data/assets/v1/summoner-spells/32.png', cdn: 'https://ddragon.leagueoflegends.com/cdn/14.18.1/img/spell/SummonerSnowball.png' }
 };
 
 // SVG Icons fallback for all 12 providers
@@ -89,7 +90,11 @@ function loadSettings() {
     importSpells = Utils.Store.get(MODULE_KEY, 'importSpells') ?? true;
     flashKeyPreference = Utils.Store.get(MODULE_KEY, 'flashKey') || 'D';
     defaultSource = Utils.Store.get(MODULE_KEY, 'source') || 'riot';
-    activeSource = defaultSource;
+    enabledSources = Utils.Store.get(MODULE_KEY, 'enabledSources') || ALL_SOURCES.map(s => s.id);
+    if (!Array.isArray(enabledSources) || enabledSources.length === 0) {
+        enabledSources = ALL_SOURCES.map(s => s.id);
+    }
+    activeSource = enabledSources.includes(defaultSource) ? defaultSource : (enabledSources[0] || 'riot');
     showWidget = Utils.Store.get(MODULE_KEY, 'showWidget') ?? true;
     isWidgetCollapsed = Utils.Store.get(MODULE_KEY, 'widgetCollapsed') ?? false;
 }
@@ -98,9 +103,13 @@ function getStyleInfo(styleId) {
     return PERK_STYLES[styleId] || { id: styleId, name: 'Runes', iconPath: '', color: '#c8aa6e' };
 }
 
-function getSpellIcon(spellId) {
-    if (!spellId) return '';
-    return SUMMONER_SPELLS[spellId]?.icon || `/lol-game-data/assets/v1/summoner-spells/${spellId}.png`;
+function getSpellData(spellId) {
+    if (!spellId) return { icon: '', cdn: '' };
+    return SUMMONER_SPELLS[spellId] || {
+        id: spellId,
+        icon: `/lol-game-data/assets/v1/summoner-spells/${spellId}.png`,
+        cdn: `https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/summoner-spells/${spellId}.png`
+    };
 }
 
 // ---------------------------------------------------------
@@ -698,10 +707,12 @@ function createWidgetStyles() {
         gap: 4px;
     }
     .srw-spell-mini {
-        width: 20px;
-        height: 20px;
+        width: 22px;
+        height: 22px;
         border-radius: 4px;
-        border: 1px solid rgba(255, 255, 255, 0.15);
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        object-fit: cover;
+        background: #111;
     }
     .srw-apply-btn {
         background: linear-gradient(180deg, rgba(200, 170, 110, 0.25), rgba(200, 170, 110, 0.1));
@@ -785,7 +796,12 @@ function renderWidget(champId, position, builds) {
 
     const isAutoOn = Utils.Store.get(MODULE_KEY, 'autoApplyOnLock') ?? autoApplyOnLock;
 
-    const sourcePillsHtml = ALL_SOURCES.map(src => {
+    const visibleSources = ALL_SOURCES.filter(s => enabledSources.includes(s.id));
+    if (!visibleSources.some(s => s.id === activeSource)) {
+        activeSource = visibleSources[0]?.id || 'riot';
+    }
+
+    const sourcePillsHtml = visibleSources.map(src => {
         const isActive = src.id === activeSource;
         const faviconUrl = `https://www.google.com/s2/favicons?domain=${src.domain}&sz=64`;
         return `
@@ -805,8 +821,8 @@ function renderWidget(champId, position, builds) {
             const prBadge = b.pickRate ? `<span>${b.pickRate}% Pick</span>` : '';
             const tagBadge = b.tag ? `<span class="srw-tag-badge">${b.tag}</span>` : '';
 
-            const spell1 = getSpellIcon(b.summonerSpell1);
-            const spell2 = getSpellIcon(b.summonerSpell2);
+            const spell1 = getSpellData(b.summonerSpell1);
+            const spell2 = getSpellData(b.summonerSpell2);
 
             return `
             <div class="srw-build-card ${isApplied ? 'applied' : ''}" data-build-id="${b.id}">
@@ -824,8 +840,8 @@ function renderWidget(champId, position, builds) {
                 </div>
                 <div class="srw-build-actions">
                     <div class="srw-spells-preview">
-                        ${spell1 ? `<img class="srw-spell-mini" src="${spell1}" title="Spell 1">` : ''}
-                        ${spell2 ? `<img class="srw-spell-mini" src="${spell2}" title="Spell 2">` : ''}
+                        ${spell1.icon ? `<img class="srw-spell-mini" src="${spell1.icon}" onerror="this.src='${spell1.cdn}'" title="${spell1.name || 'Spell 1'}">` : ''}
+                        ${spell2.icon ? `<img class="srw-spell-mini" src="${spell2.icon}" onerror="this.src='${spell2.cdn}'" title="${spell2.name || 'Spell 2'}">` : ''}
                     </div>
                     <button class="srw-apply-btn">${isApplied ? t('✓ Active') : t('Apply')}</button>
                 </div>
@@ -1011,8 +1027,21 @@ async function onChampSelectSession(session) {
 // ---------------------------------------------------------
 
 function renderExtraSettings(container) {
-    const sourceOptionsHtml = ALL_SOURCES.map(src => {
+    const visibleSources = ALL_SOURCES.filter(s => enabledSources.includes(s.id));
+    const sourceOptionsHtml = (visibleSources.length > 0 ? visibleSources : ALL_SOURCES).map(src => {
         return `<option value="${src.id}" ${defaultSource === src.id ? 'selected' : ''}>${src.name} (${src.desc})</option>`;
+    }).join('');
+
+    const sourceTogglesHtml = ALL_SOURCES.map(src => {
+        const isChecked = enabledSources.includes(src.id);
+        const faviconUrl = `https://www.google.com/s2/favicons?domain=${src.domain}&sz=64`;
+        return `
+            <label style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:6px;cursor:pointer;user-select:none;transition:border-color 0.15s;">
+                <input type="checkbox" class="srw-source-checkbox" data-source-id="${src.id}" ${isChecked ? 'checked' : ''} style="accent-color:#0ac8b9;cursor:pointer;">
+                <img src="${faviconUrl}" onerror="this.outerHTML='${src.svg.replace(/'/g, "\\'")}'" style="width:14px;height:14px;border-radius:2px;">
+                <span style="font-size:12px;font-weight:700;color:#f0e6d2;">${src.name}</span>
+            </label>
+        `;
     }).join('');
 
     container.innerHTML = `
@@ -1035,6 +1064,22 @@ function renderExtraSettings(container) {
                     </select>
                 </div>
             </div>
+
+            <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(200,170,110,0.15);border-radius:8px;padding:12px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                    <div>
+                        <div style="font-size:13px;font-weight:700;color:#c8aa6e;">${t('Enabled Meta Sources')}</div>
+                        <div style="font-size:11px;color:#8a9aaa;">${t('Choose which source tabs to display in the champ select widget.')}</div>
+                    </div>
+                    <div style="display:flex;gap:6px;">
+                        <button id="srw-select-all-btn" style="background:rgba(200,170,110,0.15);border:1px solid rgba(200,170,110,0.3);color:#f0e6d2;padding:2px 8px;border-radius:4px;font-size:10px;cursor:pointer;">${t('Select All')}</button>
+                        <button id="srw-deselect-all-btn" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:#8a9aaa;padding:2px 8px;border-radius:4px;font-size:10px;cursor:pointer;">${t('Clear')}</button>
+                    </div>
+                </div>
+                <div style="display:grid;grid-template-columns:repeat(auto-fill, minmax(130px, 1fr));gap:8px;">
+                    ${sourceTogglesHtml}
+                </div>
+            </div>
         </div>
     `;
 
@@ -1049,6 +1094,40 @@ function renderExtraSettings(container) {
         defaultSource = e.target.value;
         activeSource = e.target.value;
         Utils.Store.set(MODULE_KEY, 'source', e.target.value);
+    });
+
+    const cbs = container.querySelectorAll('.srw-source-checkbox');
+    const updateEnabledSources = () => {
+        const selected = [];
+        cbs.forEach(cb => {
+            if (cb.checked) selected.push(cb.getAttribute('data-source-id'));
+        });
+        enabledSources = selected.length > 0 ? selected : ['riot'];
+        Utils.Store.set(MODULE_KEY, 'enabledSources', enabledSources);
+        if (!enabledSources.includes(activeSource)) {
+            activeSource = enabledSources[0];
+        }
+        if (currentChampionId > 0 && widgetElement) {
+            renderWidget(currentChampionId, currentPosition, currentBuilds);
+        }
+    };
+
+    cbs.forEach(cb => {
+        cb.addEventListener('change', updateEnabledSources);
+    });
+
+    const selectAllBtn = container.querySelector('#srw-select-all-btn');
+    selectAllBtn?.addEventListener('click', (e) => {
+        e.preventDefault();
+        cbs.forEach(cb => cb.checked = true);
+        updateEnabledSources();
+    });
+
+    const deselectAllBtn = container.querySelector('#srw-deselect-all-btn');
+    deselectAllBtn?.addEventListener('click', (e) => {
+        e.preventDefault();
+        cbs.forEach((cb, idx) => cb.checked = idx === 0);
+        updateEnabledSources();
     });
 }
 
