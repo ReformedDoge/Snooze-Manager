@@ -63,7 +63,7 @@ const SUMMONER_SPELLS = {
     32: { id: 32, name: 'Mark', icon: '/lol-game-data/assets/v1/summoner-spells/32.png', cdn: 'https://ddragon.leagueoflegends.com/cdn/14.18.1/img/spell/SummonerSnowball.png' }
 };
 
-// Authentic official provider logos (Official Riot Games Fist & Blitz Hex Badge with transparent backgrounds)
+// Authentic official provider logos (Official League of Legends Gold Crest & Blitz Hex Badge with transparent backgrounds)
 export const ALL_SOURCES = [
     {
         id: 'riot',
@@ -71,7 +71,7 @@ export const ALL_SOURCES = [
         domain: 'leagueoflegends.com',
         desc: 'Riot Recommended (LCU)',
         badge: 'Official',
-        customHtml: `<svg viewBox="0 0 24 24" width="14" height="14" fill="#EB0029" style="flex-shrink:0;"><path d="M13.458.86 0 7.093l3.353 12.761 2.552-.313-.701-8.024.838-.373 1.447 8.202 4.361-.535-.775-8.857.83-.37 1.591 9.025 4.412-.542-.849-9.708.84-.374 1.74 9.87L24 17.318V3.5Zm.316 19.356.222 1.256L24 23.14v-4.18l-10.22 1.256Z"/></svg>`
+        customHtml: `<svg role="img" viewBox="0 0 24 24" width="14" height="14" fill="#c8aa6e" style="flex-shrink:0;"><title>League of Legends</title><path d="m1.912 0 1.212 2.474v19.053L1.912 24h14.73l1.337-4.682H8.33V0ZM12 1.516c-.913 0-1.798.112-2.648.312v1.74a9.738 9.738 0 0 1 2.648-.368c5.267 0 9.536 4.184 9.536 9.348a9.203 9.203 0 0 1-2.3 6.086l-.273.954-.602 2.112c2.952-1.993 4.89-5.335 4.89-9.122C23.25 6.468 18.213 1.516 12 1.516Zm0 2.673c-.924 0-1.814.148-2.648.414v13.713h8.817a8.246 8.246 0 0 0 2.36-5.768c0-4.617-3.818-8.359-8.529-8.359zM2.104 7.312A10.858 10.858 0 0 0 .75 12.576c0 1.906.492 3.7 1.355 5.266z"/></svg>`
     },
     {
         id: 'opgg',

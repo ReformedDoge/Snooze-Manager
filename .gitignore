@@ -3,3 +3,4 @@ update-contributors.py
 .serena/
 .agents/
 .mcp.json
+preview_*.html
