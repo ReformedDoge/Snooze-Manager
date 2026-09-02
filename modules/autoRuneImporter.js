@@ -1,8 +1,8 @@
 /**
  * @name Snooze-AutoRuneImporter
- * @version 2.3.0
+ * @version 2.4.0
  * @author SnoozeFest - github@ReformedDoge
- * @description Advanced Multi-Source Auto Rune & Spells Importer featuring 12 sources with authentic official brand logos (transparent Riot & Blitz, OP.GG, U.GG, Porofessor, etc.), position memory, widget scaling & opacity, smart auto-collapse, Hextech audio chime, jungler Smite auto-handling, and ARAM/Arena mode awareness.
+ * @description Advanced Multi-Source Auto Rune & Spells Importer featuring 12 sources with authentic brand logos (official Riot Games Fist in Riot Red, Blitz Hexagon, OP.GG, U.GG, Porofessor, etc.), position memory, widget scaling & opacity, smart auto-collapse, Hextech audio chime, jungler Smite auto-handling, and ARAM/Arena mode awareness.
  * @link https://github.com/ReformedDoge
  */
 import Utils, { t } from './generalUtils.js';
@@ -63,7 +63,7 @@ const SUMMONER_SPELLS = {
     32: { id: 32, name: 'Mark', icon: '/lol-game-data/assets/v1/summoner-spells/32.png', cdn: 'https://ddragon.leagueoflegends.com/cdn/14.18.1/img/spell/SummonerSnowball.png' }
 };
 
-// Authentic official provider logos (Transparent Official Riot Crest & Blitz Hex Badge)
+// Authentic official provider logos (Official Riot Games Fist & Blitz Hex Badge with transparent backgrounds)
 export const ALL_SOURCES = [
     {
         id: 'riot',
@@ -71,7 +71,7 @@ export const ALL_SOURCES = [
         domain: 'leagueoflegends.com',
         desc: 'Riot Recommended (LCU)',
         badge: 'Official',
-        customHtml: `<svg viewBox="0 0 110 70" width="15" height="13" fill="none" style="flex-shrink:0;"><path fill="#C8AA6E" d="M58 10.6C69.8 12.1 79 22.5 79 35.1c0 4.6-1.2 8.8-3.3 12.5h-6.4c1.2-1.5 2.2-3.2 3-5 1-2.4 1.5-4.9 1.5-7.5 0-9.7-7-17.7-16-19.2.2-1.8.4-3.6.2-5.3z"/><path fill="#C8AA6E" d="M31.3 47.5h27.2c-1 2.6-3 4.7-5.7 5.9l-.2.1H31.3v-6z"/><path fill="#F0E6D2" d="M31.3 16.4h6v25.1h11.4c1.9 0 3.7-.9 4.8-2.3V16.4h6.1v31.1H31.3V16.4z"/></svg>`
+        customHtml: `<svg viewBox="0 0 24 24" width="14" height="14" fill="#EB0029" style="flex-shrink:0;"><path d="M13.458.86 0 7.093l3.353 12.761 2.552-.313-.701-8.024.838-.373 1.447 8.202 4.361-.535-.775-8.857.83-.37 1.591 9.025 4.412-.542-.849-9.708.84-.374 1.74 9.87L24 17.318V3.5Zm.316 19.356.222 1.256L24 23.14v-4.18l-10.22 1.256Z"/></svg>`
     },
     {
         id: 'opgg',
