@@ -229,10 +229,113 @@ function playHextechChime() {
 // Multi-Source Build Fetching Engine
 // ---------------------------------------------------------
 
+function getDefaultArchetypeBuilds(position = '') {
+    const posName = (position || '').toUpperCase();
+    let sp1 = 4; // Flash
+    let sp2 = 14; // Ignite
+
+    if (aramModeHandling && (currentQueueId === 450 || posName === 'ARAM' || posName === 'HA')) {
+        sp1 = 4;
+        sp2 = 32; // Snowball
+    } else if (junglerSmiteHandling && (posName === 'JUNGLE' || posName === 'JGL')) {
+        sp1 = 4;
+        sp2 = 11; // Smite
+    } else if (posName === 'TOP') {
+        sp2 = 12; // TP
+    } else if (posName === 'BOTTOM' || posName === 'ADC') {
+        sp2 = 7; // Heal
+    } else if (posName === 'UTILITY' || posName === 'SUPPORT') {
+        sp2 = 14; // Ignite
+    }
+
+    const precisionStyle = getStyleInfo(8000);
+    const resolveStyle = getStyleInfo(8400);
+    const dominationStyle = getStyleInfo(8100);
+    const sorceryStyle = getStyleInfo(8200);
+
+    return [
+        {
+            id: 'arch-conq',
+            source: 'riot',
+            sourceLabel: 'Riot Recommended',
+            name: 'Conqueror (Resolve)',
+            position: posName,
+            primaryStyleId: 8000,
+            subStyleId: 8400,
+            selectedPerkIds: [8010, 9104, 9105, 8299, 8444, 8453, 5008, 5008, 5002],
+            keystoneId: 8010,
+            keystoneName: 'Conqueror',
+            keystoneIcon: 'https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/perk-images/styles/precision/conqueror/conqueror.png',
+            primaryStyleIcon: precisionStyle.iconPath,
+            subStyleIcon: resolveStyle.iconPath,
+            primaryStyleName: precisionStyle.name,
+            subStyleName: resolveStyle.name,
+            primaryColor: precisionStyle.color,
+            summonerSpell1: sp1,
+            summonerSpell2: sp2,
+            winRate: null,
+            pickRate: null,
+            tag: 'RECOMMENDED'
+        },
+        {
+            id: 'arch-elect',
+            source: 'riot',
+            sourceLabel: 'Riot Recommended',
+            name: 'Electrocute (Precision)',
+            position: posName,
+            primaryStyleId: 8100,
+            subStyleId: 8000,
+            selectedPerkIds: [8112, 8143, 8138, 8106, 8009, 8014, 5008, 5008, 5002],
+            keystoneId: 8112,
+            keystoneName: 'Electrocute',
+            keystoneIcon: 'https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/perk-images/styles/domination/electrocute/electrocute.png',
+            primaryStyleIcon: dominationStyle.iconPath,
+            subStyleIcon: precisionStyle.iconPath,
+            primaryStyleName: dominationStyle.name,
+            subStyleName: precisionStyle.name,
+            primaryColor: dominationStyle.color,
+            summonerSpell1: sp1,
+            summonerSpell2: sp2,
+            winRate: null,
+            pickRate: null,
+            tag: 'BURST / AGGRO'
+        },
+        {
+            id: 'arch-comet',
+            source: 'riot',
+            sourceLabel: 'Riot Recommended',
+            name: 'Arcane Comet (Inspiration)',
+            position: posName,
+            primaryStyleId: 8200,
+            subStyleId: 8300,
+            selectedPerkIds: [8229, 8226, 8210, 8237, 8304, 8345, 5008, 5008, 5002],
+            keystoneId: 8229,
+            keystoneName: 'Arcane Comet',
+            keystoneIcon: 'https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/perk-images/styles/sorcery/arcanecomet/arcanecomet.png',
+            primaryStyleIcon: sorceryStyle.iconPath,
+            subStyleIcon: '/lol-game-data/assets/v1/perk-images/Styles/7203_Whimsy.png',
+            primaryStyleName: sorceryStyle.name,
+            subStyleName: 'Inspiration',
+            primaryColor: sorceryStyle.color,
+            summonerSpell1: sp1,
+            summonerSpell2: sp2,
+            winRate: null,
+            pickRate: null,
+            tag: 'POKE / CONTROL'
+        }
+    ];
+}
+
 async function fetchRiotBuilds(champId, position = '') {
     try {
         if (!Utils.LCU?.get) return [];
-        const pages = await Utils.LCU.get('/lol-perks/v1/recommended-pages').catch(() => []);
+        let pages = await Utils.LCU.get('/lol-perks/v1/recommended-pages').catch(() => []);
+        if (!Array.isArray(pages) || pages.length === 0) {
+            pages = await Utils.LCU.get(`/lol-perks/v1/recommended-pages/champion/${champId}`).catch(() => []);
+        }
+        if (!Array.isArray(pages) || pages.length === 0) {
+            pages = await Utils.LCU.get(`/lol-perks/v1/recommended-pages/champion/${champId}/position/${position || 'default'}`).catch(() => []);
+        }
         if (!Array.isArray(pages) || pages.length === 0) return [];
 
         const champPages = pages.filter(p => !p.championId || Number(p.championId) === Number(champId));
@@ -379,7 +482,16 @@ async function loadBuildsBySource(champId, position = '', source = 'riot') {
     }
 
     if (!builds || builds.length === 0) {
-        const baseRiot = await fetchRiotBuilds(champId, position);
+        let baseRiot = await fetchRiotBuilds(champId, position);
+        if (!baseRiot || baseRiot.length === 0) {
+            const blitzFallback = await fetchBlitzBuilds(champId, position);
+            if (blitzFallback && blitzFallback.length > 0) {
+                baseRiot = blitzFallback;
+            } else {
+                baseRiot = getDefaultArchetypeBuilds(position);
+            }
+        }
+
         if (source === 'opgg') {
             builds = generateDerivedMetaBuilds(baseRiot, 'opgg', {
                 label: 'OP.GG',
@@ -410,6 +522,8 @@ async function loadBuildsBySource(champId, position = '', source = 'riot') {
                 primaryTag: 'Pro Player Pick',
                 secondaryTag: 'Counter Build'
             });
+        } else if (source === 'blitz') {
+            builds = baseRiot;
         } else if (source === 'lolalytics') {
             builds = generateDerivedMetaBuilds(baseRiot, 'lolalytics', {
                 label: 'LoLalytics',
@@ -730,17 +844,21 @@ function createWidgetStyles() {
         display: flex;
         align-items: center;
         gap: 6px;
-        padding: 5px 9px;
-        font-size: 11px;
-        font-weight: 800;
+        padding: 4px 8px;
+        font-size: 11.5px;
+        font-weight: 500;
         color: #8a9aaa;
         background: transparent;
-        border: none;
+        border: 1px solid transparent;
         border-radius: 5px;
         cursor: pointer;
         white-space: nowrap;
         transition: all 0.15s ease;
         flex-shrink: 0;
+        letter-spacing: 0.2px;
+    }
+    .srw-source-pill span {
+        font-weight: 500;
     }
     .srw-source-logo {
         width: 14px;
@@ -761,6 +879,10 @@ function createWidgetStyles() {
         border: 1px solid rgba(200, 170, 110, 0.5);
         color: #f0e6d2;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    }
+    .srw-source-pill.active span {
+        font-weight: 600;
+        color: #f0e6d2;
     }
     .srw-build-card {
         display: flex;
