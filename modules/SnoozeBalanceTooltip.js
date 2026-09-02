@@ -176,16 +176,16 @@ function buildStatsHtml(stats) {
             displayValue = (percentChange >= 0 ? '+' : '') + percentChange.toFixed(1) + '%';
         }
 
-        const color = isBuff ? '#5bbd72' : '#e84749';
-        const icon = `<div style="width:18px; height:18px; margin-right:10px; display:inline-flex; align-items:center; opacity:0.9;">${iconSvg}</div>`;
+        const color = isBuff ? '#0ac8b9' : '#e84749';
+        const icon = `<div style="width:16px; height:16px; margin-right:8px; display:inline-flex; align-items:center; opacity:0.9;">${iconSvg}</div>`;
 
         return `
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; font-size:13px; color:#a09b8c;">
-            <div style="display:flex; align-items:center;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; font-size:12px; font-weight:500; color:#c8aa6e; font-family:'Spiegel', var(--font-body), 'Segoe UI', -apple-system, sans-serif;">
+            <div style="display:flex; align-items:center; color:#f0e6d2;">
                 ${icon}
                 <span>${label}</span>
             </div>
-            <span style="color:${color}; font-weight:bold; font-family:var(--font-body); margin-left:24px;">${displayValue}</span>
+            <span style="color:${color}; font-weight:700; font-family:'Spiegel', var(--font-body), 'Segoe UI', sans-serif; margin-left:20px; font-size:12px; letter-spacing:0.02em;">${displayValue}</span>
         </div>`;
     }).join('');
 }
@@ -197,13 +197,13 @@ let ttRoot = null,
 function createCustomTooltip() {
     if (ttRoot) return;
     ttRoot = document.createElement('div');
-    ttRoot.style.cssText = 'position:fixed; z-index:19001; background:#1a1c21; border:1px solid #785a28; border-radius:2px; pointer-events:none; opacity:0; transition:opacity 0.1s; box-shadow:0 0 12px rgba(0,0,0,0.8); min-width:240px;';
+    ttRoot.style.cssText = 'position:fixed; z-index:19001; background:rgba(1, 10, 19, 0.95); border:1px solid rgba(200, 170, 110, 0.45); border-radius:4px; pointer-events:none; opacity:0; transition:opacity 0.15s ease; box-shadow:0 8px 24px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.06); backdrop-filter:blur(12px); min-width:240px; font-family:"Spiegel", var(--font-body), "Segoe UI", -apple-system, sans-serif; -webkit-font-smoothing:antialiased;';
     const body = document.createElement('div');
-    body.style.cssText = 'padding:16px 20px;';
+    body.style.cssText = 'padding:14px 18px;';
     ttCaption = document.createElement('div');
-    ttCaption.style.cssText = 'color:#f0e6d2; font-size:15px; font-weight:bold; letter-spacing:.075em; line-height:20px; text-transform:uppercase; margin-bottom:12px; border-bottom:1px solid #3e2e13; padding-bottom:8px;';
+    ttCaption.style.cssText = 'color:#f0e6d2; font-family:"BeaufortforLOL", "Spiegel", var(--font-display), "Segoe UI", sans-serif; font-size:14px; font-weight:700; letter-spacing:0.08em; line-height:20px; text-transform:uppercase; margin-bottom:10px; border-bottom:1px solid rgba(200,170,110,0.25); padding-bottom:6px;';
     ttContent = document.createElement('div');
-    ttContent.style.cssText = 'display:flex; flex-direction:column;';
+    ttContent.style.cssText = 'display:flex; flex-direction:column; font-family:"Spiegel", var(--font-body), "Segoe UI", sans-serif;';
     body.appendChild(ttCaption);
     body.appendChild(ttContent);
     ttRoot.appendChild(body);
