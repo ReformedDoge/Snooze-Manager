@@ -1,8 +1,8 @@
 /**
  * @name Snooze-AutoRuneImporter
- * @version 2.0.0
+ * @version 2.1.0
  * @author SnoozeFest - github@ReformedDoge
- * @description Advanced Multi-Source Auto Rune & Spells Importer featuring 12 sources, position memory, widget scaling & opacity, smart auto-collapse, Hextech audio chime, jungler Smite auto-handling, and ARAM/Arena mode awareness.
+ * @description Advanced Multi-Source Auto Rune & Spells Importer featuring 12 sources with 100% transparent vector brand logos, position memory, widget scaling & opacity, smart auto-collapse, Hextech audio chime, jungler Smite auto-handling, and ARAM/Arena mode awareness.
  * @link https://github.com/ReformedDoge
  */
 import Utils, { t } from './generalUtils.js';
@@ -18,7 +18,7 @@ let defaultSource = 'riot';
 let enabledSources = ['riot', 'opgg', 'ugg', 'porofessor', 'blitz', 'lolalytics', 'mobalytics', 'probuilds', 'metasrc', 'championgg', 'runeslol', 'zargg'];
 let showWidget = true;
 
-// New QoL Options
+// QoL Options
 let widgetScale = 1.0; // 0.85 | 1.0 | 1.15
 let widgetOpacity = 0.96; // 0.60 - 1.0
 let autoCollapseOnApply = true;
@@ -63,35 +63,35 @@ const SUMMONER_SPELLS = {
     32: { id: 32, name: 'Mark', icon: '/lol-game-data/assets/v1/summoner-spells/32.png', cdn: 'https://ddragon.leagueoflegends.com/cdn/14.18.1/img/spell/SummonerSnowball.png' }
 };
 
-// SVG Icons fallback for all 12 providers
+// 100% Transparent, crisp SVG vector icons for all 12 providers (zero white box backgrounds)
 const SOURCE_SVGS = {
-    riot: `<svg viewBox="0 0 24 24" width="13" height="13" fill="#d92323"><path d="M13 2L3 14h7v8l11-12h-8z"/></svg>`,
-    opgg: `<svg viewBox="0 0 24 24" width="13" height="13" fill="#5383e8"><rect width="20" height="20" x="2" y="2" rx="6"/><path fill="#fff" d="M7.5 7a3 3 0 000 6 3 3 0 000-6zm0 1.6a1.4 1.4 0 110 2.8 1.4 1.4 0 010-2.8zm6.5-1.6a3 3 0 000 6 3 3 0 000-6zm0 1.6a1.4 1.4 0 110 2.8 1.4 1.4 0 010-2.8z"/></svg>`,
-    ugg: `<svg viewBox="0 0 24 24" width="13" height="13" fill="#805ad5"><rect width="20" height="20" x="2" y="2" rx="6"/><path fill="#fff" d="M7 6v6a5 5 0 0010 0V6h-2.8v6a2.2 2.2 0 01-4.4 0V6H7z"/></svg>`,
-    porofessor: `<svg viewBox="0 0 24 24" width="13" height="13" fill="#e2a738"><circle cx="12" cy="12" r="10"/><path fill="#111" d="M8 9a1.5 1.5 0 113 0 1.5 1.5 0 01-3 0zm5 0a1.5 1.5 0 113 0 1.5 1.5 0 01-3 0zm-5 5c1.5 2 4.5 2 6 0"/></svg>`,
-    blitz: `<svg viewBox="0 0 24 24" width="13" height="13" fill="#e53e3e"><path d="M12 2l8 4.5v11L12 22l-8-4.5v-11L12 2zm1 4.5l-5 6.5h4v5l5-6.5h-4v-5z"/></svg>`,
-    lolalytics: `<svg viewBox="0 0 24 24" width="13" height="13" fill="#0ac8b9"><path d="M9 3v2h1v5l-4.5 7.5A2 2 0 007.2 21h9.6a2 2 0 001.7-3.5L14 10V5h1V3H9zm2 2h2v5.5l.3.5 3.7 6.2a.5.5 0 01-.4.8H7.4a.5.5 0 01-.4-.8l3.7-6.2.3-.5V5z"/></svg>`,
-    mobalytics: `<svg viewBox="0 0 24 24" width="13" height="13" fill="#3182ce"><path d="M12 2l8 4.5v11L12 22l-8-4.5v-11L12 2zm0 3.2L6 8.6v6.8l6 3.4 6-3.4V8.6L12 5.2z"/></svg>`,
-    probuilds: `<svg viewBox="0 0 24 24" width="13" height="13" fill="#c8aa6e"><path d="M6 3h12v3h2a3 3 0 013 3v2a3 3 0 01-3 3h-1.2A7 7 0 0113 18.8V21h3v2H8v-2h3v-2.2A7 7 0 015.2 14H4a3 3 0 01-3-3V9a3 3 0 013-3h2V3zm-2 5H4a1 1 0 00-1 1v2a1 1 0 001 1h2V8zm16 0h-2v4h2a1 1 0 001-1V9a1 1 0 00-1-1z"/></svg>`,
-    metasrc: `<svg viewBox="0 0 24 24" width="13" height="13" fill="#dd6b20"><circle cx="12" cy="12" r="10" fill="none" stroke="#dd6b20" stroke-width="2"/><circle cx="12" cy="12" r="6" fill="none" stroke="#dd6b20" stroke-width="2"/><circle cx="12" cy="12" r="2.5" fill="#dd6b20"/></svg>`,
-    championgg: `<svg viewBox="0 0 24 24" width="13" height="13" fill="#38a169"><path d="M12 2a9 9 0 00-9 9c0 7 9 11 9 11s9-4 9-11a9 9 0 00-9-9zm0 4a3 3 0 013 3v2h-6V9a3 3 0 013-3zm-5 8v-1h10v1c0 3.3-2.7 6-5 6.8-2.3-.8-5-3.5-5-6.8z"/></svg>`,
-    runeslol: `<svg viewBox="0 0 24 24" width="13" height="13" fill="#9f7aea"><path d="M12 2l7 7-7 13L5 9l7-7zm0 3.5L7.5 9.5 12 18l4.5-8.5L12 5.5z"/></svg>`,
-    zargg: `<svg viewBox="0 0 24 24" width="13" height="13" fill="#f56565"><path d="M12 2L4 7v10l8 5 8-5V7l-8-5zm0 3.5l5 3.2v6.6l-5 3.2-5-3.2V8.7l5-3.2zM11 8v3H8v2h3v3h2v-3h3v-2h-3V8h-2z"/></svg>`
+    riot: `<svg viewBox="0 0 24 24" width="13" height="13" fill="none"><path d="M13.5 2L3 14h7v8l10.5-12h-7z" fill="#eb0029"/></svg>`,
+    opgg: `<svg viewBox="0 0 24 24" width="13" height="13" fill="none"><rect width="20" height="20" x="2" y="2" rx="6" fill="#5383e8"/><path fill="#fff" d="M7.5 7a3 3 0 000 6 3 3 0 000-6zm0 1.6a1.4 1.4 0 110 2.8 1.4 1.4 0 010-2.8zm6.5-1.6a3 3 0 000 6 3 3 0 000-6zm0 1.6a1.4 1.4 0 110 2.8 1.4 1.4 0 010-2.8z"/></svg>`,
+    ugg: `<svg viewBox="0 0 24 24" width="13" height="13" fill="none"><rect width="20" height="20" x="2" y="2" rx="6" fill="#805ad5"/><path fill="#fff" d="M7 6v6a5 5 0 0010 0V6h-2.8v6a2.2 2.2 0 01-4.4 0V6H7z"/></svg>`,
+    porofessor: `<svg viewBox="0 0 24 24" width="13" height="13" fill="none"><circle cx="12" cy="12" r="10" fill="#e2a738"/><path fill="#111" d="M8 9a1.5 1.5 0 113 0 1.5 1.5 0 01-3 0zm5 0a1.5 1.5 0 113 0 1.5 1.5 0 01-3 0zm-5 5c1.5 2 4.5 2 6 0"/></svg>`,
+    blitz: `<svg viewBox="0 0 24 24" width="13" height="13" fill="none"><path d="M12 2L4 7v10l8 5 8-5V7l-8-5zm1 5.5l-5 6.5h4v5l5-6.5h-4v-5z" fill="#f03838"/></svg>`,
+    lolalytics: `<svg viewBox="0 0 24 24" width="13" height="13" fill="none"><path d="M9 3v2h1v5l-4.5 7.5A2 2 0 007.2 21h9.6a2 2 0 001.7-3.5L14 10V5h1V3H9zm2 2h2v5.5l.3.5 3.7 6.2a.5.5 0 01-.4.8H7.4a.5.5 0 01-.4-.8l3.7-6.2.3-.5V5z" fill="#0ac8b9"/></svg>`,
+    mobalytics: `<svg viewBox="0 0 24 24" width="13" height="13" fill="none"><path d="M12 2l8 4.5v11L12 22l-8-4.5v-11L12 2zm0 3.2L6 8.6v6.8l6 3.4 6-3.4V8.6L12 5.2z" fill="#3182ce"/></svg>`,
+    probuilds: `<svg viewBox="0 0 24 24" width="13" height="13" fill="none"><path d="M6 3h12v3h2a3 3 0 013 3v2a3 3 0 01-3 3h-1.2A7 7 0 0113 18.8V21h3v2H8v-2h3v-2.2A7 7 0 015.2 14H4a3 3 0 01-3-3V9a3 3 0 013-3h2V3zm-2 5H4a1 1 0 00-1 1v2a1 1 0 001 1h2V8zm16 0h-2v4h2a1 1 0 001-1V9a1 1 0 00-1-1z" fill="#c8aa6e"/></svg>`,
+    metasrc: `<svg viewBox="0 0 24 24" width="13" height="13" fill="none"><circle cx="12" cy="12" r="10" stroke="#dd6b20" stroke-width="2"/><circle cx="12" cy="12" r="6" stroke="#dd6b20" stroke-width="2"/><circle cx="12" cy="12" r="2.5" fill="#dd6b20"/></svg>`,
+    championgg: `<svg viewBox="0 0 24 24" width="13" height="13" fill="none"><path d="M12 2a9 9 0 00-9 9c0 7 9 11 9 11s9-4 9-11a9 9 0 00-9-9zm0 4a3 3 0 013 3v2h-6V9a3 3 0 013-3zm-5 8v-1h10v1c0 3.3-2.7 6-5 6.8-2.3-.8-5-3.5-5-6.8z" fill="#38a169"/></svg>`,
+    runeslol: `<svg viewBox="0 0 24 24" width="13" height="13" fill="none"><path d="M12 2l7 7-7 13L5 9l7-7zm0 3.5L7.5 9.5 12 18l4.5-8.5L12 5.5z" fill="#9f7aea"/></svg>`,
+    zargg: `<svg viewBox="0 0 24 24" width="13" height="13" fill="none"><path d="M12 2L4 7v10l8 5 8-5V7l-8-5zm0 3.5l5 3.2v6.6l-5 3.2-5-3.2V8.7l5-3.2zM11 8v3H8v2h3v3h2v-3h3v-2h-3V8h-2z" fill="#f56565"/></svg>`
 };
 
 export const ALL_SOURCES = [
-    { id: 'riot', name: 'Riot', domain: 'leagueoflegends.com', desc: 'Riot Recommended (LCU)', badge: 'Official', svg: SOURCE_SVGS.riot },
-    { id: 'opgg', name: 'OP.GG', domain: 'op.gg', desc: 'OP.GG Emerald+ Meta', badge: 'KR / High Elo', svg: SOURCE_SVGS.opgg },
-    { id: 'ugg', name: 'U.GG', domain: 'u.gg', desc: 'U.GG Tier List Meta', badge: 'Tier List', svg: SOURCE_SVGS.ugg },
-    { id: 'porofessor', name: 'Porofessor', domain: 'porofessor.gg', desc: 'Porofessor Pro Builds', badge: 'Pro Play', svg: SOURCE_SVGS.porofessor },
-    { id: 'blitz', name: 'Blitz', domain: 'blitz.gg', desc: 'Blitz.gg Auto Builds', badge: 'Esports', svg: SOURCE_SVGS.blitz },
-    { id: 'lolalytics', name: 'LoLalytics', domain: 'lolalytics.com', desc: 'LoLalytics Diamond+ Analytics', badge: 'Deep Stats', svg: SOURCE_SVGS.lolalytics },
-    { id: 'mobalytics', name: 'Mobalytics', domain: 'mobalytics.gg', desc: 'Mobalytics GPI Meta Tier', badge: 'Meta Tier', svg: SOURCE_SVGS.mobalytics },
-    { id: 'probuilds', name: 'ProBuilds', domain: 'probuilds.net', desc: 'Pro Player SoloQ Builds', badge: 'Pro Match', svg: SOURCE_SVGS.probuilds },
-    { id: 'metasrc', name: 'MetaSRC', domain: 'metasrc.com', desc: 'MetaSRC Ranked & ARAM Engine', badge: 'Meta Engine', svg: SOURCE_SVGS.metasrc },
-    { id: 'championgg', name: 'Champion.gg', domain: 'champion.gg', desc: 'Champion.gg Statistical Aggregator', badge: 'Aggregator', svg: SOURCE_SVGS.championgg },
-    { id: 'runeslol', name: 'Runes.lol', domain: 'runes.lol', desc: 'Runes.lol OTP Specialty Builds', badge: 'OTP Pick', svg: SOURCE_SVGS.runeslol },
-    { id: 'zargg', name: 'ZAR.gg', domain: 'zar.gg', desc: 'ZAR.gg Tactical In-Game Builds', badge: 'Tactical', svg: SOURCE_SVGS.zargg }
+    { id: 'riot', name: 'Riot', desc: 'Riot Recommended (LCU)', badge: 'Official', svg: SOURCE_SVGS.riot },
+    { id: 'opgg', name: 'OP.GG', desc: 'OP.GG Emerald+ Meta', badge: 'KR / High Elo', svg: SOURCE_SVGS.opgg },
+    { id: 'ugg', name: 'U.GG', desc: 'U.GG Tier List Meta', badge: 'Tier List', svg: SOURCE_SVGS.ugg },
+    { id: 'porofessor', name: 'Porofessor', desc: 'Porofessor Pro Builds', badge: 'Pro Play', svg: SOURCE_SVGS.porofessor },
+    { id: 'blitz', name: 'Blitz', desc: 'Blitz.gg Auto Builds', badge: 'Esports', svg: SOURCE_SVGS.blitz },
+    { id: 'lolalytics', name: 'LoLalytics', desc: 'LoLalytics Diamond+ Analytics', badge: 'Deep Stats', svg: SOURCE_SVGS.lolalytics },
+    { id: 'mobalytics', name: 'Mobalytics', desc: 'Mobalytics GPI Meta Tier', badge: 'Meta Tier', svg: SOURCE_SVGS.mobalytics },
+    { id: 'probuilds', name: 'ProBuilds', desc: 'Pro Player SoloQ Builds', badge: 'Pro Match', svg: SOURCE_SVGS.probuilds },
+    { id: 'metasrc', name: 'MetaSRC', desc: 'MetaSRC Ranked & ARAM Engine', badge: 'Meta Engine', svg: SOURCE_SVGS.metasrc },
+    { id: 'championgg', name: 'Champion.gg', desc: 'Champion.gg Statistical Aggregator', badge: 'Aggregator', svg: SOURCE_SVGS.championgg },
+    { id: 'runeslol', name: 'Runes.lol', desc: 'Runes.lol OTP Specialty Builds', badge: 'OTP Pick', svg: SOURCE_SVGS.runeslol },
+    { id: 'zargg', name: 'ZAR.gg', desc: 'ZAR.gg Tactical In-Game Builds', badge: 'Tactical', svg: SOURCE_SVGS.zargg }
 ];
 
 function loadSettings() {
@@ -131,10 +131,6 @@ function getSpellData(spellId) {
     };
 }
 
-// ---------------------------------------------------------
-// Synthetic Hextech Audio Chime
-// ---------------------------------------------------------
-
 function playHextechChime() {
     if (!playApplySound) return;
     try {
@@ -147,7 +143,6 @@ function playHextechChime() {
         const gain = ctx.createGain();
 
         osc.type = 'sine';
-        // Tri-tone harmonic arpeggio: C5 -> E5 -> G5 (523Hz -> 659Hz -> 784Hz)
         osc.frequency.setValueAtTime(523.25, now);
         osc.frequency.exponentialRampToValueAtTime(659.25, now + 0.08);
         osc.frequency.exponentialRampToValueAtTime(783.99, now + 0.16);
@@ -162,9 +157,7 @@ function playHextechChime() {
         osc.start(now);
         osc.stop(now + 0.36);
         setTimeout(() => ctx.close(), 500);
-    } catch (e) {
-        // audio context blocked or unsupported
-    }
+    } catch (e) {}
 }
 
 // ---------------------------------------------------------
@@ -195,7 +188,6 @@ async function fetchRiotBuilds(champId, position = '') {
             let sp1 = page.summonerSpell1 || page.spell1Id || 4;
             let sp2 = page.summonerSpell2 || page.spell2Id || 14;
 
-            // ARAM mode override if detected
             if (aramModeHandling && (currentQueueId === 450 || posName === 'ARAM' || posName === 'HA')) {
                 sp1 = 4; // Flash
                 sp2 = 32; // Snowball/Mark
@@ -685,13 +677,6 @@ function createWidgetStyles() {
         transition: all 0.15s ease;
         flex-shrink: 0;
     }
-    .srw-source-logo {
-        width: 14px;
-        height: 14px;
-        border-radius: 3px;
-        object-fit: contain;
-        flex-shrink: 0;
-    }
     .srw-source-pill svg {
         flex-shrink: 0;
     }
@@ -908,10 +893,9 @@ function renderWidget(champId, position, builds) {
 
     const sourcePillsHtml = visibleSources.map(src => {
         const isActive = src.id === activeSource;
-        const faviconUrl = `https://www.google.com/s2/favicons?domain=${src.domain}&sz=64`;
         return `
             <button class="srw-source-pill ${isActive ? 'active' : ''}" data-src="${src.id}" title="${src.desc}">
-                <img class="srw-source-logo" src="${faviconUrl}" onerror="this.outerHTML='${src.svg.replace(/'/g, "\\'")}'" alt="${src.name}">
+                ${src.svg}
                 <span>${src.name}</span>
             </button>`;
     }).join('');
@@ -1155,11 +1139,10 @@ function renderExtraSettings(container) {
 
     const sourceTogglesHtml = ALL_SOURCES.map(src => {
         const isChecked = enabledSources.includes(src.id);
-        const faviconUrl = `https://www.google.com/s2/favicons?domain=${src.domain}&sz=64`;
         return `
             <label style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:6px;cursor:pointer;user-select:none;transition:border-color 0.15s;">
                 <input type="checkbox" class="srw-source-checkbox" data-source-id="${src.id}" ${isChecked ? 'checked' : ''} style="accent-color:#0ac8b9;cursor:pointer;">
-                <img src="${faviconUrl}" onerror="this.outerHTML='${src.svg.replace(/'/g, "\\'")}'" style="width:14px;height:14px;border-radius:2px;">
+                ${src.svg}
                 <span style="font-size:12px;font-weight:700;color:#f0e6d2;">${src.name}</span>
             </label>
         `;
