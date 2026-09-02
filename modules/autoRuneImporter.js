@@ -262,7 +262,7 @@ function getDefaultArchetypeBuilds(position = '') {
             position: posName,
             primaryStyleId: 8000,
             subStyleId: 8400,
-            selectedPerkIds: [8010, 9104, 9105, 8299, 8444, 8453, 5008, 5008, 5002],
+            selectedPerkIds: [8010, 9104, 9105, 8299, 8444, 8453, 5008, 5008, 5011],
             keystoneId: 8010,
             keystoneName: 'Conqueror',
             keystoneIcon: 'https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/perk-images/styles/precision/conqueror/conqueror.png',
@@ -285,7 +285,7 @@ function getDefaultArchetypeBuilds(position = '') {
             position: posName,
             primaryStyleId: 8100,
             subStyleId: 8000,
-            selectedPerkIds: [8112, 8143, 8138, 8106, 8009, 8014, 5008, 5008, 5002],
+            selectedPerkIds: [8112, 8143, 8138, 8106, 8009, 8014, 5008, 5008, 5011],
             keystoneId: 8112,
             keystoneName: 'Electrocute',
             keystoneIcon: 'https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/perk-images/styles/domination/electrocute/electrocute.png',
@@ -308,7 +308,7 @@ function getDefaultArchetypeBuilds(position = '') {
             position: posName,
             primaryStyleId: 8200,
             subStyleId: 8300,
-            selectedPerkIds: [8229, 8226, 8210, 8237, 8304, 8345, 5008, 5008, 5002],
+            selectedPerkIds: [8229, 8226, 8210, 8237, 8304, 8345, 5008, 5008, 5011],
             keystoneId: 8229,
             keystoneName: 'Arcane Comet',
             keystoneIcon: 'https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/perk-images/styles/sorcery/arcanecomet/arcanecomet.png',
@@ -607,46 +607,81 @@ async function loadBuildsBySource(champId, position = '', source = 'riot') {
 // Applying Runes and Summoner Spells
 // ---------------------------------------------------------
 
+function sanitizePerkIds(perkIds) {
+    if (!Array.isArray(perkIds)) return [8010, 9104, 9105, 8299, 8444, 8453, 5008, 5008, 5011];
+    let sanitized = perkIds.map(p => {
+        const id = Number(p);
+        if (id === 5002 || id === 5003) return 5011; // replace deprecated Armor/MR shards with Flat Health
+        return id;
+    }).filter(id => id > 0);
+
+    const defaultShards = [5008, 5008, 5011];
+    while (sanitized.length < 9) {
+        sanitized.push(defaultShards[Math.max(0, sanitized.length - 6)] || 5011);
+    }
+    return sanitized.slice(0, 9);
+}
+
 async function applyRunePage(build) {
     if (!Utils.LCU || !build || !build.selectedPerkIds?.length) return false;
 
     try {
+        const cleanPerks = sanitizePerkIds(build.selectedPerkIds);
         const pageName = `Snooze: ${build.name.slice(0, 18)}`;
         const payload = {
             name: pageName,
-            primaryStyleId: build.primaryStyleId,
-            subStyleId: build.subStyleId,
-            selectedPerkIds: build.selectedPerkIds,
-            current: true
+            primaryStyleId: Number(build.primaryStyleId),
+            subStyleId: Number(build.subStyleId),
+            selectedPerkIds: cleanPerks,
+            current: true,
+            isActive: true,
+            isDeletable: true,
+            isEditable: true
         };
 
         const currentPage = await Utils.LCU.get('/lol-perks/v1/currentpage').catch(() => null);
-        if (currentPage && (currentPage.isEditable || currentPage.isCustom)) {
-            await Utils.LCU.put(`/lol-perks/v1/pages/${currentPage.id}`, payload);
-            Utils.Debug.log(`[AutoRune] Updated active perk page ${currentPage.id}`);
-            return true;
+        if (currentPage && (currentPage.isEditable || currentPage.isCustom) && currentPage.id) {
+            const res = await Utils.LCU.put(`/lol-perks/v1/pages/${currentPage.id}`, payload).catch(() => null);
+            if (res) {
+                await Utils.LCU.put('/lol-perks/v1/currentpage', { id: currentPage.id }).catch(() => {});
+                Utils.Debug.log(`[AutoRune] Updated active perk page ${currentPage.id}`);
+                return true;
+            }
         }
 
         const pages = await Utils.LCU.get('/lol-perks/v1/pages').catch(() => []);
-        const editablePage = Array.isArray(pages) ? pages.find(p => p.isEditable || p.isCustom) : null;
+        const editablePage = Array.isArray(pages) ? pages.find(p => (p.isEditable || p.isCustom) && p.id) : null;
 
         if (editablePage) {
-            await Utils.LCU.put(`/lol-perks/v1/pages/${editablePage.id}`, payload);
-            Utils.Debug.log(`[AutoRune] Updated editable perk page ${editablePage.id}`);
+            const res = await Utils.LCU.put(`/lol-perks/v1/pages/${editablePage.id}`, payload).catch(() => null);
+            if (res) {
+                await Utils.LCU.put('/lol-perks/v1/currentpage', { id: editablePage.id }).catch(() => {});
+                Utils.Debug.log(`[AutoRune] Updated editable perk page ${editablePage.id}`);
+                return true;
+            }
+        }
+
+        const newPage = await Utils.LCU.post('/lol-perks/v1/pages', payload).catch(() => null);
+        if (newPage && newPage.id) {
+            await Utils.LCU.put('/lol-perks/v1/currentpage', { id: newPage.id }).catch(() => {});
+            Utils.Debug.log(`[AutoRune] Created and set active perk page ${newPage.id}`);
             return true;
         }
 
-        await Utils.LCU.post('/lol-perks/v1/pages', payload).catch(async () => {
-            if (Array.isArray(pages) && pages.length > 0) {
-                const oldest = pages[pages.length - 1];
-                if (oldest?.id && (oldest.isEditable || oldest.isCustom)) {
-                    await Utils.LCU.delete(`/lol-perks/v1/pages/${oldest.id}`).catch(() => {});
-                    await Utils.LCU.post('/lol-perks/v1/pages', payload).catch(() => {});
+        if (Array.isArray(pages) && pages.length > 0) {
+            const oldest = pages.slice().reverse().find(p => (p.isEditable || p.isCustom) && p.id);
+            if (oldest?.id) {
+                await Utils.LCU.delete(`/lol-perks/v1/pages/${oldest.id}`).catch(() => {});
+                const retryPage = await Utils.LCU.post('/lol-perks/v1/pages', payload).catch(() => null);
+                if (retryPage && retryPage.id) {
+                    await Utils.LCU.put('/lol-perks/v1/currentpage', { id: retryPage.id }).catch(() => {});
+                    Utils.Debug.log(`[AutoRune] Replaced oldest and set active perk page ${retryPage.id}`);
+                    return true;
                 }
             }
-        });
+        }
 
-        return true;
+        return false;
     } catch (e) {
         Utils.Debug.error('[AutoRune] Failed to apply rune page:', e);
         return false;
