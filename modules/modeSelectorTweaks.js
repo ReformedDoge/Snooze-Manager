@@ -280,10 +280,10 @@ function openConfigModal() {
         modalStyle = document.createElement('style');
         modalStyle.id = 'pm-mode-modal-styles';
         modalStyle.textContent = `
-            #pm-mode-modal-overlay { position: fixed; inset: 0; z-index: 2147483647; display: flex; align-items: center; justify-content: center; background: rgba(0, 0, 0, 0.45); backdrop-filter: blur(2px); pointer-events: auto; font-family: var(--font-body), "Segoe UI", sans-serif; }
-            #pm-mode-modal { position: relative; z-index: 1; width: 850px; height: 600px; max-height: 85vh; background: rgba(1, 10, 19, 0.75); border: 1px solid rgba(200, 170, 110, 0.2); border-radius: 12px; display: flex; flex-direction: column; overflow: hidden; color: #a09b8c; box-shadow: 0 16px 48px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.05); backdrop-filter: blur(25px) saturate(140%); pointer-events: auto; }
+            #pm-mode-modal-overlay { position: fixed; inset: 0; z-index: 2147483647; display: flex; align-items: center; justify-content: center; background: rgba(0, 0, 0, 0.45); backdrop-filter: blur(2px); pointer-events: auto; font-family: "Spiegel", var(--font-body), "Segoe UI", sans-serif; -webkit-font-smoothing: antialiased; }
+            #pm-mode-modal { position: relative; z-index: 1; width: 850px; height: 600px; max-height: 85vh; background: rgba(1, 10, 19, 0.75); border: 1px solid rgba(200, 170, 110, 0.2); border-radius: 12px; display: flex; flex-direction: column; overflow: hidden; color: #a09b8c; box-shadow: 0 16px 48px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.05); backdrop-filter: blur(25px) saturate(140%); pointer-events: auto; font-family: "Spiegel", var(--font-body), "Segoe UI", sans-serif; }
             #pm-mode-modal .pm-header { display: flex; justify-content: space-between; align-items: center; padding: 20px 24px; border-bottom: 1px solid rgba(255, 255, 255, 0.06); background: rgba(0, 0, 0, 0.2); flex-shrink: 0; }
-            #pm-mode-modal .pm-title { color: #f0e6d2; font-size: 20px; font-weight: bold; margin: 0; text-transform: uppercase; letter-spacing: 1px; }
+            #pm-mode-modal .pm-title { color: #f0e6d2; font-family: "BeaufortforLOL", "Spiegel", var(--font-display), "Segoe UI", sans-serif; font-size: 20px; font-weight: bold; margin: 0; text-transform: uppercase; letter-spacing: 1px; }
             #pm-mode-modal .pm-close { background: none; border: none; color: #a09b8c; font-size: 24px; cursor: pointer; padding: 0; line-height: 1; transition: color 0.15s; }
             #pm-mode-modal .pm-close:hover { color: #f0e6d2; }
             #pm-mode-modal .pm-content { flex: 1; padding: 24px; overflow-y: auto; }

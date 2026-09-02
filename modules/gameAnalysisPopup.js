@@ -902,7 +902,7 @@ export function init(context) {
                     const btn = document.createElement('div');
                     btn.className = 'pm-view-history-btn';
                     btn.textContent = t('View History');
-                    btn.style.cssText = 'position:absolute; bottom:5px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.8); color:#0ac8b9; border:1px solid #0ac8b9; padding:2px 6px; font-size:10px; cursor:pointer; border-radius:4px; z-index:99; display:none; transition:opacity 0.2s;';
+                    btn.style.cssText = 'position:absolute; bottom:5px; left:50%; transform:translateX(-50%); background:rgba(1,10,19,0.9); color:#0ac8b9; border:1px solid #0ac8b9; padding:2px 8px; font-size:11px; font-weight:700; font-family:"Spiegel",var(--font-body),"Segoe UI",sans-serif; -webkit-font-smoothing:antialiased; cursor:pointer; border-radius:4px; z-index:99; display:none; transition:opacity 0.2s;';
 
                     el.addEventListener('mouseenter', () => {
                         if (Utils.Store.get('gameAnalysisPopup', 'enabled')) {
@@ -1745,7 +1745,8 @@ export const MatchHistoryModal = (function() {
             display: 'none',
             alignItems: 'center',
             justifyContent: 'center',
-            fontFamily: '"Segoe UI", sans-serif',
+            fontFamily: '"Spiegel", "BeaufortforLOL", var(--font-body), "Segoe UI", sans-serif',
+            WebkitFontSmoothing: 'antialiased',
             pointerEvents: 'none'
         });
 
@@ -1777,6 +1778,7 @@ export const MatchHistoryModal = (function() {
             color: '#a09b8c',
             boxShadow: '0 16px 48px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.05)',
             backdropFilter: 'blur(25px) saturate(140%)',
+            fontFamily: '"Spiegel", var(--font-body), "Segoe UI", sans-serif',
             pointerEvents: 'auto'
         });
 
@@ -1801,6 +1803,7 @@ export const MatchHistoryModal = (function() {
         title.id = 'pm-history-title';
         Object.assign(title.style, {
             color: '#f0e6d2',
+            fontFamily: '"BeaufortforLOL", "Spiegel", var(--font-display), "Segoe UI", sans-serif',
             fontSize: '18px',
             fontWeight: 'bold',
             margin: '0',

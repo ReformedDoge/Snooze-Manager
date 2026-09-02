@@ -213,7 +213,7 @@ function renderPriorityPicker(container, labelText, storeKey, role, champions) {
     if (!document.getElementById('alc-dd-style')) {
         const s = document.createElement('style');
         s.id = 'alc-dd-style';
-        s.textContent = '.alc-dd-item{display:flex;align-items:center;gap:8px;padding:5px 8px;cursor:pointer;font-size:12px;color:#a09b8c;background:transparent}.alc-dd-item.hl{color:#f0e6d2;background:rgba(200,170,110,0.15)}.alc-dd-item img{width:22px;height:22px;border-radius:50%;flex-shrink:0;object-fit:cover}';
+        s.textContent = '.alc-dd-item{display:flex;align-items:center;gap:8px;padding:5px 8px;cursor:pointer;font-size:12px;color:#a09b8c;background:transparent;font-family:"Spiegel",var(--font-body),"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased;}.alc-dd-item.hl{color:#f0e6d2;background:rgba(200,170,110,0.15)}.alc-dd-item img{width:22px;height:22px;border-radius:50%;flex-shrink:0;object-fit:cover}';
         document.head.appendChild(s);
     }
 

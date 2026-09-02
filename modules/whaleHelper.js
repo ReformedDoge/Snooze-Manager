@@ -158,7 +158,8 @@ function injectStyles() {
             position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
             z-index: 2147483600; display: flex; opacity: 0; visibility: hidden;
             align-items: center; justify-content: center;
-            font-family: var(--font-body), 'Segoe UI', sans-serif;
+            font-family: "Spiegel", var(--font-body), "Segoe UI", sans-serif;
+            -webkit-font-smoothing: antialiased;
             pointer-events: none; transition: opacity 0.25s, visibility 0.25s;
         }
         #${PANEL_ID}.sm-show { opacity: 1; visibility: visible; pointer-events: auto; }
@@ -1945,7 +1946,7 @@ function renderOddsModal(item, odds) {
         #${modalId} ::-webkit-scrollbar-thumb:hover { background: rgba(200,170,110,0.3); }
         .odds-row:last-child { border-bottom: none !important; }
         #${modalId}-pool-body { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; padding: 10px; align-content: start; }
-        .sm-pool-card { min-width: 0; border-radius: 6px; border: 1px solid rgba(255,255,255,0.06); background: rgba(255,255,255,0.02); transition: border-color 0.2s, transform 0.15s; cursor: default; }
+        .sm-pool-card { min-width: 0; border-radius: 6px; border: 1px solid rgba(255,255,255,0.06); background: rgba(255,255,255,0.02); transition: border-color 0.2s, transform 0.15s; cursor: default; font-family: "Spiegel", var(--font-body), "Segoe UI", sans-serif; }
         .sm-pool-card:hover { border-color: rgba(200,170,110,0.3); transform: translateY(-2px); }
         .sm-pool-card-img-wrap { width: 100%; position: relative; padding-bottom: 100%; background: #0a0e14; border-radius: 5px 5px 0 0; overflow: hidden; }
         .sm-pool-card-img { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; display: block; }

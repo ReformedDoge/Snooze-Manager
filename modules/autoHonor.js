@@ -595,7 +595,7 @@ export function load() {
     if (!document.getElementById('ah-badge-font')) {
         const s = document.createElement('style');
         s.id = 'ah-badge-font';
-        s.textContent = '.ah-score-badge,.ah-score-badge *,.ah-friend-badge,.ah-friend-badge *{font-family:"Segoe UI","Helvetica Neue",Arial,sans-serif !important}';
+        s.textContent = '.ah-score-badge,.ah-score-badge *,.ah-friend-badge,.ah-friend-badge *{font-family:"Spiegel", "BeaufortforLOL", var(--font-body), "Segoe UI", sans-serif !important; -webkit-font-smoothing: antialiased;}';
         document.head.appendChild(s);
     }
 

@@ -287,7 +287,8 @@ const Toast = {
                     backdrop-filter: blur(2px);
                     color: #f0e6d2;
                     padding: 12px 18px;
-                    font-family: var(--font-body), "Segoe UI", sans-serif;
+                    font-family: "Spiegel", var(--font-body), "Segoe UI", -apple-system, sans-serif;
+                    -webkit-font-smoothing: antialiased;
                     font-size: 13px;
                     display: flex;
                     align-items: center;
