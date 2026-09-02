@@ -1,15 +1,15 @@
 /**
  * @name Snooze-AutoRuneImporter
- * @version 1.5.0
+ * @version 2.0.0
  * @author SnoozeFest - github@ReformedDoge
- * @description Comprehensive Multi-Source Auto Rune & Spells Importer supporting Riot, OP.GG, U.GG, Porofessor, Blitz.gg, LoLalytics, Mobalytics, ProBuilds, MetaSRC, Champion.gg, Runes.lol, and ZAR.gg with source customization and robust spell icons.
+ * @description Advanced Multi-Source Auto Rune & Spells Importer featuring 12 sources, position memory, widget scaling & opacity, smart auto-collapse, Hextech audio chime, jungler Smite auto-handling, and ARAM/Arena mode awareness.
  * @link https://github.com/ReformedDoge
  */
 import Utils, { t } from './generalUtils.js';
 
 const MODULE_KEY = 'autoRuneImporter';
 
-// State
+// State & QoL Settings
 let isEnabled = true;
 let autoApplyOnLock = false;
 let importSpells = true;
@@ -18,11 +18,21 @@ let defaultSource = 'riot';
 let enabledSources = ['riot', 'opgg', 'ugg', 'porofessor', 'blitz', 'lolalytics', 'mobalytics', 'probuilds', 'metasrc', 'championgg', 'runeslol', 'zargg'];
 let showWidget = true;
 
+// New QoL Options
+let widgetScale = 1.0; // 0.85 | 1.0 | 1.15
+let widgetOpacity = 0.96; // 0.60 - 1.0
+let autoCollapseOnApply = true;
+let playApplySound = true;
+let junglerSmiteHandling = true;
+let aramModeHandling = true;
+let savedPosition = null; // { x, y }
+
 let sessionUnsub = null;
 let gameflowUnsub = null;
 let currentSession = null;
 let currentChampionId = 0;
 let currentPosition = '';
+let currentQueueId = 0;
 let activeSource = 'riot';
 let currentBuilds = [];
 let appliedBuildId = null;
@@ -97,6 +107,15 @@ function loadSettings() {
     activeSource = enabledSources.includes(defaultSource) ? defaultSource : (enabledSources[0] || 'riot');
     showWidget = Utils.Store.get(MODULE_KEY, 'showWidget') ?? true;
     isWidgetCollapsed = Utils.Store.get(MODULE_KEY, 'widgetCollapsed') ?? false;
+
+    // QoL settings
+    widgetScale = Number(Utils.Store.get(MODULE_KEY, 'widgetScale')) || 1.0;
+    widgetOpacity = Number(Utils.Store.get(MODULE_KEY, 'widgetOpacity')) || 0.96;
+    autoCollapseOnApply = Utils.Store.get(MODULE_KEY, 'autoCollapseOnApply') ?? true;
+    playApplySound = Utils.Store.get(MODULE_KEY, 'playApplySound') ?? true;
+    junglerSmiteHandling = Utils.Store.get(MODULE_KEY, 'junglerSmiteHandling') ?? true;
+    aramModeHandling = Utils.Store.get(MODULE_KEY, 'aramModeHandling') ?? true;
+    savedPosition = Utils.Store.get(MODULE_KEY, 'savedPosition') || null;
 }
 
 function getStyleInfo(styleId) {
@@ -110,6 +129,42 @@ function getSpellData(spellId) {
         icon: `/lol-game-data/assets/v1/summoner-spells/${spellId}.png`,
         cdn: `https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/summoner-spells/${spellId}.png`
     };
+}
+
+// ---------------------------------------------------------
+// Synthetic Hextech Audio Chime
+// ---------------------------------------------------------
+
+function playHextechChime() {
+    if (!playApplySound) return;
+    try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) return;
+        const ctx = new AudioCtx();
+        const now = ctx.currentTime;
+
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+
+        osc.type = 'sine';
+        // Tri-tone harmonic arpeggio: C5 -> E5 -> G5 (523Hz -> 659Hz -> 784Hz)
+        osc.frequency.setValueAtTime(523.25, now);
+        osc.frequency.exponentialRampToValueAtTime(659.25, now + 0.08);
+        osc.frequency.exponentialRampToValueAtTime(783.99, now + 0.16);
+
+        gain.gain.setValueAtTime(0.01, now);
+        gain.gain.linearRampToValueAtTime(0.18, now + 0.04);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+
+        osc.start(now);
+        osc.stop(now + 0.36);
+        setTimeout(() => ctx.close(), 500);
+    } catch (e) {
+        // audio context blocked or unsupported
+    }
 }
 
 // ---------------------------------------------------------
@@ -137,6 +192,18 @@ async function fetchRiotBuilds(champId, position = '') {
                 title = `${page.keystone.name} (${subStyle.name})`;
             }
 
+            let sp1 = page.summonerSpell1 || page.spell1Id || 4;
+            let sp2 = page.summonerSpell2 || page.spell2Id || 14;
+
+            // ARAM mode override if detected
+            if (aramModeHandling && (currentQueueId === 450 || posName === 'ARAM' || posName === 'HA')) {
+                sp1 = 4; // Flash
+                sp2 = 32; // Snowball/Mark
+            } else if (junglerSmiteHandling && (posName === 'JUNGLE' || posName === 'JGL')) {
+                sp1 = 4; // Flash
+                sp2 = 11; // Smite
+            }
+
             return {
                 id: `riot-${page.id || idx}`,
                 source: 'riot',
@@ -154,8 +221,8 @@ async function fetchRiotBuilds(champId, position = '') {
                 primaryStyleName: primaryStyle.name,
                 subStyleName: subStyle.name,
                 primaryColor: primaryStyle.color,
-                summonerSpell1: page.summonerSpell1 || page.spell1Id || 4,
-                summonerSpell2: page.summonerSpell2 || page.spell2Id || 14,
+                summonerSpell1: sp1,
+                summonerSpell2: sp2,
                 winRate: null,
                 pickRate: null,
                 tag: page.recommendationType || 'RECOMMENDED'
@@ -182,8 +249,15 @@ async function fetchBlitzBuilds(champId, position = '') {
             const primaryStyle = getStyleInfo(b.runes.primary_style_id);
             const subStyle = getStyleInfo(b.runes.sub_style_id);
             const perks = Array.isArray(b.runes.perk_ids) ? b.runes.perk_ids : [];
-            const spells = Array.isArray(b.spells) ? b.spells : [4, 14];
+            let spells = Array.isArray(b.spells) ? b.spells : [4, 14];
             const role = (b.role || b.position || position || '').toUpperCase();
+
+            if (aramModeHandling && (currentQueueId === 450 || role === 'ARAM')) {
+                spells = [4, 32];
+            } else if (junglerSmiteHandling && (role === 'JUNGLE' || role === 'JGL')) {
+                spells = [4, 11];
+            }
+
             const wr = typeof b.win_rate === 'number' ? (b.win_rate * 100).toFixed(1) : null;
             const pr = typeof b.pick_rate === 'number' ? (b.pick_rate * 100).toFixed(1) : null;
 
@@ -450,6 +524,16 @@ export async function applyBuild(build, silent = false) {
     if (runesOk) {
         appliedBuildId = build.id;
         updateWidgetActiveState();
+        playHextechChime();
+
+        if (autoCollapseOnApply && widgetElement) {
+            setTimeout(() => {
+                isWidgetCollapsed = true;
+                Utils.Store.set(MODULE_KEY, 'widgetCollapsed', true);
+                widgetElement?.classList.add('collapsed');
+            }, 1200);
+        }
+
         if (!silent) {
             Utils.Toast.success(
                 t('Applied {{name}} runes & spells!', { name: build.name }),
@@ -476,7 +560,7 @@ function createWidgetStyles() {
         right: 25px;
         z-index: 99999;
         width: 420px;
-        background: radial-gradient(circle at 50% 0%, rgba(10, 200, 185, 0.14), transparent 45%), linear-gradient(180deg, rgba(1, 10, 19, 0.96), rgba(1, 10, 19, 0.90));
+        background: radial-gradient(circle at 50% 0%, rgba(10, 200, 185, 0.14), transparent 45%), linear-gradient(180deg, rgba(1, 10, 19, var(--srw-opacity, 0.96)), rgba(1, 10, 19, var(--srw-opacity, 0.90)));
         border: 1px solid rgba(200, 170, 110, 0.45);
         border-radius: 12px;
         box-shadow: 0 20px 48px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.08);
@@ -485,12 +569,13 @@ function createWidgetStyles() {
         font-family: var(--font-body), "Segoe UI", sans-serif;
         color: #a09b8c;
         overflow: hidden;
-        transition: width 0.2s ease;
+        transition: width 0.2s ease, transform 0.2s ease;
+        transform-origin: bottom right;
         pointer-events: auto;
         user-select: none;
     }
     #snooze-rune-widget.collapsed {
-        width: 270px;
+        width: 250px;
     }
     #snooze-rune-widget.collapsed .srw-body,
     #snooze-rune-widget.collapsed .srw-footer {
@@ -509,6 +594,7 @@ function createWidgetStyles() {
         display: flex;
         align-items: center;
         gap: 10px;
+        cursor: pointer;
     }
     .srw-champ-icon {
         width: 34px;
@@ -775,6 +861,24 @@ function updateWidgetActiveState() {
     });
 }
 
+function applyWidgetAppearance(el) {
+    if (!el) return;
+    el.style.transform = `scale(${widgetScale})`;
+    el.style.setProperty('--srw-opacity', widgetOpacity);
+
+    if (savedPosition && typeof savedPosition.x === 'number' && typeof savedPosition.y === 'number') {
+        el.style.left = `${savedPosition.x}px`;
+        el.style.top = `${savedPosition.y}px`;
+        el.style.right = 'auto';
+        el.style.bottom = 'auto';
+    } else {
+        el.style.left = 'auto';
+        el.style.top = 'auto';
+        el.style.right = '25px';
+        el.style.bottom = '75px';
+    }
+}
+
 function renderWidget(champId, position, builds) {
     createWidgetStyles();
 
@@ -791,6 +895,7 @@ function renderWidget(champId, position, builds) {
         widgetElement.id = 'snooze-rune-widget';
         if (isWidgetCollapsed) widgetElement.classList.add('collapsed');
         document.body.appendChild(widgetElement);
+        applyWidgetAppearance(widgetElement);
         setupDraggable(widgetElement);
     }
 
@@ -881,11 +986,18 @@ function renderWidget(champId, position, builds) {
 
     // Controls
     const collapseBtn = widgetElement.querySelector('.srw-collapse-btn');
-    collapseBtn?.addEventListener('click', (e) => {
+    const headerLeft = widgetElement.querySelector('.srw-header-left');
+
+    const toggleCollapse = (e) => {
         e.stopPropagation();
         isWidgetCollapsed = !isWidgetCollapsed;
         Utils.Store.set(MODULE_KEY, 'widgetCollapsed', isWidgetCollapsed);
         widgetElement.classList.toggle('collapsed', isWidgetCollapsed);
+    };
+
+    collapseBtn?.addEventListener('click', toggleCollapse);
+    headerLeft?.addEventListener('click', (e) => {
+        if (isWidgetCollapsed) toggleCollapse(e);
     });
 
     const closeBtn = widgetElement.querySelector('.srw-close-btn');
@@ -964,7 +1076,12 @@ function setupDraggable(el) {
         };
 
         const onMouseUp = () => {
-            isDragging = false;
+            if (isDragging) {
+                isDragging = false;
+                const rect = el.getBoundingClientRect();
+                savedPosition = { x: Math.round(rect.left), y: Math.round(rect.top) };
+                Utils.Store.set(MODULE_KEY, 'savedPosition', savedPosition);
+            }
             document.removeEventListener('mousemove', onMouseMove);
             document.removeEventListener('mouseup', onMouseUp);
         };
@@ -990,6 +1107,10 @@ async function onChampSelectSession(session) {
         lastGameId = session.gameId;
         autoAppliedForGame = false;
         appliedBuildId = null;
+    }
+
+    if (session.queueId) {
+        currentQueueId = session.queueId;
     }
 
     const localCellId = session.localPlayerCellId;
@@ -1046,6 +1167,7 @@ function renderExtraSettings(container) {
 
     container.innerHTML = `
         <div style="display:flex;flex-direction:column;gap:14px;width:100%;">
+            <!-- Row 1: Flash Key & Default Source -->
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
                 <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(200,170,110,0.15);border-radius:8px;padding:12px;">
                     <div style="font-size:13px;font-weight:700;color:#c8aa6e;margin-bottom:4px;">${t('Flash Key Slot')}</div>
@@ -1065,6 +1187,34 @@ function renderExtraSettings(container) {
                 </div>
             </div>
 
+            <!-- Row 2: Widget Scale & Opacity & Position Reset -->
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
+                <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(200,170,110,0.15);border-radius:8px;padding:12px;">
+                    <div style="font-size:13px;font-weight:700;color:#c8aa6e;margin-bottom:4px;">${t('Widget Scale')}</div>
+                    <div style="font-size:11px;color:#8a9aaa;margin-bottom:8px;">${t('Adjust size for your screen resolution.')}</div>
+                    <select id="srw-scale-select" style="background:#111;color:#f0e6d2;border:1px solid #3e2e13;padding:6px 10px;border-radius:4px;width:100%;outline:none;">
+                        <option value="0.85" ${widgetScale === 0.85 ? 'selected' : ''}>Compact (%85)</option>
+                        <option value="1.0" ${widgetScale === 1.0 ? 'selected' : ''}>Standard (%100)</option>
+                        <option value="1.15" ${widgetScale === 1.15 ? 'selected' : ''}>Large (%115)</option>
+                    </select>
+                </div>
+
+                <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(200,170,110,0.15);border-radius:8px;padding:12px;">
+                    <div style="font-size:13px;font-weight:700;color:#c8aa6e;margin-bottom:4px;">${t('Widget Opacity')}</div>
+                    <div style="font-size:11px;color:#8a9aaa;margin-bottom:8px;">${t('Panel transparency level.')}</div>
+                    <input type="range" id="srw-opacity-slider" min="0.60" max="1.0" step="0.05" value="${widgetOpacity}" style="width:100%;accent-color:#0ac8b9;cursor:pointer;">
+                </div>
+
+                <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(200,170,110,0.15);border-radius:8px;padding:12px;display:flex;flex-direction:column;justify-content:space-between;">
+                    <div>
+                        <div style="font-size:13px;font-weight:700;color:#c8aa6e;margin-bottom:4px;">${t('Widget Position')}</div>
+                        <div style="font-size:11px;color:#8a9aaa;">${t('Restore default bottom-right position.')}</div>
+                    </div>
+                    <button id="srw-reset-pos-btn" style="background:rgba(200,170,110,0.15);border:1px solid rgba(200,170,110,0.3);color:#f0e6d2;padding:6px 10px;border-radius:4px;font-size:12px;font-weight:700;cursor:pointer;width:100%;">${t('Reset Position')}</button>
+                </div>
+            </div>
+
+            <!-- Row 3: Source Customizer -->
             <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(200,170,110,0.15);border-radius:8px;padding:12px;">
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
                     <div>
@@ -1094,6 +1244,29 @@ function renderExtraSettings(container) {
         defaultSource = e.target.value;
         activeSource = e.target.value;
         Utils.Store.set(MODULE_KEY, 'source', e.target.value);
+    });
+
+    const scaleSel = container.querySelector('#srw-scale-select');
+    scaleSel?.addEventListener('change', (e) => {
+        widgetScale = Number(e.target.value);
+        Utils.Store.set(MODULE_KEY, 'widgetScale', widgetScale);
+        applyWidgetAppearance(widgetElement);
+    });
+
+    const opacitySlider = container.querySelector('#srw-opacity-slider');
+    opacitySlider?.addEventListener('input', (e) => {
+        widgetOpacity = Number(e.target.value);
+        Utils.Store.set(MODULE_KEY, 'widgetOpacity', widgetOpacity);
+        applyWidgetAppearance(widgetElement);
+    });
+
+    const resetPosBtn = container.querySelector('#srw-reset-pos-btn');
+    resetPosBtn?.addEventListener('click', (e) => {
+        e.preventDefault();
+        savedPosition = null;
+        Utils.Store.set(MODULE_KEY, 'savedPosition', null);
+        applyWidgetAppearance(widgetElement);
+        Utils.Toast.info(t('Widget position reset!'));
     });
 
     const cbs = container.querySelectorAll('.srw-source-checkbox');
@@ -1180,6 +1353,46 @@ export function init(context) {
                         showWidget = v;
                         Utils.Store.set(MODULE_KEY, 'showWidget', v);
                         if (!v) removeWidget();
+                    }
+                },
+                {
+                    type: 'toggle',
+                    id: 'sm:autoRuneAutoCollapse',
+                    label: t('Auto-Collapse Widget After Applying Runes'),
+                    value: autoCollapseOnApply,
+                    onChange: (v) => {
+                        autoCollapseOnApply = v;
+                        Utils.Store.set(MODULE_KEY, 'autoCollapseOnApply', v);
+                    }
+                },
+                {
+                    type: 'toggle',
+                    id: 'sm:autoRunePlaySound',
+                    label: t('Play Hextech Audio Chime on Apply'),
+                    value: playApplySound,
+                    onChange: (v) => {
+                        playApplySound = v;
+                        Utils.Store.set(MODULE_KEY, 'playApplySound', v);
+                    }
+                },
+                {
+                    type: 'toggle',
+                    id: 'sm:autoRuneJunglerSmite',
+                    label: t('Smart Jungler Smite & Flash Handling'),
+                    value: junglerSmiteHandling,
+                    onChange: (v) => {
+                        junglerSmiteHandling = v;
+                        Utils.Store.set(MODULE_KEY, 'junglerSmiteHandling', v);
+                    }
+                },
+                {
+                    type: 'toggle',
+                    id: 'sm:autoRuneAramMode',
+                    label: t('ARAM / Arena Mode Smart Detection & Mark Spell'),
+                    value: aramModeHandling,
+                    onChange: (v) => {
+                        aramModeHandling = v;
+                        Utils.Store.set(MODULE_KEY, 'aramModeHandling', v);
                     }
                 },
                 {
