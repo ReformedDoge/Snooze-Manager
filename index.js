@@ -1682,6 +1682,7 @@ import * as autoQueueModule from './modules/autoQueue.js';
 import * as modeSelectorTweaksModule from './modules/modeSelectorTweaks.js';
 import * as nameSpooferModule from './modules/nameSpoofer.js';
 import * as useClientDuringGameModule from './modules/useClientDuringGame.js';
+import * as autoRuneImporterModule from './modules/autoRuneImporter.js';
 
 const MANAGED_MODULES = Object.freeze([
     ['autoAccept', autoAcceptModule],
@@ -1701,7 +1702,8 @@ const MANAGED_MODULES = Object.freeze([
     ['autoQueue', autoQueueModule],
     ['modeSelectorTweaks', modeSelectorTweaksModule],
     ['nameSpoofer', nameSpooferModule],
-    ['useClientDuringGame', useClientDuringGameModule]
+    ['useClientDuringGame', useClientDuringGameModule],
+    ['autoRuneImporter', autoRuneImporterModule]
 ]);
 
 const registeredModules = [];
@@ -1765,6 +1767,9 @@ const MODULE_INFO = {
     },
     useClientDuringGame: {
         name: t('Use Client In Game')
+    },
+    autoRuneImporter: {
+        name: t('Auto Rune & Spells')
     }
 };
 
