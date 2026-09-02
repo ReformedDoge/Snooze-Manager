@@ -1080,13 +1080,18 @@ function applyWidgetAppearance(el) {
 function renderWidget(champId, position, builds) {
     createWidgetStyles();
 
-    if (!showWidget || !champId || champId <= 0) {
+    if (!showWidget) {
         removeWidget();
         return;
     }
 
-    const champName = Utils.GameData?.Assets?.getChampionName?.(champId) || `Champion ${champId}`;
-    const champIcon = `/lol-game-data/assets/v1/champion-icons/${champId}.png`;
+    const hasChamp = Boolean(champId && champId > 0);
+    const champName = hasChamp 
+        ? (Utils.GameData?.Assets?.getChampionName?.(champId) || `Champion ${champId}`) 
+        : t('Select a Champion');
+    const champIcon = hasChamp 
+        ? `/lol-game-data/assets/v1/champion-icons/${champId}.png` 
+        : '/lol-game-data/assets/v1/profile-icons/29.png';
 
     if (!widgetElement) {
         widgetElement = document.createElement('div');
@@ -1115,7 +1120,14 @@ function renderWidget(champId, position, builds) {
     }).join('');
 
     let buildsHtml = '';
-    if (!builds || builds.length === 0) {
+    if (!hasChamp) {
+        buildsHtml = `
+        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 16px;text-align:center;gap:10px;color:#8a9aaa;">
+            <svg role="img" viewBox="0 0 24 24" width="28" height="28" fill="#c8aa6e" style="opacity:0.85;"><title>League of Legends</title><path d="m1.912 0 1.212 2.474v19.053L1.912 24h14.73l1.337-4.682H8.33V0ZM12 1.516c-.913 0-1.798.112-2.648.312v1.74a9.738 9.738 0 0 1 2.648-.368c5.267 0 9.536 4.184 9.536 9.348a9.203 9.203 0 0 1-2.3 6.086l-.273.954-.602 2.112c2.952-1.993 4.89-5.335 4.89-9.122C23.25 6.468 18.213 1.516 12 1.516Zm0 2.673c-.924 0-1.814.148-2.648.414v13.713h8.817a8.246 8.246 0 0 0 2.36-5.768c0-4.617-3.818-8.359-8.529-8.359zM2.104 7.312A10.858 10.858 0 0 0 .75 12.576c0 1.906.492 3.7 1.355 5.266z"/></svg>
+            <div style="font-size:13.5px;font-weight:700;color:#f0e6d2;">${t('No Champion Selected')}</div>
+            <div style="font-size:11.5px;line-height:1.45;color:#8a9aaa;max-width:280px;">${t('Hover or lock in a champion to view and apply meta runes.')}</div>
+        </div>`;
+    } else if (!builds || builds.length === 0) {
         buildsHtml = `<div style="text-align:center;padding:24px;color:#8a9aaa;font-size:12px;">${t('Loading builds...')}</div>`;
     } else {
         buildsHtml = builds.map(b => {
@@ -1211,8 +1223,10 @@ function renderWidget(champId, position, builds) {
         e.stopPropagation();
         const selectedRole = e.target.value;
         currentPosition = selectedRole;
-        const newBuilds = await loadBuildsBySource(currentChampionId, selectedRole, activeSource);
-        renderWidget(currentChampionId, selectedRole, newBuilds);
+        if (currentChampionId > 0) {
+            const newBuilds = await loadBuildsBySource(currentChampionId, selectedRole, activeSource);
+            renderWidget(currentChampionId, selectedRole, newBuilds);
+        }
     });
     roleSelect?.addEventListener('click', (e) => e.stopPropagation());
     roleSelect?.addEventListener('mousedown', (e) => e.stopPropagation());
@@ -1250,8 +1264,10 @@ function renderWidget(champId, position, builds) {
             activeSource = src;
             pills.forEach(p => p.classList.remove('active'));
             pill.classList.add('active');
-            const newBuilds = await loadBuildsBySource(currentChampionId, currentPosition, src);
-            renderWidget(currentChampionId, currentPosition, newBuilds);
+            if (currentChampionId > 0) {
+                const newBuilds = await loadBuildsBySource(currentChampionId, currentPosition, src);
+                renderWidget(currentChampionId, currentPosition, newBuilds);
+            }
         });
     });
 
@@ -1285,7 +1301,7 @@ function setupDraggable(el) {
     if (!header) return;
 
     header.addEventListener('mousedown', (e) => {
-        if (e.target.closest('.srw-header-controls')) return;
+        if (e.target.closest('.srw-header-controls') || e.target.closest('.srw-role-select')) return;
         isDragging = true;
         startX = e.clientX;
         startY = e.clientY;
@@ -1351,7 +1367,10 @@ async function onChampSelectSession(session) {
     if (!myCell && Array.isArray(session.myTeam) && session.myTeam.length > 0) {
         myCell = session.myTeam[0];
     }
-    if (!myCell) return;
+    if (!myCell) {
+        renderWidget(0, '', []);
+        return;
+    }
 
     const assignedPos = (myCell.assignedPosition || '').toUpperCase();
     currentPosition = assignedPos;
@@ -1385,7 +1404,7 @@ async function onChampSelectSession(session) {
                 applyBuild(builds[0], false);
             }
         } else {
-            removeWidget();
+            renderWidget(0, assignedPos, []);
         }
     } else if (isLocked && autoApplyOnLock && !autoAppliedForGame && currentBuilds.length > 0) {
         autoAppliedForGame = true;
