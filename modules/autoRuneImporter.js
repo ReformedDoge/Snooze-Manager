@@ -1171,14 +1171,34 @@ async function onChampSelectSession(session) {
     }
 
     const localCellId = session.localPlayerCellId;
-    const myCell = session.myTeam?.find(m => m.cellId === localCellId);
+    let myCell = session.myTeam?.find(m => m.cellId === localCellId) 
+              || session.theirTeam?.find(m => m.cellId === localCellId);
+    
+    // In Practice Tool / Custom single-player lobbies
+    if (!myCell && Array.isArray(session.myTeam) && session.myTeam.length > 0) {
+        myCell = session.myTeam[0];
+    }
     if (!myCell) return;
 
     const assignedPos = (myCell.assignedPosition || '').toUpperCase();
     currentPosition = assignedPos;
 
     let champId = myCell.championId || myCell.championPickIntent || 0;
-    const isLocked = myCell.championId > 0;
+
+    // Check actions for hovered / active pick in Custom / Practice Tool / Blind Pick
+    if (!champId && session.actions) {
+        const allActions = Array.isArray(session.actions) ? session.actions.flat(3) : [];
+        const myAction = allActions.find(a => 
+            (a.actorCellId === localCellId || a.actorCellId === myCell.cellId) && 
+            (a.type === 'pick' || a.type === 'vote') && 
+            a.championId > 0
+        );
+        if (myAction) {
+            champId = myAction.championId;
+        }
+    }
+
+    const isLocked = myCell.championId > 0 || (session.actions && Array.isArray(session.actions) && session.actions.flat(3).some(a => (a.actorCellId === localCellId || a.actorCellId === myCell.cellId) && a.type === 'pick' && a.completed && a.championId > 0));
 
     if (champId !== currentChampionId) {
         currentChampionId = champId;
@@ -1475,8 +1495,13 @@ export function load() {
             if (e.data !== 'ChampSelect') {
                 removeWidget();
                 currentChampionId = 0;
+            } else {
+                Utils.LCU.get('/lol-champ-select/v1/session').then(onChampSelectSession).catch(() => {});
             }
         });
+
+        // Initial fetch in case already inside ChampSelect
+        Utils.LCU.get('/lol-champ-select/v1/session').then(onChampSelectSession).catch(() => {});
     }
 }
 
