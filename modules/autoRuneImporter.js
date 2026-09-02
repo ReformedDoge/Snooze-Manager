@@ -1478,7 +1478,7 @@ async function onChampSelectSession(session) {
         myCell = session.myTeam[0];
     }
     if (!myCell) {
-        renderWidget(0, '', []);
+        if (!widgetElement) renderWidget(0, '', []);
         return;
     }
 
@@ -1502,7 +1502,7 @@ async function onChampSelectSession(session) {
 
     const isLocked = myCell.championId > 0 || (session.actions && Array.isArray(session.actions) && session.actions.flat(3).some(a => (a.actorCellId === localCellId || a.actorCellId === myCell.cellId) && a.type === 'pick' && a.completed && a.championId > 0));
 
-    if (champId !== currentChampionId) {
+    if (!widgetElement || champId !== currentChampionId) {
         currentChampionId = champId;
         appliedBuildId = null;
         if (champId > 0) {
