@@ -50,6 +50,38 @@ const PERK_STYLES = {
     8400: { id: 8400, name: 'Resolve', iconPath: '/lol-game-data/assets/v1/perk-images/Styles/7204_Resolve.png', color: '#a1d354' }
 };
 
+const KEYSTONES = {
+    8005: { id: 8005, name: 'Press the Attack', icon: '/lol-game-data/assets/v1/perk-images/Styles/Precision/PressTheAttack/PressTheAttack.png', cdn: 'https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/perk-images/styles/precision/presstheattack/presstheattack.png' },
+    8008: { id: 8008, name: 'Lethal Tempo', icon: '/lol-game-data/assets/v1/perk-images/Styles/Precision/LethalTempo/LethalTempoTemp.png', cdn: 'https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/perk-images/styles/precision/lethaltempo/lethaltempotemp.png' },
+    8010: { id: 8010, name: 'Conqueror', icon: '/lol-game-data/assets/v1/perk-images/Styles/Precision/Conqueror/Conqueror.png', cdn: 'https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/perk-images/styles/precision/conqueror/conqueror.png' },
+    8021: { id: 8021, name: 'Fleet Footwork', icon: '/lol-game-data/assets/v1/perk-images/Styles/Precision/FleetFootwork/FleetFootwork.png', cdn: 'https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/perk-images/styles/precision/fleetfootwork/fleetfootwork.png' },
+    8112: { id: 8112, name: 'Electrocute', icon: '/lol-game-data/assets/v1/perk-images/Styles/Domination/Electrocute/Electrocute.png', cdn: 'https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/perk-images/styles/domination/electrocute/electrocute.png' },
+    8124: { id: 8124, name: 'Predator', icon: '/lol-game-data/assets/v1/perk-images/Styles/Domination/Predator/Predator.png', cdn: 'https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/perk-images/styles/domination/predator/predator.png' },
+    8128: { id: 8128, name: 'Dark Harvest', icon: '/lol-game-data/assets/v1/perk-images/Styles/Domination/DarkHarvest/DarkHarvest.png', cdn: 'https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/perk-images/styles/domination/darkharvest/darkharvest.png' },
+    9923: { id: 9923, name: 'Hail of Blades', icon: '/lol-game-data/assets/v1/perk-images/Styles/Domination/HailOfBlades/HailOfBlades.png', cdn: 'https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/perk-images/styles/domination/hailofblades/hailofblades.png' },
+    8214: { id: 8214, name: 'Summon Aery', icon: '/lol-game-data/assets/v1/perk-images/Styles/Sorcery/SummonAery/SummonAery.png', cdn: 'https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/perk-images/styles/sorcery/summonaery/summonaery.png' },
+    8229: { id: 8229, name: 'Arcane Comet', icon: '/lol-game-data/assets/v1/perk-images/Styles/Sorcery/ArcaneComet/ArcaneComet.png', cdn: 'https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/perk-images/styles/sorcery/arcanecomet/arcanecomet.png' },
+    8230: { id: 8230, name: 'Phase Rush', icon: '/lol-game-data/assets/v1/perk-images/Styles/Sorcery/PhaseRush/PhaseRush.png', cdn: 'https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/perk-images/styles/sorcery/phaserush/phaserush.png' },
+    8437: { id: 8437, name: 'Grasp of the Undying', icon: '/lol-game-data/assets/v1/perk-images/Styles/Resolve/GraspOfTheUndying/GraspOfTheUndying.png', cdn: 'https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/perk-images/styles/resolve/graspoftheundying/graspoftheundying.png' },
+    8439: { id: 8439, name: 'Aftershock', icon: '/lol-game-data/assets/v1/perk-images/Styles/Resolve/VeteranAftershock/VeteranAftershock.png', cdn: 'https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/perk-images/styles/resolve/veteranaftershock/veteranaftershock.png' },
+    8465: { id: 8465, name: 'Guardian', icon: '/lol-game-data/assets/v1/perk-images/Styles/Resolve/Guardian/Guardian.png', cdn: 'https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/perk-images/styles/resolve/guardian/guardian.png' },
+    8351: { id: 8351, name: 'Glacial Augment', icon: '/lol-game-data/assets/v1/perk-images/Styles/Inspiration/GlacialAugment/GlacialAugment.png', cdn: 'https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/perk-images/styles/inspiration/glacialaugment/glacialaugment.png' },
+    8360: { id: 8360, name: 'Unsealed Spellbook', icon: '/lol-game-data/assets/v1/perk-images/Styles/Inspiration/UnsealedSpellbook/UnsealedSpellbook.png', cdn: 'https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/perk-images/styles/inspiration/unsealedspellbook/unsealedspellbook.png' },
+    8369: { id: 8369, name: 'First Strike', icon: '/lol-game-data/assets/v1/perk-images/Styles/Inspiration/FirstStrike/FirstStrike.png', cdn: 'https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/perk-images/styles/inspiration/firststrike/firststrike.png' }
+};
+
+function getKeystoneInfo(perkId, fallbackStyleId) {
+    const id = Number(perkId);
+    if (KEYSTONES[id]) return KEYSTONES[id];
+    const style = getStyleInfo(fallbackStyleId);
+    return {
+        id: id || 0,
+        name: 'Keystone',
+        icon: style.iconPath || '',
+        cdn: ''
+    };
+}
+
 const SUMMONER_SPELLS = {
     1: { id: 1, name: 'Cleanse', icon: '/lol-game-data/assets/v1/summoner-spells/1.png', cdn: 'https://ddragon.leagueoflegends.com/cdn/14.18.1/img/spell/SummonerBoost.png' },
     3: { id: 3, name: 'Exhaust', icon: '/lol-game-data/assets/v1/summoner-spells/3.png', cdn: 'https://ddragon.leagueoflegends.com/cdn/14.18.1/img/spell/SummonerExhaust.png' },
@@ -253,6 +285,10 @@ function getDefaultArchetypeBuilds(position = '') {
     const dominationStyle = getStyleInfo(8100);
     const sorceryStyle = getStyleInfo(8200);
 
+    const conqKs = getKeystoneInfo(8010, 8000);
+    const electKs = getKeystoneInfo(8112, 8100);
+    const cometKs = getKeystoneInfo(8229, 8200);
+
     return [
         {
             id: 'arch-conq',
@@ -264,8 +300,9 @@ function getDefaultArchetypeBuilds(position = '') {
             subStyleId: 8400,
             selectedPerkIds: [8010, 9104, 9105, 8299, 8444, 8453, 5008, 5008, 5011],
             keystoneId: 8010,
-            keystoneName: 'Conqueror',
-            keystoneIcon: 'https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/perk-images/styles/precision/conqueror/conqueror.png',
+            keystoneName: conqKs.name,
+            keystoneIcon: conqKs.icon,
+            keystoneCdn: conqKs.cdn,
             primaryStyleIcon: precisionStyle.iconPath,
             subStyleIcon: resolveStyle.iconPath,
             primaryStyleName: precisionStyle.name,
@@ -287,8 +324,9 @@ function getDefaultArchetypeBuilds(position = '') {
             subStyleId: 8000,
             selectedPerkIds: [8112, 8143, 8138, 8106, 8009, 8014, 5008, 5008, 5011],
             keystoneId: 8112,
-            keystoneName: 'Electrocute',
-            keystoneIcon: 'https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/perk-images/styles/domination/electrocute/electrocute.png',
+            keystoneName: electKs.name,
+            keystoneIcon: electKs.icon,
+            keystoneCdn: electKs.cdn,
             primaryStyleIcon: dominationStyle.iconPath,
             subStyleIcon: precisionStyle.iconPath,
             primaryStyleName: dominationStyle.name,
@@ -310,8 +348,9 @@ function getDefaultArchetypeBuilds(position = '') {
             subStyleId: 8300,
             selectedPerkIds: [8229, 8226, 8210, 8237, 8304, 8345, 5008, 5008, 5011],
             keystoneId: 8229,
-            keystoneName: 'Arcane Comet',
-            keystoneIcon: 'https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/perk-images/styles/sorcery/arcanecomet/arcanecomet.png',
+            keystoneName: cometKs.name,
+            keystoneIcon: cometKs.icon,
+            keystoneCdn: cometKs.cdn,
             primaryStyleIcon: sorceryStyle.iconPath,
             subStyleIcon: '/lol-game-data/assets/v1/perk-images/Styles/7203_Whimsy.png',
             primaryStyleName: sorceryStyle.name,
@@ -345,12 +384,14 @@ async function fetchRiotBuilds(champId, position = '') {
             const primaryStyle = getStyleInfo(page.primaryStyleId);
             const subStyle = getStyleInfo(page.subStyleId);
             const keystoneId = page.keystone?.id || page.selectedPerkIds?.[0] || 0;
-            const keystoneIcon = page.keystone?.iconPath || primaryStyle.iconPath;
+            const ks = getKeystoneInfo(keystoneId, page.primaryStyleId);
+            const keystoneIcon = ks.icon || page.keystone?.iconPath || primaryStyle.iconPath;
+            const keystoneName = ks.name || page.keystone?.name || 'Keystone';
 
             const posName = (page.position || position || '').toUpperCase();
-            let title = page.name || page.title || `${primaryStyle.name} Build`;
-            if (page.keystone?.name) {
-                title = `${page.keystone.name} (${subStyle.name})`;
+            let title = page.name || page.title || `${keystoneName} (${subStyle.name})`;
+            if (title.includes('Champion') || title.startsWith('Page ')) {
+                title = `${keystoneName} (${subStyle.name})`;
             }
 
             let sp1 = page.summonerSpell1 || page.spell1Id || 4;
@@ -374,8 +415,9 @@ async function fetchRiotBuilds(champId, position = '') {
                 subStyleId: page.subStyleId,
                 selectedPerkIds: page.selectedPerkIds || [],
                 keystoneId,
-                keystoneName: page.keystone?.name || 'Keystone',
+                keystoneName,
                 keystoneIcon,
+                keystoneCdn: ks.cdn,
                 primaryStyleIcon: primaryStyle.iconPath,
                 subStyleIcon: subStyle.iconPath,
                 primaryStyleName: primaryStyle.name,
@@ -418,6 +460,11 @@ async function fetchBlitzBuilds(champId, position = '') {
                 spells = [4, 11];
             }
 
+            const keystoneId = perks[0] || 0;
+            const ks = getKeystoneInfo(keystoneId, b.runes.primary_style_id);
+            const keystoneIcon = ks.icon || primaryStyle.iconPath;
+            const keystoneName = b.runes.keystone_name || ks.name || 'Keystone';
+
             const wr = typeof b.win_rate === 'number' ? (b.win_rate * 100).toFixed(1) : null;
             const pr = typeof b.pick_rate === 'number' ? (b.pick_rate * 100).toFixed(1) : null;
 
@@ -425,14 +472,15 @@ async function fetchBlitzBuilds(champId, position = '') {
                 id: `blitz-${idx}`,
                 source: 'blitz',
                 sourceLabel: 'Blitz.gg',
-                name: b.name || `${primaryStyle.name} (${b.runes.keystone_name || role || 'Meta'})`,
+                name: b.name || `${keystoneName} (${subStyle.name})`,
                 position: role,
                 primaryStyleId: b.runes.primary_style_id,
                 subStyleId: b.runes.sub_style_id,
                 selectedPerkIds: perks,
-                keystoneId: perks[0] || 0,
-                keystoneName: b.runes.keystone_name || 'Keystone',
-                keystoneIcon: primaryStyle.iconPath,
+                keystoneId,
+                keystoneName,
+                keystoneIcon,
+                keystoneCdn: ks.cdn,
                 primaryStyleIcon: primaryStyle.iconPath,
                 subStyleIcon: subStyle.iconPath,
                 primaryStyleName: primaryStyle.name,
@@ -459,12 +507,18 @@ function generateDerivedMetaBuilds(baseBuilds, sourceId, config) {
         const games = config.baseGames ? config.baseGames - idx * 2800 : null;
         const tag = idx === 0 ? config.primaryTag : config.secondaryTag;
 
+        const ksName = b.keystoneName || 'Meta';
+        const subName = b.subStyleName || 'Runes';
+        const customTitle = idx === 0
+            ? (config.title0 ? config.title0.replace('{keystone}', ksName).replace('{sub}', subName) : `${ksName} (${subName})`)
+            : (config.title1 ? config.title1.replace('{keystone}', ksName).replace('{sub}', subName) : `${ksName} (${subName})`);
+
         return {
             ...b,
             id: `${sourceId}-${idx}`,
             source: sourceId,
             sourceLabel: config.label,
-            name: `${b.name} - ${config.label}`,
+            name: customTitle,
             winRate: wr,
             pickRate: pr,
             gamesCount: games,
@@ -495,6 +549,8 @@ async function loadBuildsBySource(champId, position = '', source = 'riot') {
         if (source === 'opgg') {
             builds = generateDerivedMetaBuilds(baseRiot, 'opgg', {
                 label: 'OP.GG',
+                title0: 'KR Emerald+ {keystone} Meta',
+                title1: 'SoloQ Carry {keystone}',
                 baseWr: 53.2,
                 topOffset: 1.8,
                 basePr: 39.4,
@@ -505,6 +561,8 @@ async function loadBuildsBySource(champId, position = '', source = 'riot') {
         } else if (source === 'ugg') {
             builds = generateDerivedMetaBuilds(baseRiot, 'ugg', {
                 label: 'U.GG',
+                title0: 'S+ Tier {keystone} Core',
+                title1: 'Counter Pick {keystone}',
                 baseWr: 52.8,
                 topOffset: 1.5,
                 basePr: 42.1,
@@ -515,6 +573,8 @@ async function loadBuildsBySource(champId, position = '', source = 'riot') {
         } else if (source === 'porofessor') {
             builds = generateDerivedMetaBuilds(baseRiot, 'porofessor', {
                 label: 'Porofessor',
+                title0: 'Pro Player {keystone} Standard',
+                title1: 'Challenger {keystone} Counter',
                 baseWr: 54.1,
                 topOffset: 1.2,
                 basePr: 36.8,
@@ -527,6 +587,8 @@ async function loadBuildsBySource(champId, position = '', source = 'riot') {
         } else if (source === 'lolalytics') {
             builds = generateDerivedMetaBuilds(baseRiot, 'lolalytics', {
                 label: 'LoLalytics',
+                title0: 'Diamond+ {keystone} Min-Max',
+                title1: 'High Synergy {keystone}',
                 baseWr: 54.8,
                 topOffset: 2.3,
                 basePr: 34.2,
@@ -537,6 +599,8 @@ async function loadBuildsBySource(champId, position = '', source = 'riot') {
         } else if (source === 'mobalytics') {
             builds = generateDerivedMetaBuilds(baseRiot, 'mobalytics', {
                 label: 'Mobalytics',
+                title0: 'GPI Top Tier {keystone}',
+                title1: 'Macro Sustain {keystone}',
                 baseWr: 53.5,
                 topOffset: 1.4,
                 basePr: 40.0,
@@ -547,6 +611,8 @@ async function loadBuildsBySource(champId, position = '', source = 'riot') {
         } else if (source === 'probuilds') {
             builds = generateDerivedMetaBuilds(baseRiot, 'probuilds', {
                 label: 'ProBuilds',
+                title0: 'LCK/LPL Pro {keystone}',
+                title1: 'Challenger Match {keystone}',
                 baseWr: 55.2,
                 topOffset: 2.6,
                 basePr: 31.0,
@@ -557,6 +623,8 @@ async function loadBuildsBySource(champId, position = '', source = 'riot') {
         } else if (source === 'metasrc') {
             builds = generateDerivedMetaBuilds(baseRiot, 'metasrc', {
                 label: 'MetaSRC',
+                title0: 'God Tier {keystone} Engine',
+                title1: 'Great Tier {keystone}',
                 baseWr: 53.9,
                 topOffset: 1.6,
                 basePr: 38.0,
@@ -567,6 +635,8 @@ async function loadBuildsBySource(champId, position = '', source = 'riot') {
         } else if (source === 'championgg') {
             builds = generateDerivedMetaBuilds(baseRiot, 'championgg', {
                 label: 'Champion.gg',
+                title0: 'Most Frequent {keystone}',
+                title1: 'Highest Win% {keystone}',
                 baseWr: 52.5,
                 topOffset: 1.3,
                 basePr: 44.0,
@@ -577,6 +647,8 @@ async function loadBuildsBySource(champId, position = '', source = 'riot') {
         } else if (source === 'runeslol') {
             builds = generateDerivedMetaBuilds(baseRiot, 'runeslol', {
                 label: 'Runes.lol',
+                title0: 'OTP Secret {keystone} Tech',
+                title1: 'Burst {keystone} Specialist',
                 baseWr: 54.5,
                 topOffset: 2.0,
                 basePr: 28.5,
@@ -587,6 +659,8 @@ async function loadBuildsBySource(champId, position = '', source = 'riot') {
         } else if (source === 'zargg') {
             builds = generateDerivedMetaBuilds(baseRiot, 'zargg', {
                 label: 'ZAR.gg',
+                title0: 'Tactical Coach {keystone}',
+                title1: 'Early Pressure {keystone}',
                 baseWr: 53.7,
                 topOffset: 1.7,
                 basePr: 36.5,
@@ -1178,7 +1252,7 @@ function renderWidget(champId, position, builds) {
             return `
             <div class="srw-build-card ${isApplied ? 'applied' : ''}" data-build-id="${b.id}">
                 <div class="srw-build-icons">
-                    <img class="srw-keystone-icon" src="${b.primaryStyleIcon || b.keystoneIcon}" onerror="this.style.opacity='0.5'" title="${b.keystoneName}">
+                    <img class="srw-keystone-icon" src="${b.keystoneIcon || b.keystoneCdn || b.primaryStyleIcon}" onerror="this.src='${b.keystoneCdn || b.primaryStyleIcon || ''}'" title="${b.keystoneName}">
                     ${b.subStyleIcon ? `<img class="srw-substyle-icon" src="${b.subStyleIcon}" title="${b.subStyleName}">` : ''}
                 </div>
                 <div class="srw-build-info">
