@@ -990,6 +990,8 @@ const LCU = {
     _uris: new Set(),
     _subscribed: new Set(),
     _subscriptions: new Map(),
+    _lastGameflowPhase: null,
+    _pollTimer: null,
 
     bind(ctx) {
         if (this._ctx && this._ctx !== ctx) {
@@ -1001,9 +1003,55 @@ const LCU = {
         window.LCU = this;
         Debug.log('[LCU] bindContext');
         this._uris.forEach(u => this._subscribe(u));
+        this._startHeartbeat();
+    },
+
+    _startHeartbeat() {
+        if (this._pollTimer) return;
+        this._pollTimer = setInterval(async () => {
+            if (!this._ctx) return;
+            try {
+                const phase = await this.get('/lol-gameflow/v1/gameflow-phase');
+                if (phase && phase !== this._lastGameflowPhase) {
+                    const oldPhase = this._lastGameflowPhase;
+                    this._lastGameflowPhase = phase;
+                    Debug.log(`[LCU] Gameflow phase transition detected via poll: ${oldPhase} → ${phase}`);
+                    this._dispatch('/lol-gameflow/v1/gameflow-phase', phase);
+                    this._refreshSubscriptions();
+                }
+            } catch (e) {}
+        }, 1000);
+    },
+
+    _refreshSubscriptions() {
+        if (!this._ctx?.socket) return;
+        for (const uri of this._uris) {
+            if (!this._subscribed.has(uri)) {
+                this._subscribe(uri);
+            }
+        }
+    },
+
+    _dispatch(uri, data) {
+        const listeners = this._listeners.get(uri);
+        if (!listeners || listeners.size === 0) return;
+        for (const callback of listeners) {
+            try {
+                const result = callback({ data });
+                if (result && typeof result.catch === 'function') {
+                    result.catch(error => Debug.error(`[LCU] Observer callback rejected for ${uri}:`, error));
+                }
+            } catch (error) {
+                Debug.error(`[LCU] Observer callback failed for ${uri}:`, error);
+            }
+        }
     },
 
     unbind() {
+        if (this._pollTimer) {
+            clearInterval(this._pollTimer);
+            this._pollTimer = null;
+        }
         for (const uri of [...this._subscriptions.keys()]) {
             this._disconnectUri(uri);
         }
@@ -1012,6 +1060,7 @@ const LCU = {
         this._subscribed.clear();
         this._subscriptions.clear();
         this._ctx = null;
+        this._lastGameflowPhase = null;
         if (window.LCU === this) delete window.LCU;
     },
 

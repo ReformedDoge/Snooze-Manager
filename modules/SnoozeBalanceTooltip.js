@@ -459,6 +459,7 @@ export function init(context) {
 
 export function load() {
     fetchWikiData();
+    isEnabled = Utils.Store.get('SnoozeBalanceTooltip', 'enabled') || false;
     if (isEnabled) mountSnoozeBalanceTooltip();
 }
 export function unload() {

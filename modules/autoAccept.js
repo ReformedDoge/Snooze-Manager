@@ -162,15 +162,18 @@ let _hideReadyCheckHookCleanup = null;
 let _exitOnDodgeHookCleanup = null;
 
 export function load() {
+    isEnabled = Utils.Store.get('autoAccept', SETTINGS_KEY) || false;
     if (Utils.LCU && Utils.LCU.observe) {
+        if (_phaseUnsub) _phaseUnsub();
         _phaseUnsub = Utils.LCU.observe('/lol-gameflow/v1/gameflow-phase', e => {
             const phase = e.data;
+            const enabled = Utils.Store.get('autoAccept', SETTINGS_KEY) || false;
             const exitOnDecline = Utils.Store.get('autoAccept', EXIT_ON_DECLINE_KEY);
 
             if (phase === 'ReadyCheck') {
                 wasInReadyCheck = true;
                 acceptedCurrentReadyCheck = false;
-                if (!isEnabled) return;
+                if (!enabled) return;
                 if (acceptedCurrentReadyCheck) return;
                 acceptedCurrentReadyCheck = true;
 
@@ -189,7 +192,7 @@ export function load() {
                         pendingAcceptTimer = null;
                         pendingPanicUnsub?.();
                         pendingPanicUnsub = null;
-                        if (isCancelled || !isEnabled || !acceptedCurrentReadyCheck) return;
+                        if (isCancelled || !Utils.Store.get('autoAccept', SETTINGS_KEY) || !acceptedCurrentReadyCheck) return;
                         Utils.LCU.post('/lol-matchmaking/v1/ready-check/accept').catch(() => {});
                     }, delay * 1000);
                 }

@@ -1373,6 +1373,7 @@ function unmountAutoLockChampion() {
 }
 
 export function load() {
+    isEnabled = Utils.Store.get('autoLockChampion', 'enabled') || false;
     if (isEnabled) mountAutoLockChampion();
     fetchCurrentSummoner();
 }
