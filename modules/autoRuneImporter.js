@@ -1230,9 +1230,9 @@ function renderExtraSettings(container) {
                     <div style="font-size:13px;font-weight:700;color:#c8aa6e;margin-bottom:4px;">${t('Flash Key Slot')}</div>
                     <div style="font-size:11px;color:#8a9aaa;margin-bottom:8px;">${t('Choose preferred slot for Flash spell.')}</div>
                     <select id="srw-flash-key-select" style="background:#111;color:#f0e6d2;border:1px solid #3e2e13;padding:6px 10px;border-radius:4px;width:100%;outline:none;">
-                        <option value="D" ${flashKeyPreference === 'D' ? 'selected' : ''}>D Key (D Tuşu)</option>
-                        <option value="F" ${flashKeyPreference === 'F' ? 'selected' : ''}>F Key (F Tuşu)</option>
-                        <option value="keep" ${flashKeyPreference === 'keep' ? 'selected' : ''}>Keep Default (Varsayılan)</option>
+                        <option value="D" ${flashKeyPreference === 'D' ? 'selected' : ''}>${t('D Key')}</option>
+                        <option value="F" ${flashKeyPreference === 'F' ? 'selected' : ''}>${t('F Key')}</option>
+                        <option value="keep" ${flashKeyPreference === 'keep' ? 'selected' : ''}>${t('Keep Default')}</option>
                     </select>
                 </div>
                 <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(200,170,110,0.15);border-radius:8px;padding:12px;">
@@ -1250,9 +1250,9 @@ function renderExtraSettings(container) {
                     <div style="font-size:13px;font-weight:700;color:#c8aa6e;margin-bottom:4px;">${t('Widget Scale')}</div>
                     <div style="font-size:11px;color:#8a9aaa;margin-bottom:8px;">${t('Adjust size for your screen resolution.')}</div>
                     <select id="srw-scale-select" style="background:#111;color:#f0e6d2;border:1px solid #3e2e13;padding:6px 10px;border-radius:4px;width:100%;outline:none;">
-                        <option value="0.85" ${widgetScale === 0.85 ? 'selected' : ''}>Compact (%85)</option>
-                        <option value="1.0" ${widgetScale === 1.0 ? 'selected' : ''}>Standard (%100)</option>
-                        <option value="1.15" ${widgetScale === 1.15 ? 'selected' : ''}>Large (%115)</option>
+                        <option value="0.85" ${widgetScale === 0.85 ? 'selected' : ''}>${t('Compact (85%)')}</option>
+                        <option value="1.0" ${widgetScale === 1.0 ? 'selected' : ''}>${t('Standard (100%)')}</option>
+                        <option value="1.15" ${widgetScale === 1.15 ? 'selected' : ''}>${t('Large (115%)')}</option>
                     </select>
                 </div>
 
