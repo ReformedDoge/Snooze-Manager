@@ -13,6 +13,7 @@ const MODULE_KEY = 'autoRuneImporter';
 let isEnabled = true;
 let autoApplyOnLock = false;
 let importSpells = true;
+let importItemSets = true;
 let flashKeyPreference = 'D'; // 'D' | 'F' | 'keep'
 let defaultSource = 'riot';
 let enabledSources = ['riot', 'opgg', 'ugg', 'porofessor', 'blitz', 'lolalytics', 'mobalytics', 'probuilds', 'metasrc', 'championgg', 'runeslol', 'zargg'];
@@ -198,6 +199,7 @@ function loadSettings() {
     isEnabled = Utils.Store.get(MODULE_KEY, 'enabled') ?? true;
     autoApplyOnLock = Utils.Store.get(MODULE_KEY, 'autoApplyOnLock') ?? false;
     importSpells = Utils.Store.get(MODULE_KEY, 'importSpells') ?? true;
+    importItemSets = Utils.Store.get(MODULE_KEY, 'importItemSets') ?? true;
     flashKeyPreference = Utils.Store.get(MODULE_KEY, 'flashKey') || 'D';
     defaultSource = Utils.Store.get(MODULE_KEY, 'source') || 'riot';
     enabledSources = Utils.Store.get(MODULE_KEY, 'enabledSources') || ALL_SOURCES.map(s => s.id);
@@ -808,6 +810,248 @@ async function applySummonerSpells(spell1Id, spell2Id) {
     }
 }
 
+function getItemBlocksForBuild(build, champId) {
+    if (build?.rawItems && Array.isArray(build.rawItems.blocks)) {
+        return build.rawItems.blocks;
+    }
+
+    const pos = (build?.position || currentPosition || '').toUpperCase();
+    const isJungle = pos === 'JUNGLE' || pos === 'JGL';
+    const isSupport = pos === 'UTILITY' || pos === 'SUPPORT' || pos === 'SUP';
+    const isAram = currentQueueId === 450 || pos === 'ARAM';
+
+    const primaryStyleId = Number(build?.primaryStyleId || 8000);
+    const keystoneId = Number(build?.keystoneId || 0);
+
+    let starterItems = [];
+    let coreItems = [];
+    let situationalItems = [];
+
+    if (isJungle) {
+        starterItems = [
+            { id: '1102', count: 1 }, // Scorchclaw Pup
+            { id: '2003', count: 1 }, // Potion
+            { id: '3340', count: 1 }  // Ward
+        ];
+    } else if (isSupport) {
+        starterItems = [
+            { id: '3865', count: 1 }, // World Atlas
+            { id: '2003', count: 2 }, // Potions
+            { id: '3340', count: 1 }  // Ward
+        ];
+    } else if (isAram) {
+        starterItems = [
+            { id: '2051', count: 1 }, // Guardian's Horn / Blade / Orb
+            { id: '2003', count: 1 }
+        ];
+    } else {
+        starterItems = [
+            { id: '1055', count: 1 }, // Doran's Blade
+            { id: '2003', count: 1 }, // Potion
+            { id: '3340', count: 1 }  // Ward
+        ];
+    }
+
+    if (isSupport) {
+        if (primaryStyleId === 8400) {
+            coreItems = [
+                { id: '3869', count: 1 }, // Celestial Opposition / Dream Maker
+                { id: '3109', count: 1 }, // Knight's Vow
+                { id: '3190', count: 1 }, // Locket of the Iron Solari
+                { id: '3111', count: 1 }  // Mercury's Treads
+            ];
+            situationalItems = [
+                { id: '3050', count: 1 }, // Zeke's Convergence
+                { id: '3107', count: 1 }, // Redemption
+                { id: '3110', count: 1 }, // Frozen Heart
+                { id: '3001', count: 1 }  // Abyssal Mask
+            ];
+        } else {
+            coreItems = [
+                { id: '3869', count: 1 }, // Dream Maker
+                { id: '6617', count: 1 }, // Moonstone Renewer
+                { id: '6620', count: 1 }, // Echoes of Helia
+                { id: '3158', count: 1 }  // Ionian Boots
+            ];
+            situationalItems = [
+                { id: '3504', count: 1 }, // Ardent Censer
+                { id: '6616', count: 1 }, // Staff of Flowing Water
+                { id: '3107', count: 1 }, // Redemption
+                { id: '3222', count: 1 }  // Mikael's Blessing
+            ];
+        }
+    } else if (primaryStyleId === 8200 || keystoneId === 8229 || keystoneId === 8214) {
+        // AP Mage
+        if (!isJungle && !isAram) {
+            starterItems = [
+                { id: '1056', count: 1 }, // Doran's Ring
+                { id: '2003', count: 2 }, // 2x Potions
+                { id: '3340', count: 1 }
+            ];
+        }
+        coreItems = [
+            { id: '6655', count: 1 }, // Luden's Companion
+            { id: '4645', count: 1 }, // Shadowflame
+            { id: '3089', count: 1 }, // Rabadon's Deathcap
+            { id: '3020', count: 1 }  // Sorcerer's Shoes
+        ];
+        situationalItems = [
+            { id: '3157', count: 1 }, // Zhonya's Hourglass
+            { id: '3135', count: 1 }, // Void Staff
+            { id: '3102', count: 1 }, // Banshee's Veil
+            { id: '3165', count: 1 }, // Morellonomicon
+            { id: '4629', count: 1 }  // Cosmic Drive
+        ];
+    } else if (primaryStyleId === 8100 || keystoneId === 8112 || keystoneId === 8128) {
+        // AD / Lethality Assassin
+        coreItems = [
+            { id: '6697', count: 1 }, // Profane Hydra
+            { id: '6701', count: 1 }, // Opportunity
+            { id: '6694', count: 1 }, // Serylda's Grudge
+            { id: '3158', count: 1 }  // Ionian Boots
+        ];
+        situationalItems = [
+            { id: '3814', count: 1 }, // Edge of Night
+            { id: '6692', count: 1 }, // Eclipse
+            { id: '3156', count: 1 }, // Maw of Malmortius
+            { id: '3026', count: 1 }, // Guardian Angel
+            { id: '6698', count: 1 }  // Voltaic Cyclosword
+        ];
+    } else if (primaryStyleId === 8400 || keystoneId === 8437 || keystoneId === 8439) {
+        // Tank / Heavy Bruiser
+        if (!isJungle && !isAram) {
+            starterItems = [
+                { id: '1054', count: 1 }, // Doran's Shield
+                { id: '2003', count: 1 },
+                { id: '3340', count: 1 }
+            ];
+        }
+        coreItems = [
+            { id: '3068', count: 1 }, // Sunfire Aegis
+            { id: '3084', count: 1 }, // Heartsteel
+            { id: '3075', count: 1 }, // Thornmail
+            { id: '3047', count: 1 }  // Plated Steelcaps
+        ];
+        situationalItems = [
+            { id: '6664', count: 1 }, // Kaenic Rookern
+            { id: '6665', count: 1 }, // Jak'Sho
+            { id: '3110', count: 1 }, // Frozen Heart
+            { id: '3083', count: 1 }  // Warmog's Armor
+        ];
+    } else if (pos === 'BOTTOM' || pos === 'ADC' || keystoneId === 8008 || keystoneId === 8005) {
+        // ADC / Marksman
+        coreItems = [
+            { id: '6672', count: 1 }, // Kraken Slayer
+            { id: '3031', count: 1 }, // Infinity Edge
+            { id: '3036', count: 1 }, // Lord Dominik's Regards
+            { id: '3006', count: 1 }  // Berserker's Greaves
+        ];
+        situationalItems = [
+            { id: '3072', count: 1 }, // Bloodthirster
+            { id: '3026', count: 1 }, // Guardian Angel
+            { id: '6673', count: 1 }, // Immortal Shieldbow
+            { id: '3033', count: 1 }, // Mortal Reminder
+            { id: '6675', count: 1 }  // Navori Flickerblade
+        ];
+    } else {
+        // Bruiser / Fighter (Conqueror / Top / Mid)
+        coreItems = [
+            { id: '3078', count: 1 }, // Trinity Force
+            { id: '6610', count: 1 }, // Sundered Sky
+            { id: '3053', count: 1 }, // Sterak's Gage
+            { id: '3047', count: 1 }  // Plated Steelcaps
+        ];
+        situationalItems = [
+            { id: '6333', count: 1 }, // Death's Dance
+            { id: '3156', count: 1 }, // Maw of Malmortius
+            { id: '3071', count: 1 }, // Black Cleaver
+            { id: '3026', count: 1 }, // Guardian Angel
+            { id: '3074', count: 1 }  // Ravenous Hydra
+        ];
+    }
+
+    const consumableItems = [
+        { id: '2003', count: 1 }, // Health Potion
+        { id: '2055', count: 1 }, // Control Ward
+        { id: '2140', count: 1 }, // Elixir of Wrath
+        { id: '2139', count: 1 }, // Elixir of Sorcery
+        { id: '2138', count: 1 }  // Elixir of Iron
+    ];
+
+    return [
+        {
+            type: t('Starting Items'),
+            items: starterItems
+        },
+        {
+            type: t('Core Build'),
+            items: coreItems
+        },
+        {
+            type: t('Situational & Late Game'),
+            items: situationalItems
+        },
+        {
+            type: t('Consumables & Elixirs'),
+            items: consumableItems
+        }
+    ];
+}
+
+async function applyItemSet(champId, build) {
+    if (!Utils.LCU || !champId || !build) return false;
+
+    try {
+        const summoner = await Utils.LCU.get('/lol-summoner/v1/current-summoner').catch(() => null);
+        const accountId = summoner?.accountId || summoner?.summonerId;
+        if (!accountId) return false;
+
+        const currentData = await Utils.LCU.get(`/lol-item-sets/v1/item-sets/${accountId}/sets`).catch(() => null) || { itemSets: [] };
+        const existingSets = Array.isArray(currentData.itemSets) ? currentData.itemSets : [];
+
+        // Remove any previous Snooze auto-imported set for this champion
+        const filteredSets = existingSets.filter(s => {
+            if (s.uid === 'snooze-auto-itemset' || s.title?.startsWith('Snooze:')) {
+                return false;
+            }
+            return true;
+        });
+
+        const blocks = getItemBlocksForBuild(build, champId);
+        const champName = Utils.GameData?.Assets?.getChampionName?.(champId) || `Champion ${champId}`;
+        const sourceLabel = build.sourceLabel || 'Meta';
+
+        const newSet = {
+            title: `Snooze: ${champName} (${sourceLabel})`,
+            associatedChampions: [Number(champId)],
+            associatedMaps: [11, 12],
+            blocks: blocks,
+            preferredItemSlots: [],
+            sortorder: 0,
+            startedFrom: 'blank',
+            uid: 'snooze-auto-itemset'
+        };
+
+        filteredSets.push(newSet);
+
+        const payload = {
+            accountId: Number(accountId),
+            itemSets: filteredSets,
+            timestamp: Date.now()
+        };
+
+        const res = await Utils.LCU.put(`/lol-item-sets/v1/item-sets/${accountId}/sets`, payload).catch(() => null);
+        if (res) {
+            Utils.Debug.log(`[AutoRune] Successfully applied item set for ${champName}`);
+            return true;
+        }
+        return false;
+    } catch (e) {
+        Utils.Debug.error('[AutoRune] Failed to apply item set:', e);
+        return false;
+    }
+}
+
 export async function applyBuild(build, silent = false) {
     if (!build) return;
 
@@ -815,6 +1059,11 @@ export async function applyBuild(build, silent = false) {
     const shouldImportSpells = Utils.Store.get(MODULE_KEY, 'importSpells') ?? importSpells;
     if (shouldImportSpells && build.summonerSpell1 && build.summonerSpell2) {
         await applySummonerSpells(build.summonerSpell1, build.summonerSpell2);
+    }
+
+    const shouldImportItemSets = Utils.Store.get(MODULE_KEY, 'importItemSets') ?? importItemSets;
+    if (shouldImportItemSets && currentChampionId > 0) {
+        await applyItemSet(currentChampionId, build);
     }
 
     if (runesOk) {
@@ -832,7 +1081,7 @@ export async function applyBuild(build, silent = false) {
 
         if (!silent) {
             Utils.Toast.success(
-                t('Applied {{name}} runes & spells!', { name: build.name }),
+                t('Applied {{name}} runes, spells & item sets!', { name: build.name }),
                 { duration: 4000, closable: true, position: 'bottom-right' }
             );
         }
@@ -1854,6 +2103,16 @@ export function init(context) {
                     onChange: (v) => {
                         importSpells = v;
                         Utils.Store.set(MODULE_KEY, 'importSpells', v);
+                    }
+                },
+                {
+                    type: 'toggle',
+                    id: 'sm:autoRuneImportItemSets',
+                    label: t('Import Recommended Item Sets'),
+                    value: importItemSets,
+                    onChange: (v) => {
+                        importItemSets = v;
+                        Utils.Store.set(MODULE_KEY, 'importItemSets', v);
                     }
                 },
                 {
