@@ -782,13 +782,32 @@ function createWidgetStyles() {
         color: #f0e6d2;
         line-height: 1.2;
     }
-    .srw-role-badge {
+    .srw-role-select {
         display: inline-block;
         font-size: 10px;
         font-weight: 800;
         color: #0ac8b9;
         text-transform: uppercase;
         letter-spacing: 0.5px;
+        background: rgba(10, 200, 185, 0.10);
+        border: 1px solid rgba(10, 200, 185, 0.35);
+        border-radius: 4px;
+        padding: 1px 4px;
+        outline: none;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        margin-top: 2px;
+    }
+    .srw-role-select:hover, .srw-role-select:focus {
+        background: rgba(10, 200, 185, 0.22);
+        border-color: #0ac8b9;
+        color: #f0e6d2;
+    }
+    .srw-role-select option {
+        background: #010a13;
+        color: #f0e6d2;
+        font-size: 11px;
+        font-weight: 700;
     }
     .srw-header-controls {
         display: flex;
@@ -1133,13 +1152,33 @@ function renderWidget(champId, position, builds) {
         }).join('');
     }
 
+    const currentPosNorm = (position || '').toUpperCase();
+    const roleOptions = [
+        { val: '', label: t('ALL ROLES') },
+        { val: 'TOP', label: t('TOP') },
+        { val: 'JUNGLE', label: t('JUNGLE') },
+        { val: 'MIDDLE', label: t('MIDDLE') },
+        { val: 'BOTTOM', label: t('BOTTOM') },
+        { val: 'UTILITY', label: t('SUPPORT') },
+        { val: 'ARAM', label: t('ARAM') }
+    ];
+
+    const roleSelectHtml = `
+        <select class="srw-role-select" title="${t('Change Role')}">
+            ${roleOptions.map(r => {
+                const isSel = (r.val === currentPosNorm) || (!r.val && (!currentPosNorm || currentPosNorm === 'ALL'));
+                return `<option value="${r.val}" ${isSel ? 'selected' : ''}>${r.label}</option>`;
+            }).join('')}
+        </select>
+    `;
+
     widgetElement.innerHTML = `
         <div class="srw-header">
             <div class="srw-header-left">
                 <img class="srw-champ-icon" src="${champIcon}" onerror="this.style.opacity='0.4'">
                 <div>
                     <div class="srw-champ-title">${champName}</div>
-                    <div class="srw-role-badge">${position || t('ALL ROLES')}</div>
+                    ${roleSelectHtml}
                 </div>
             </div>
             <div class="srw-header-controls">
@@ -1166,6 +1205,17 @@ function renderWidget(champId, position, builds) {
     // Controls
     const collapseBtn = widgetElement.querySelector('.srw-collapse-btn');
     const headerLeft = widgetElement.querySelector('.srw-header-left');
+    const roleSelect = widgetElement.querySelector('.srw-role-select');
+
+    roleSelect?.addEventListener('change', async (e) => {
+        e.stopPropagation();
+        const selectedRole = e.target.value;
+        currentPosition = selectedRole;
+        const newBuilds = await loadBuildsBySource(currentChampionId, selectedRole, activeSource);
+        renderWidget(currentChampionId, selectedRole, newBuilds);
+    });
+    roleSelect?.addEventListener('click', (e) => e.stopPropagation());
+    roleSelect?.addEventListener('mousedown', (e) => e.stopPropagation());
 
     const toggleCollapse = (e) => {
         e.stopPropagation();
@@ -1176,6 +1226,7 @@ function renderWidget(champId, position, builds) {
 
     collapseBtn?.addEventListener('click', toggleCollapse);
     headerLeft?.addEventListener('click', (e) => {
+        if (e.target.closest('.srw-role-select')) return;
         if (isWidgetCollapsed) toggleCollapse(e);
     });
 
