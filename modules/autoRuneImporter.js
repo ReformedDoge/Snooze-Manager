@@ -1,8 +1,8 @@
 /**
  * @name Snooze-AutoRuneImporter
- * @version 1.3.0
+ * @version 1.4.0
  * @author SnoozeFest - github@ReformedDoge
- * @description Comprehensive Multi-Source Auto Rune & Spells Importer supporting Riot, OP.GG, U.GG, Porofessor, Blitz.gg, LoLalytics, Mobalytics, ProBuilds, MetaSRC, Champion.gg, Runes.lol, and ZAR.gg with vector SVGs and an interactive build selector widget.
+ * @description Comprehensive Multi-Source Auto Rune & Spells Importer supporting Riot, OP.GG, U.GG, Porofessor, Blitz.gg, LoLalytics, Mobalytics, ProBuilds, MetaSRC, Champion.gg, Runes.lol, and ZAR.gg with authentic brand logos and vector fallbacks.
  * @link https://github.com/ReformedDoge
  */
 import Utils, { t } from './generalUtils.js';
@@ -52,7 +52,7 @@ const SUMMONER_SPELLS = {
     32: { id: 32, name: 'Mark', icon: '/lol-game-data/assets/v1/summoner-spells/32.png' }
 };
 
-// SVG Icons for all 12 providers
+// SVG Icons fallback for all 12 providers
 const SOURCE_SVGS = {
     riot: `<svg viewBox="0 0 24 24" width="13" height="13" fill="#d92323"><path d="M13 2L3 14h7v8l11-12h-8z"/></svg>`,
     opgg: `<svg viewBox="0 0 24 24" width="13" height="13" fill="#5383e8"><rect width="20" height="20" x="2" y="2" rx="6"/><path fill="#fff" d="M7.5 7a3 3 0 000 6 3 3 0 000-6zm0 1.6a1.4 1.4 0 110 2.8 1.4 1.4 0 010-2.8zm6.5-1.6a3 3 0 000 6 3 3 0 000-6zm0 1.6a1.4 1.4 0 110 2.8 1.4 1.4 0 010-2.8z"/></svg>`,
@@ -69,18 +69,18 @@ const SOURCE_SVGS = {
 };
 
 export const ALL_SOURCES = [
-    { id: 'riot', name: 'Riot', desc: 'Riot Recommended (LCU)', badge: 'Official', svg: SOURCE_SVGS.riot },
-    { id: 'opgg', name: 'OP.GG', desc: 'OP.GG Emerald+ Meta', badge: 'KR / High Elo', svg: SOURCE_SVGS.opgg },
-    { id: 'ugg', name: 'U.GG', desc: 'U.GG Tier List Meta', badge: 'Tier List', svg: SOURCE_SVGS.ugg },
-    { id: 'porofessor', name: 'Porofessor', desc: 'Porofessor Pro Builds', badge: 'Pro Play', svg: SOURCE_SVGS.porofessor },
-    { id: 'blitz', name: 'Blitz', desc: 'Blitz.gg Auto Builds', badge: 'Esports', svg: SOURCE_SVGS.blitz },
-    { id: 'lolalytics', name: 'LoLalytics', desc: 'LoLalytics Diamond+ Analytics', badge: 'Deep Stats', svg: SOURCE_SVGS.lolalytics },
-    { id: 'mobalytics', name: 'Mobalytics', desc: 'Mobalytics GPI Meta Tier', badge: 'Meta Tier', svg: SOURCE_SVGS.mobalytics },
-    { id: 'probuilds', name: 'ProBuilds', desc: 'Pro Player SoloQ Builds', badge: 'Pro Match', svg: SOURCE_SVGS.probuilds },
-    { id: 'metasrc', name: 'MetaSRC', desc: 'MetaSRC Ranked & ARAM Engine', badge: 'Meta Engine', svg: SOURCE_SVGS.metasrc },
-    { id: 'championgg', name: 'Champion.gg', desc: 'Champion.gg Statistical Aggregator', badge: 'Aggregator', svg: SOURCE_SVGS.championgg },
-    { id: 'runeslol', name: 'Runes.lol', desc: 'Runes.lol OTP Specialty Builds', badge: 'OTP Pick', svg: SOURCE_SVGS.runeslol },
-    { id: 'zargg', name: 'ZAR.gg', desc: 'ZAR.gg Tactical In-Game Builds', badge: 'Tactical', svg: SOURCE_SVGS.zargg }
+    { id: 'riot', name: 'Riot', domain: 'leagueoflegends.com', desc: 'Riot Recommended (LCU)', badge: 'Official', svg: SOURCE_SVGS.riot },
+    { id: 'opgg', name: 'OP.GG', domain: 'op.gg', desc: 'OP.GG Emerald+ Meta', badge: 'KR / High Elo', svg: SOURCE_SVGS.opgg },
+    { id: 'ugg', name: 'U.GG', domain: 'u.gg', desc: 'U.GG Tier List Meta', badge: 'Tier List', svg: SOURCE_SVGS.ugg },
+    { id: 'porofessor', name: 'Porofessor', domain: 'porofessor.gg', desc: 'Porofessor Pro Builds', badge: 'Pro Play', svg: SOURCE_SVGS.porofessor },
+    { id: 'blitz', name: 'Blitz', domain: 'blitz.gg', desc: 'Blitz.gg Auto Builds', badge: 'Esports', svg: SOURCE_SVGS.blitz },
+    { id: 'lolalytics', name: 'LoLalytics', domain: 'lolalytics.com', desc: 'LoLalytics Diamond+ Analytics', badge: 'Deep Stats', svg: SOURCE_SVGS.lolalytics },
+    { id: 'mobalytics', name: 'Mobalytics', domain: 'mobalytics.gg', desc: 'Mobalytics GPI Meta Tier', badge: 'Meta Tier', svg: SOURCE_SVGS.mobalytics },
+    { id: 'probuilds', name: 'ProBuilds', domain: 'probuilds.net', desc: 'Pro Player SoloQ Builds', badge: 'Pro Match', svg: SOURCE_SVGS.probuilds },
+    { id: 'metasrc', name: 'MetaSRC', domain: 'metasrc.com', desc: 'MetaSRC Ranked & ARAM Engine', badge: 'Meta Engine', svg: SOURCE_SVGS.metasrc },
+    { id: 'championgg', name: 'Champion.gg', domain: 'champion.gg', desc: 'Champion.gg Statistical Aggregator', badge: 'Aggregator', svg: SOURCE_SVGS.championgg },
+    { id: 'runeslol', name: 'Runes.lol', domain: 'runes.lol', desc: 'Runes.lol OTP Specialty Builds', badge: 'OTP Pick', svg: SOURCE_SVGS.runeslol },
+    { id: 'zargg', name: 'ZAR.gg', domain: 'zar.gg', desc: 'ZAR.gg Tactical In-Game Builds', badge: 'Tactical', svg: SOURCE_SVGS.zargg }
 ];
 
 function loadSettings() {
@@ -577,7 +577,7 @@ function createWidgetStyles() {
     .srw-source-pill {
         display: flex;
         align-items: center;
-        gap: 5px;
+        gap: 6px;
         padding: 5px 9px;
         font-size: 11px;
         font-weight: 800;
@@ -588,6 +588,13 @@ function createWidgetStyles() {
         cursor: pointer;
         white-space: nowrap;
         transition: all 0.15s ease;
+        flex-shrink: 0;
+    }
+    .srw-source-logo {
+        width: 14px;
+        height: 14px;
+        border-radius: 3px;
+        object-fit: contain;
         flex-shrink: 0;
     }
     .srw-source-pill svg {
@@ -780,7 +787,12 @@ function renderWidget(champId, position, builds) {
 
     const sourcePillsHtml = ALL_SOURCES.map(src => {
         const isActive = src.id === activeSource;
-        return `<button class="srw-source-pill ${isActive ? 'active' : ''}" data-src="${src.id}" title="${src.desc}">${src.svg}<span>${src.name}</span></button>`;
+        const faviconUrl = `https://www.google.com/s2/favicons?domain=${src.domain}&sz=64`;
+        return `
+            <button class="srw-source-pill ${isActive ? 'active' : ''}" data-src="${src.id}" title="${src.desc}">
+                <img class="srw-source-logo" src="${faviconUrl}" onerror="this.outerHTML='${src.svg.replace(/'/g, "\\'")}'" alt="${src.name}">
+                <span>${src.name}</span>
+            </button>`;
     }).join('');
 
     let buildsHtml = '';
