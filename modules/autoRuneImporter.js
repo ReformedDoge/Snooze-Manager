@@ -41,6 +41,9 @@ let lastGameId = null;
 let widgetElement = null;
 let isWidgetCollapsed = false;
 
+// In-memory runtime cache for the entire client session
+const buildsCache = new Map();
+
 // Style definitions & Metadata
 const PERK_STYLES = {
     8000: { id: 8000, name: 'Precision', iconPath: '/lol-game-data/assets/v1/perk-images/Styles/7201_Precision.png', color: '#c8aa6e' },
@@ -530,6 +533,16 @@ function generateDerivedMetaBuilds(baseBuilds, sourceId, config) {
 async function loadBuildsBySource(champId, position = '', source = 'riot') {
     if (!champId) return [];
 
+    const normPos = (position || 'ALL').toUpperCase();
+    const cacheKey = `${champId}_${normPos}_${source}`;
+    if (buildsCache.has(cacheKey)) {
+        const cached = buildsCache.get(cacheKey);
+        if (Array.isArray(cached) && cached.length > 0) {
+            currentBuilds = cached;
+            return cached;
+        }
+    }
+
     let builds = [];
     if (source === 'blitz') {
         builds = await fetchBlitzBuilds(champId, position);
@@ -673,6 +686,9 @@ async function loadBuildsBySource(champId, position = '', source = 'riot') {
         }
     }
 
+    if (Array.isArray(builds) && builds.length > 0) {
+        buildsCache.set(cacheKey, builds);
+    }
     currentBuilds = builds;
     return builds;
 }
@@ -1485,22 +1501,58 @@ async function onChampSelectSession(session) {
     const assignedPos = (myCell.assignedPosition || '').toUpperCase();
     currentPosition = assignedPos;
 
-    let champId = myCell.championId || myCell.championPickIntent || 0;
+    let champId = 0;
+    const allActions = session.actions ? (Array.isArray(session.actions) ? session.actions.flat(3) : []) : [];
 
-    // Check actions for hovered / active pick in Custom / Practice Tool / Blind Pick
-    if (!champId && session.actions) {
-        const allActions = Array.isArray(session.actions) ? session.actions.flat(3) : [];
-        const myAction = allActions.find(a => 
+    // 1. Prioritize active in-progress pick/vote action (tracks real-time grid clicks / hover in Practice Tool, Custom, Blind, Draft)
+    const activePickAction = allActions.find(a => 
+        (a.actorCellId === localCellId || a.actorCellId === myCell.cellId) && 
+        (a.type === 'pick' || a.type === 'vote') && 
+        !a.completed && 
+        a.championId > 0
+    );
+    if (activePickAction) {
+        champId = activePickAction.championId;
+    }
+
+    // 2. Locked / picked champion from cell
+    if (!champId && myCell.championId > 0) {
+        champId = myCell.championId;
+    }
+
+    // 3. Completed pick action
+    if (!champId) {
+        const completedAction = allActions.find(a => 
             (a.actorCellId === localCellId || a.actorCellId === myCell.cellId) && 
-            (a.type === 'pick' || a.type === 'vote') && 
+            a.type === 'pick' && 
+            a.completed && 
             a.championId > 0
         );
-        if (myAction) {
-            champId = myAction.championId;
+        if (completedAction) {
+            champId = completedAction.championId;
         }
     }
 
-    const isLocked = myCell.championId > 0 || (session.actions && Array.isArray(session.actions) && session.actions.flat(3).some(a => (a.actorCellId === localCellId || a.actorCellId === myCell.cellId) && a.type === 'pick' && a.completed && a.championId > 0));
+    // 4. Fallback to pick intent or any action for user
+    if (!champId) {
+        champId = myCell.championPickIntent || 0;
+    }
+    if (!champId) {
+        const anyAction = allActions.find(a => 
+            (a.actorCellId === localCellId || a.actorCellId === myCell.cellId) && 
+            a.championId > 0
+        );
+        if (anyAction) {
+            champId = anyAction.championId;
+        }
+    }
+
+    const isLocked = myCell.championId > 0 || allActions.some(a => 
+        (a.actorCellId === localCellId || a.actorCellId === myCell.cellId) && 
+        a.type === 'pick' && 
+        a.completed && 
+        a.championId > 0
+    );
 
     if (!widgetElement || champId !== currentChampionId) {
         currentChampionId = champId;
