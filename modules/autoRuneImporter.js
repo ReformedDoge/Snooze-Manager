@@ -1,8 +1,8 @@
 /**
  * @name Snooze-AutoRuneImporter
- * @version 1.2.0
+ * @version 1.3.0
  * @author SnoozeFest - github@ReformedDoge
- * @description Comprehensive Multi-Source Auto Rune & Spells Importer supporting Riot, OP.GG, U.GG, Porofessor, Blitz.gg, LoLalytics, Mobalytics, ProBuilds, MetaSRC, Champion.gg, Runes.lol, and ZAR.gg.
+ * @description Comprehensive Multi-Source Auto Rune & Spells Importer supporting Riot, OP.GG, U.GG, Porofessor, Blitz.gg, LoLalytics, Mobalytics, ProBuilds, MetaSRC, Champion.gg, Runes.lol, and ZAR.gg with vector SVGs and an interactive build selector widget.
  * @link https://github.com/ReformedDoge
  */
 import Utils, { t } from './generalUtils.js';
@@ -52,19 +52,35 @@ const SUMMONER_SPELLS = {
     32: { id: 32, name: 'Mark', icon: '/lol-game-data/assets/v1/summoner-spells/32.png' }
 };
 
+// SVG Icons for all 12 providers
+const SOURCE_SVGS = {
+    riot: `<svg viewBox="0 0 24 24" width="13" height="13" fill="#d92323"><path d="M13 2L3 14h7v8l11-12h-8z"/></svg>`,
+    opgg: `<svg viewBox="0 0 24 24" width="13" height="13" fill="#5383e8"><rect width="20" height="20" x="2" y="2" rx="6"/><path fill="#fff" d="M7.5 7a3 3 0 000 6 3 3 0 000-6zm0 1.6a1.4 1.4 0 110 2.8 1.4 1.4 0 010-2.8zm6.5-1.6a3 3 0 000 6 3 3 0 000-6zm0 1.6a1.4 1.4 0 110 2.8 1.4 1.4 0 010-2.8z"/></svg>`,
+    ugg: `<svg viewBox="0 0 24 24" width="13" height="13" fill="#805ad5"><rect width="20" height="20" x="2" y="2" rx="6"/><path fill="#fff" d="M7 6v6a5 5 0 0010 0V6h-2.8v6a2.2 2.2 0 01-4.4 0V6H7z"/></svg>`,
+    porofessor: `<svg viewBox="0 0 24 24" width="13" height="13" fill="#e2a738"><circle cx="12" cy="12" r="10"/><path fill="#111" d="M8 9a1.5 1.5 0 113 0 1.5 1.5 0 01-3 0zm5 0a1.5 1.5 0 113 0 1.5 1.5 0 01-3 0zm-5 5c1.5 2 4.5 2 6 0"/></svg>`,
+    blitz: `<svg viewBox="0 0 24 24" width="13" height="13" fill="#e53e3e"><path d="M12 2l8 4.5v11L12 22l-8-4.5v-11L12 2zm1 4.5l-5 6.5h4v5l5-6.5h-4v-5z"/></svg>`,
+    lolalytics: `<svg viewBox="0 0 24 24" width="13" height="13" fill="#0ac8b9"><path d="M9 3v2h1v5l-4.5 7.5A2 2 0 007.2 21h9.6a2 2 0 001.7-3.5L14 10V5h1V3H9zm2 2h2v5.5l.3.5 3.7 6.2a.5.5 0 01-.4.8H7.4a.5.5 0 01-.4-.8l3.7-6.2.3-.5V5z"/></svg>`,
+    mobalytics: `<svg viewBox="0 0 24 24" width="13" height="13" fill="#3182ce"><path d="M12 2l8 4.5v11L12 22l-8-4.5v-11L12 2zm0 3.2L6 8.6v6.8l6 3.4 6-3.4V8.6L12 5.2z"/></svg>`,
+    probuilds: `<svg viewBox="0 0 24 24" width="13" height="13" fill="#c8aa6e"><path d="M6 3h12v3h2a3 3 0 013 3v2a3 3 0 01-3 3h-1.2A7 7 0 0113 18.8V21h3v2H8v-2h3v-2.2A7 7 0 015.2 14H4a3 3 0 01-3-3V9a3 3 0 013-3h2V3zm-2 5H4a1 1 0 00-1 1v2a1 1 0 001 1h2V8zm16 0h-2v4h2a1 1 0 001-1V9a1 1 0 00-1-1z"/></svg>`,
+    metasrc: `<svg viewBox="0 0 24 24" width="13" height="13" fill="#dd6b20"><circle cx="12" cy="12" r="10" fill="none" stroke="#dd6b20" stroke-width="2"/><circle cx="12" cy="12" r="6" fill="none" stroke="#dd6b20" stroke-width="2"/><circle cx="12" cy="12" r="2.5" fill="#dd6b20"/></svg>`,
+    championgg: `<svg viewBox="0 0 24 24" width="13" height="13" fill="#38a169"><path d="M12 2a9 9 0 00-9 9c0 7 9 11 9 11s9-4 9-11a9 9 0 00-9-9zm0 4a3 3 0 013 3v2h-6V9a3 3 0 013-3zm-5 8v-1h10v1c0 3.3-2.7 6-5 6.8-2.3-.8-5-3.5-5-6.8z"/></svg>`,
+    runeslol: `<svg viewBox="0 0 24 24" width="13" height="13" fill="#9f7aea"><path d="M12 2l7 7-7 13L5 9l7-7zm0 3.5L7.5 9.5 12 18l4.5-8.5L12 5.5z"/></svg>`,
+    zargg: `<svg viewBox="0 0 24 24" width="13" height="13" fill="#f56565"><path d="M12 2L4 7v10l8 5 8-5V7l-8-5zm0 3.5l5 3.2v6.6l-5 3.2-5-3.2V8.7l5-3.2zM11 8v3H8v2h3v3h2v-3h3v-2h-3V8h-2z"/></svg>`
+};
+
 export const ALL_SOURCES = [
-    { id: 'riot', name: 'Riot', label: '⚡ Riot', desc: 'Riot Recommended (LCU)', badge: 'Official' },
-    { id: 'opgg', name: 'OP.GG', label: '📈 OP.GG', desc: 'OP.GG Emerald+ Meta', badge: 'KR / High Elo' },
-    { id: 'ugg', name: 'U.GG', label: '📊 U.GG', desc: 'U.GG Tier List Meta', badge: 'Tier List' },
-    { id: 'porofessor', name: 'Porofessor', label: '🔍 Porofessor', desc: 'Porofessor Pro Builds', badge: 'Pro Play' },
-    { id: 'blitz', name: 'Blitz', label: '⚡ Blitz', desc: 'Blitz.gg Auto Builds', badge: 'Esports' },
-    { id: 'lolalytics', name: 'LoLalytics', label: '🧪 LoLalytics', desc: 'LoLalytics Diamond+ Analytics', badge: 'Deep Stats' },
-    { id: 'mobalytics', name: 'Mobalytics', label: '💎 Mobalytics', desc: 'Mobalytics GPI Meta Tier', badge: 'Meta Tier' },
-    { id: 'probuilds', name: 'ProBuilds', label: '🏆 ProBuilds', desc: 'Pro Player SoloQ Builds', badge: 'Pro Match' },
-    { id: 'metasrc', name: 'MetaSRC', label: '🎯 MetaSRC', desc: 'MetaSRC Ranked & ARAM Engine', badge: 'Meta Engine' },
-    { id: 'championgg', name: 'Champion.gg', label: '🧠 Champion.gg', desc: 'Champion.gg Statistical Aggregator', badge: 'Aggregator' },
-    { id: 'runeslol', name: 'Runes.lol', label: '🌐 Runes.lol', desc: 'Runes.lol OTP Specialty Builds', badge: 'OTP Pick' },
-    { id: 'zargg', name: 'ZAR.gg', label: '🚀 ZAR.gg', desc: 'ZAR.gg Tactical In-Game Builds', badge: 'Tactical' }
+    { id: 'riot', name: 'Riot', desc: 'Riot Recommended (LCU)', badge: 'Official', svg: SOURCE_SVGS.riot },
+    { id: 'opgg', name: 'OP.GG', desc: 'OP.GG Emerald+ Meta', badge: 'KR / High Elo', svg: SOURCE_SVGS.opgg },
+    { id: 'ugg', name: 'U.GG', desc: 'U.GG Tier List Meta', badge: 'Tier List', svg: SOURCE_SVGS.ugg },
+    { id: 'porofessor', name: 'Porofessor', desc: 'Porofessor Pro Builds', badge: 'Pro Play', svg: SOURCE_SVGS.porofessor },
+    { id: 'blitz', name: 'Blitz', desc: 'Blitz.gg Auto Builds', badge: 'Esports', svg: SOURCE_SVGS.blitz },
+    { id: 'lolalytics', name: 'LoLalytics', desc: 'LoLalytics Diamond+ Analytics', badge: 'Deep Stats', svg: SOURCE_SVGS.lolalytics },
+    { id: 'mobalytics', name: 'Mobalytics', desc: 'Mobalytics GPI Meta Tier', badge: 'Meta Tier', svg: SOURCE_SVGS.mobalytics },
+    { id: 'probuilds', name: 'ProBuilds', desc: 'Pro Player SoloQ Builds', badge: 'Pro Match', svg: SOURCE_SVGS.probuilds },
+    { id: 'metasrc', name: 'MetaSRC', desc: 'MetaSRC Ranked & ARAM Engine', badge: 'Meta Engine', svg: SOURCE_SVGS.metasrc },
+    { id: 'championgg', name: 'Champion.gg', desc: 'Champion.gg Statistical Aggregator', badge: 'Aggregator', svg: SOURCE_SVGS.championgg },
+    { id: 'runeslol', name: 'Runes.lol', desc: 'Runes.lol OTP Specialty Builds', badge: 'OTP Pick', svg: SOURCE_SVGS.runeslol },
+    { id: 'zargg', name: 'ZAR.gg', desc: 'ZAR.gg Tactical In-Game Builds', badge: 'Tactical', svg: SOURCE_SVGS.zargg }
 ];
 
 function loadSettings() {
@@ -193,7 +209,6 @@ async function fetchBlitzBuilds(champId, position = '') {
     }
 }
 
-// Higher order generator for meta statistics sources
 function generateDerivedMetaBuilds(baseBuilds, sourceId, config) {
     return baseBuilds.map((b, idx) => {
         const wr = (config.baseWr + (idx === 0 ? config.topOffset : -0.9 * idx)).toFixed(1);
@@ -351,7 +366,6 @@ async function applyRunePage(build) {
             current: true
         };
 
-        // 1. Try updating current page if editable
         const currentPage = await Utils.LCU.get('/lol-perks/v1/currentpage').catch(() => null);
         if (currentPage && (currentPage.isEditable || currentPage.isCustom)) {
             await Utils.LCU.put(`/lol-perks/v1/pages/${currentPage.id}`, payload);
@@ -359,7 +373,6 @@ async function applyRunePage(build) {
             return true;
         }
 
-        // 2. Otherwise find first editable custom page
         const pages = await Utils.LCU.get('/lol-perks/v1/pages').catch(() => []);
         const editablePage = Array.isArray(pages) ? pages.find(p => p.isEditable || p.isCustom) : null;
 
@@ -369,7 +382,6 @@ async function applyRunePage(build) {
             return true;
         }
 
-        // 3. Try creating a new custom page or replacing
         await Utils.LCU.post('/lol-perks/v1/pages', payload).catch(async () => {
             if (Array.isArray(pages) && pages.length > 0) {
                 const oldest = pages[pages.length - 1];
@@ -395,7 +407,6 @@ async function applySummonerSpells(spell1Id, spell2Id) {
         let s2 = Number(spell2Id);
         const pref = Utils.Store.get(MODULE_KEY, 'flashKey') || flashKeyPreference;
 
-        // Flash is spell ID 4
         if (pref === 'D') {
             if (s2 === 4 && s1 !== 4) {
                 [s1, s2] = [s2, s1];
@@ -555,35 +566,42 @@ function createWidgetStyles() {
     }
     .srw-source-pills {
         display: flex;
-        gap: 4px;
-        background: rgba(0, 0, 0, 0.4);
+        gap: 5px;
+        background: rgba(0, 0, 0, 0.45);
         padding: 4px;
-        border-radius: 6px;
+        border-radius: 8px;
         border: 1px solid rgba(255, 255, 255, 0.05);
         overflow-x: auto;
         scrollbar-width: thin;
     }
     .srw-source-pill {
-        padding: 4px 9px;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        padding: 5px 9px;
         font-size: 11px;
         font-weight: 800;
         color: #8a9aaa;
         background: transparent;
         border: none;
-        border-radius: 4px;
+        border-radius: 5px;
         cursor: pointer;
         white-space: nowrap;
         transition: all 0.15s ease;
         flex-shrink: 0;
     }
+    .srw-source-pill svg {
+        flex-shrink: 0;
+    }
     .srw-source-pill:hover {
         color: #f0e6d2;
-        background: rgba(255, 255, 255, 0.03);
+        background: rgba(255, 255, 255, 0.04);
     }
     .srw-source-pill.active {
-        background: linear-gradient(135deg, rgba(200, 170, 110, 0.32), rgba(10, 200, 185, 0.18));
-        border: 1px solid rgba(200, 170, 110, 0.45);
+        background: linear-gradient(135deg, rgba(200, 170, 110, 0.35), rgba(10, 200, 185, 0.20));
+        border: 1px solid rgba(200, 170, 110, 0.5);
         color: #f0e6d2;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
     }
     .srw-build-card {
         display: flex;
@@ -762,7 +780,7 @@ function renderWidget(champId, position, builds) {
 
     const sourcePillsHtml = ALL_SOURCES.map(src => {
         const isActive = src.id === activeSource;
-        return `<button class="srw-source-pill ${isActive ? 'active' : ''}" data-src="${src.id}" title="${src.desc}">${src.label}</button>`;
+        return `<button class="srw-source-pill ${isActive ? 'active' : ''}" data-src="${src.id}" title="${src.desc}">${src.svg}<span>${src.name}</span></button>`;
     }).join('');
 
     let buildsHtml = '';
@@ -982,7 +1000,7 @@ async function onChampSelectSession(session) {
 
 function renderExtraSettings(container) {
     const sourceOptionsHtml = ALL_SOURCES.map(src => {
-        return `<option value="${src.id}" ${defaultSource === src.id ? 'selected' : ''}>${src.label} (${src.desc})</option>`;
+        return `<option value="${src.id}" ${defaultSource === src.id ? 'selected' : ''}>${src.name} (${src.desc})</option>`;
     }).join('');
 
     container.innerHTML = `
