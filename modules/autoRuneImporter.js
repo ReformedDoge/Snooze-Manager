@@ -736,8 +736,9 @@ function createWidgetStyles() {
         border-radius: 12px;
         box-shadow: 0 20px 48px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.08);
         backdrop-filter: blur(20px) saturate(140%);
-        -webkit-backdrop-filter: blur(20px) saturate(140%);
-        font-family: var(--font-body), "Segoe UI", sans-serif;
+        font-family: "Spiegel", var(--font-body), "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
+        -webkit-font-smoothing: antialiased;
+        text-rendering: optimizeLegibility;
         color: #a09b8c;
         overflow: hidden;
         transition: width 0.2s ease, transform 0.2s ease;

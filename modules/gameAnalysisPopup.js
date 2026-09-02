@@ -983,10 +983,15 @@ export function init(context) {
                 .pm-cs-stats-row, .pm-cs-stats-row *,
                 .pm-rank-badge, .pm-rank-badge *,
                 .pm-pre-badge, .pm-pre-badge * {
-                    font-family: var(--font-body), "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", Arial, sans-serif !important;
+                    font-family: "Spiegel", "BeaufortforLOL", var(--font-body), "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, sans-serif !important;
                     -webkit-font-smoothing: antialiased;
                     -moz-osx-font-smoothing: grayscale;
                     text-rendering: optimizeLegibility;
+                }
+                .pm-rank-badge {
+                    font-family: "BeaufortforLOL", var(--font-display), "Segoe UI", sans-serif !important;
+                    font-weight: 800 !important;
+                    letter-spacing: 0.5px !important;
                 }
             `;
             document.head.appendChild(st);
