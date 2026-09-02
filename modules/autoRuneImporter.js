@@ -1464,11 +1464,61 @@ function setupDraggable(el) {
 }
 
 // ---------------------------------------------------------
+// Non-Rune Game Mode Detection (Arena, Mayhem, Swarm, TFT)
+// ---------------------------------------------------------
+
+const NO_RUNE_QUEUE_IDS = [
+    // Arena (Cherry)
+    1700, 1710, 1750,
+    // Mayhem / ARAM Mayhem (Kiwi)
+    2400, 2450, 3270, 3280,
+    // TFT
+    1090, 1100, 1110, 1130, 1160,
+    // Swarm (Strawberry)
+    1810, 1820, 1830, 1840, 1850,
+    // Tutorial
+    2000, 2010, 2020
+];
+
+const NO_RUNE_MODES = [
+    'CHERRY', 
+    'KIWI', 
+    'KIWI_JADE', 
+    'STRAWBERRY', 
+    'TFT', 
+    'TUTORIAL', 
+    'DOOM'
+];
+
+function isRuneSelectionSupported(session) {
+    if (!session) return false;
+
+    // Explicit LCU session flags if provided by client
+    if (session.hasCustomPerks === false || session.allowPerks === false || session.perksEnabled === false) {
+        return false;
+    }
+
+    // Queue ID checks
+    const qId = Number(session.queueId || currentQueueId || 0);
+    if (qId > 0 && NO_RUNE_QUEUE_IDS.includes(qId)) {
+        return false;
+    }
+
+    // Game mode / queue type string checks
+    const gameMode = (session.gameMode || session.gameType || session.queueType || '').toUpperCase();
+    if (NO_RUNE_MODES.some(m => gameMode.includes(m))) {
+        return false;
+    }
+
+    return true;
+}
+
+// ---------------------------------------------------------
 // Champ Select Session Watcher
 // ---------------------------------------------------------
 
 async function onChampSelectSession(session) {
-    if (!isEnabled || !session) {
+    if (!isEnabled || !session || !isRuneSelectionSupported(session)) {
         removeWidget();
         return;
     }
