@@ -975,6 +975,23 @@ export function init(context) {
             premadeColor = '#e84057';
         }
 
+        // Ensure modern font styles for champ select stats elements
+        if (!document.getElementById('pm-cs-stats-injected-styles')) {
+            const st = document.createElement('style');
+            st.id = 'pm-cs-stats-injected-styles';
+            st.textContent = `
+                .pm-cs-stats-row, .pm-cs-stats-row *,
+                .pm-rank-badge, .pm-rank-badge *,
+                .pm-pre-badge, .pm-pre-badge * {
+                    font-family: var(--font-body), "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", Arial, sans-serif !important;
+                    -webkit-font-smoothing: antialiased;
+                    -moz-osx-font-smoothing: grayscale;
+                    text-rendering: optimizeLegibility;
+                }
+            `;
+            document.head.appendChild(st);
+        }
+
         // Cleanup all injected elements
         ['.pm-champ-select-stats', '.pm-cs-stats-wrapper', '.pm-cs-stats-row', '.pm-pre-badge', '.pm-rank-badge'].forEach(sel => {
             el.querySelectorAll(sel).forEach(node => node.remove());
@@ -1020,7 +1037,7 @@ export function init(context) {
             const preBadge = document.createElement('span');
             preBadge.className = 'pm-pre-badge';
             preBadge.textContent = t('PRE');
-            preBadge.style.cssText = `position:absolute; top:-4px; left:50%; transform:translateX(-50%); font-size:11px; font-weight:900; color:${premadeColor}; text-shadow:-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 0 4px #000; text-transform:uppercase; z-index:10; pointer-events:none;`;
+            preBadge.style.cssText = `position:absolute; top:-4px; left:50%; transform:translateX(-50%); font-family:var(--font-body),"Segoe UI",sans-serif; font-size:11px; font-weight:900; color:${premadeColor}; text-shadow:-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 0 4px #000; text-transform:uppercase; z-index:10; pointer-events:none; letter-spacing:0.5px;`;
             iconContainer.appendChild(preBadge);
         }
 
@@ -1033,7 +1050,7 @@ export function init(context) {
             const rankBadge = document.createElement('div');
             rankBadge.className = 'pm-rank-badge';
             rankBadge.textContent = statsData.rankText;
-            rankBadge.style.cssText = `position:absolute; bottom:-12px; left:50%; transform:translateX(-50%); font-size:9px; font-weight:bold; color:${rankColor}; background:rgba(0,0,0,0.8); padding:1px 4px; border-radius:4px; border:1px solid ${rankColor}44; text-transform:uppercase; line-height:1; white-space:nowrap; z-index:10; pointer-events:none; text-align:center; box-shadow:0 1px 3px rgba(0,0,0,0.5);`;
+            rankBadge.style.cssText = `position:absolute; bottom:-12px; left:50%; transform:translateX(-50%); font-family:var(--font-body),"Segoe UI",sans-serif; font-size:9.5px; font-weight:700; color:${rankColor}; background:rgba(1,10,19,0.9); padding:2px 5px; border-radius:4px; border:1px solid ${rankColor}55; text-transform:uppercase; line-height:1; white-space:nowrap; z-index:10; pointer-events:none; text-align:center; box-shadow:0 2px 6px rgba(0,0,0,0.6); letter-spacing:0.3px;`;
             iconContainer.appendChild(rankBadge);
         }
 
@@ -1044,10 +1061,10 @@ export function init(context) {
         let badgeWR = '';
         if (!statsData.empty) {
             badgeWR = `
-            <div style="display:inline-flex; align-items:center; gap:3px; font-size:9px; color:#a09b8c; background:rgba(0,0,0,0.6); padding:2px 3px; border-radius:3px; border:1px solid rgba(255,255,255,0.08); white-space:nowrap;">
-                <span style="color:${wrColor}; font-weight:bold;">${statsData.wr}${t("% WR")}</span>
-                <span style="color:#746e64;">${t("|")}</span>
-                <span style="font-weight:600;">${statsData.kda} ${t("KDA")}</span>
+            <div style="display:inline-flex; align-items:center; gap:4px; font-family:var(--font-body),'Segoe UI',sans-serif; font-size:10px; color:#a09b8c; background:rgba(1,10,19,0.85); padding:2px 5px; border-radius:4px; border:1px solid rgba(255,255,255,0.08); white-space:nowrap; box-shadow:0 2px 4px rgba(0,0,0,0.4);">
+                <span style="color:${wrColor}; font-weight:700;">${statsData.wr}${t("% WR")}</span>
+                <span style="color:#746e64; font-size:9px;">${t("|")}</span>
+                <span style="font-weight:600; color:#f0e6d2;">${statsData.kda} <span style="font-size:8.5px; color:#8a9aaa;">${t("KDA")}</span></span>
             </div>
             `;
         }
@@ -1057,16 +1074,16 @@ export function init(context) {
             const champIcon = Utils.GameData.Assets?.getIcon?.('champs', statsData.mostPickedId) || `/lol-game-data/assets/v1/champion-icons/${statsData.mostPickedId}.png`;
             if (isRightSide) {
                 badgeMostPicked = `
-                <div style="display:inline-flex; align-items:center; gap:3px; background:rgba(0,0,0,0.6); padding:1px 5px; border-radius:3px; border:1px solid rgba(200,170,110,0.2); white-space:nowrap;">
-                    <img src="${champIcon}" style="width:16px; height:16px; border-radius:50%; object-fit:cover;">
-                    <span style="font-size:11px; font-weight:bold; color:#a09b8c;">${statsData.mostPickedCount}x</span>
+                <div style="display:inline-flex; align-items:center; gap:4px; font-family:var(--font-body),'Segoe UI',sans-serif; background:rgba(1,10,19,0.85); padding:2px 5px; border-radius:4px; border:1px solid rgba(200,170,110,0.25); white-space:nowrap; box-shadow:0 2px 4px rgba(0,0,0,0.4);">
+                    <img src="${champIcon}" style="width:15px; height:15px; border-radius:50%; object-fit:cover; border:1px solid rgba(200,170,110,0.4);">
+                    <span style="font-size:10.5px; font-weight:700; color:#f0e6d2;">${statsData.mostPickedCount}x</span>
                 </div>
                 `;
             } else {
                 badgeMostPicked = `
-                <div style="display:inline-flex; align-items:center; gap:3px; background:rgba(0,0,0,0.6); padding:1px 5px; border-radius:3px; border:1px solid rgba(200,170,110,0.2); white-space:nowrap;">
-                    <span style="font-size:11px; font-weight:bold; color:#a09b8c;">${statsData.mostPickedCount}x</span>
-                    <img src="${champIcon}" style="width:16px; height:16px; border-radius:50%; object-fit:cover;">
+                <div style="display:inline-flex; align-items:center; gap:4px; font-family:var(--font-body),'Segoe UI',sans-serif; background:rgba(1,10,19,0.85); padding:2px 5px; border-radius:4px; border:1px solid rgba(200,170,110,0.25); white-space:nowrap; box-shadow:0 2px 4px rgba(0,0,0,0.4);">
+                    <span style="font-size:10.5px; font-weight:700; color:#f0e6d2;">${statsData.mostPickedCount}x</span>
+                    <img src="${champIcon}" style="width:15px; height:15px; border-radius:50%; object-fit:cover; border:1px solid rgba(200,170,110,0.4);">
                 </div>
                 `;
             }
@@ -1076,9 +1093,9 @@ export function init(context) {
         if (statsData.results && statsData.results.length > 0) {
             const dots = statsData.results.map(r => {
                 const bg = r === 'win' ? '#0ac8b9' : (r === 'loss' ? '#e84057' : '#746e64');
-                return `<div style="width:3px;height:3px;border-radius:50%;background:${bg};"></div>`;
+                return `<div style="width:4px;height:4px;border-radius:50%;background:${bg};box-shadow:0 0 3px ${bg}88;"></div>`;
             }).join('');
-            badgeDots = `<div style="display:inline-flex; gap:2px; align-items:center; background:rgba(0,0,0,0.6); padding:3px 4px; border-radius:3px; border:1px solid rgba(255,255,255,0.08); white-space:nowrap;">${dots}</div>`;
+            badgeDots = `<div style="display:inline-flex; gap:3px; align-items:center; background:rgba(1,10,19,0.85); padding:4px 6px; border-radius:4px; border:1px solid rgba(255,255,255,0.08); white-space:nowrap; box-shadow:0 2px 4px rgba(0,0,0,0.4);">${dots}</div>`;
         }
 
         if (isRightSide) {
@@ -1094,7 +1111,7 @@ export function init(context) {
         if (statsRowHtml) {
             const statsRow = document.createElement('div');
             statsRow.className = 'pm-cs-stats-row';
-            statsRow.style.cssText = `display:flex; align-items:center; gap:3px; flex-wrap:wrap; margin-top:2px; justify-content:${isRightSide ? 'flex-end' : 'flex-start'}; width:100%; pointer-events:none; overflow:hidden;`;
+            statsRow.style.cssText = `display:flex; align-items:center; gap:4px; flex-wrap:wrap; margin-top:3px; justify-content:${isRightSide ? 'flex-end' : 'flex-start'}; width:100%; pointer-events:none; overflow:hidden;`;
             statsRow.innerHTML = statsRowHtml;
             targetHook.appendChild(statsRow);
         }
