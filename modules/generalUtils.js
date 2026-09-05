@@ -2,7 +2,7 @@
  * @name Snooze-GeneralUtils
  * @version 1.1.0
  * @author SnoozeFest - github@ReformedDoge
- * @description Shared helper utilities used by Snooze modules. Standalone —
+ * @description Shared helper utilities used by Snooze modules. Standalone :
  * ships without external dependencies; locale files are optional.
  * @link https://github.com/ReformedDoge
  */
@@ -10,7 +10,7 @@
 /**
  * i18n API
  * Configuration is per-plugin: call initI18n({ storageKey, supportedLanguages }) with your own settings (keep them in a tiny i18n.js config file in the plugin).
- * If never configured, t() still works — it falls back to the English keys.
+ * If never configured, t() still works : it falls back to the English keys.
  */
 const DEFAULT_LANG = 'en';
 
@@ -43,19 +43,10 @@ export async function initI18n(config = {}) {
         return;
     }
 
-    let savedLang = Store.get(storageKey, 'language');
-    if (savedLang === undefined) {
-        savedLang = localStorage.getItem(storageKey);
-        if (savedLang !== null) {
-            if (supportedLanguages && !Object.prototype.hasOwnProperty.call(supportedLanguages, savedLang)) {
-                savedLang = undefined;
-            } else {
-                Store.set(storageKey, 'language', savedLang);
-            }
-            localStorage.removeItem(storageKey);
-        }
+    const savedLang = Store.get(storageKey, 'language');
+    if (savedLang && (!supportedLanguages || Object.prototype.hasOwnProperty.call(supportedLanguages, savedLang))) {
+        currentLanguage = savedLang;
     }
-    if (savedLang) currentLanguage = savedLang;
 
     await loadDictionary(currentLanguage);
     isInitialized = true;
@@ -75,7 +66,7 @@ async function loadDictionary(lang) {
 
     try {
         // Resolve the exact path in the Pengu CEF environment. generalUtils may be
-        // shipped inside a plugin's /modules/, at the plugin root, or elsewhere —
+        // shipped inside a plugin's /modules/, at the plugin root, or elsewhere :
         // so we probe a few candidates relative to this module's own location.
         const normalized = import.meta.url.replace(/\\/g, "/");
         const moduleDir = normalized.substring(0, normalized.lastIndexOf("/") + 1);
@@ -102,14 +93,14 @@ async function loadDictionary(lang) {
 
         if (typeof data === 'object' && data !== null) {
             translations = data;
-            console.debug(`[i18n] Successfully loaded locale: ${lang}`);
+            Debug.debug(`[i18n] Successfully loaded locale: ${lang}`);
         } else if (lastError) {
             throw lastError;
         }
     } catch (error) {
         // If en.json fails, it's totally fine since the keys are English.
         if (lang !== 'en') {
-            console.warn(`[i18n] Failed to load translations for '${lang}', falling back to default keys. Error:`, error);
+            Debug.warn(`[i18n] Failed to load translations for '${lang}', falling back to default keys. Error:`, error);
         }
         translations = {}; // Reset to prevent mixing languages if a fetch fails
     }
@@ -124,7 +115,7 @@ async function loadDictionary(lang) {
  */
 export function t(key, params = {}) {
     if (typeof key !== 'string') {
-        console.warn('[i18n] t() called with non-string key:', key);
+        Debug.warn('[i18n] t() called with non-string key:', key);
         return String(key);
     }
 
@@ -155,24 +146,24 @@ export function t(key, params = {}) {
  */
 export async function setLanguage(lang) {
     if (supportedLanguages && !Object.prototype.hasOwnProperty.call(supportedLanguages, lang)) {
-        console.error(`[i18n] Attempted to set unsupported language: ${lang}`);
+        Debug.error(`[i18n] Attempted to set unsupported language: ${lang}`);
         return false;
     }
 
     if (lang === currentLanguage) return true; // No change needed
 
     if (!storageKey) {
-        console.warn('[i18n] setLanguage() called before initI18n() with a storageKey — nothing saved');
+        Debug.warn('[i18n] setLanguage() called before initI18n() with a storageKey : nothing saved');
         return false;
     }
 
     try {
         Store.set(storageKey, 'language', lang);
-        console.log(`[i18n] Language saved as ${lang}. Reloading...`);
+        Debug.log(`[i18n] Language saved as ${lang}. Reloading...`);
         fetch("/riotclient/kill-and-restart-ux", { method: "POST" });
         return true;
     } catch (e) {
-        console.error('[i18n] Failed to save language preference:', e);
+        Debug.error('[i18n] Failed to save language preference:', e);
         return false;
     }
 }
@@ -204,6 +195,10 @@ function setDebugEnabled(v) {
 }
 const Debug = {
     setEnabled: setDebugEnabled,
+    debug(...args) {
+        if (!_debugState.enabled) return;
+        console.debug(...args);
+    },
     log(...args) {
         if (!_debugState.enabled) return;
         console.log(...args);
@@ -1605,6 +1600,20 @@ const Assets = {
         this._championVariantRules.push(...rules);
         this._refreshChampionNames();
         return this;
+    },
+    /** Return champion records belonging to a registered variant rule. */
+    getChampionVariants(suffix = 'Classic', source = this.champs) {
+        const rule = this._championVariantRules.find(
+            r => String(r.suffix).toLowerCase() === String(suffix).toLowerCase()
+        );
+        if (!rule) return [];
+
+        const records = Array.isArray(source)
+            ? source
+            : Object.values(source || {});
+        return records
+            .filter(champ => champ && Number(champ.id) > 0 && rule.matches(champ))
+            .sort((a, b) => Number(a.id) - Number(b.id));
     },
     getChampionName(id, opts = {}) {
         const champ = this.champs[Number(id)];
