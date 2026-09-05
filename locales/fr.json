@@ -561,7 +561,6 @@
   "Requeue last lobby (ignores queue selection)": "Refaire la dernière salle (ignore la file sélectionnée)",
   "Delay before queue (seconds)": "Délai avant mise en file (secondes)",
   "Auto Queue: you are not the party leader.": "File d'attente automatique : vous n'êtes pas le chef du groupe.",
-  "Auto Queue: lobby did not become ready in time.": "File d'attente automatique : la salle ne s'est pas préparée à temps.",
   "Auto Queue: searching for a match...": "File d'attente automatique : recherche d'une partie en cours...",
   "Auto Queue: failed to start matchmaking.": "File d'attente automatique : impossible de démarrer la recherche de partie.",
   "Auto Queue: matchmaking error - {{msg}}": "File d'attente automatique : erreur de matchmaking - {{msg}}",
@@ -575,5 +574,7 @@
   "Stop": "Arrêter",
   "Full Automation Guide:": "Guide d’automatisation complète :",
   "For a completely hands-free journey from queue to game, make sure to also enable the following features:": "Pour un parcours entièrement automatique de la file d’attente à la partie, pensez également à activer les fonctionnalités suivantes :",
-  "with the 'Skip Honor' option checked": "avec l’option « Ignorer l’honneur » cochée"
+  "with the 'Skip Honor' option checked": "avec l’option « Ignorer l’honneur » cochée",
+  "Mayhem (Classic)": "Chaos (Classique)",
+  "SR (Classic)": "Faille (Classique)"
 }

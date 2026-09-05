@@ -561,7 +561,6 @@
   "Requeue last lobby (ignores queue selection)": "Son lobiyi yeniden sıraya al (seçili sırayı yok sayar)",
   "Delay before queue (seconds)": "Sıraya girmeden önceki gecikme (saniye)",
   "Auto Queue: you are not the party leader.": "Otomatik Sıraya Girme: parti lideri değilsin.",
-  "Auto Queue: lobby did not become ready in time.": "Otomatik Sıraya Girme: lobi zamanında hazır olmadı.",
   "Auto Queue: searching for a match...": "Otomatik Sıraya Girme: eşleşme aranıyor...",
   "Auto Queue: failed to start matchmaking.": "Otomatik Sıraya Girme: eşleşme araması başlatılamadı.",
   "Auto Queue: matchmaking error - {{msg}}": "Otomatik Sıraya Girme: eşleşme hatası - {{msg}}",
@@ -575,5 +574,7 @@
   "Stop": "Durdur",
   "Full Automation Guide:": "Tam Otomasyon Rehberi:",
   "For a completely hands-free journey from queue to game, make sure to also enable the following features:": "Sıradan oyuna kadar tamamen otomatik bir yolculuk için şu özellikleri de etkinleştirdiğinizden emin olun:",
-  "with the 'Skip Honor' option checked": "'Onuru Atla' seçeneği işaretli"
+  "with the 'Skip Honor' option checked": "'Onuru Atla' seçeneği işaretli",
+  "Mayhem (Classic)": "Kaos (Klasik)",
+  "SR (Classic)": "Uçurum (Klasik)"
 }

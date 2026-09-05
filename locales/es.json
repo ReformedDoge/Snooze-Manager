@@ -561,7 +561,6 @@
   "Requeue last lobby (ignores queue selection)": "Repetir la última sala (ignora la cola seleccionada)",
   "Delay before queue (seconds)": "Retraso antes de poner en cola (segundos)",
   "Auto Queue: you are not the party leader.": "Cola automática: no eres el líder del equipo.",
-  "Auto Queue: lobby did not become ready in time.": "Cola automática: la sala no se preparó a tiempo.",
   "Auto Queue: searching for a match...": "Cola automática: buscando partida...",
   "Auto Queue: failed to start matchmaking.": "Cola automática: no se pudo iniciar la búsqueda de partida.",
   "Auto Queue: matchmaking error - {{msg}}": "Cola automática: error de emparejamiento - {{msg}}",
@@ -575,5 +574,7 @@
   "Stop": "Detener",
   "Full Automation Guide:": "Guía de automatización completa:",
   "For a completely hands-free journey from queue to game, make sure to also enable the following features:": "Para un viaje totalmente automático desde la cola hasta la partida, asegúrate de activar también las siguientes funciones:",
-  "with the 'Skip Honor' option checked": "con la opción 'Omitir honor' marcada"
+  "with the 'Skip Honor' option checked": "con la opción 'Omitir honor' marcada",
+  "Mayhem (Classic)": "Caos (Clásico)",
+  "SR (Classic)": "Grieta (Clásica)"
 }

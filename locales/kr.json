@@ -561,7 +561,6 @@
   "Requeue last lobby (ignores queue selection)": "마지막 로비 다시 대기열 등록(선택한 대기열 무시)",
   "Delay before queue (seconds)": "대기열 등록 전 지연(초)",
   "Auto Queue: you are not the party leader.": "자동 대기열: 파티 리더가 아닙니다.",
-  "Auto Queue: lobby did not become ready in time.": "자동 대기열: 로비가 제시간에 준비되지 않았습니다.",
   "Auto Queue: searching for a match...": "자동 대기열: 매치메이킹 검색 중...",
   "Auto Queue: failed to start matchmaking.": "자동 대기열: 매치메이킹 검색을 시작하지 못했습니다.",
   "Auto Queue: matchmaking error - {{msg}}": "자동 대기열: 매치메이킹 오류 - {{msg}}",
@@ -575,5 +574,7 @@
   "Stop": "중지",
   "Full Automation Guide:": "완전 자동화 가이드:",
   "For a completely hands-free journey from queue to game, make sure to also enable the following features:": "대기열부터 게임까지 완전히 자동으로 진행하려면 다음 기능도 활성화하세요:",
-  "with the 'Skip Honor' option checked": "'예치 건너뛰기' 옵션 선택"
+  "with the 'Skip Honor' option checked": "'예치 건너뛰기' 옵션 선택",
+  "Mayhem (Classic)": "매혹 (클래식)",
+  "SR (Classic)": "소환사의 협곡 (클래식)"
 }

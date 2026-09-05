@@ -38,8 +38,6 @@ function requestStop() {
 let _availableQueues = []; // [{ id, name }] from Utils.GameData.Assets
 let _queuesLoadPromise = null;
 
-// Abort if the lobby never becomes ready (watchdog)
-const LOBBY_READY_TIMEOUT_MS = 30000;
 const SEARCH_VERIFY_DELAY_MS = 1500;
 
 // Queue list 
@@ -140,12 +138,11 @@ async function inMatchmakingSearch() {
 }
 
 /**
- * Event: Readiness wait - mirrors the native parties fe: it binds
+ * Event-driven readiness wait - mirrors the native parties frontend: it binds
  * /lol-lobby/v2/lobby over the websocket and drives its Find Match button from
  * lobby.canStartActivity (canStartMatchmaking alias):
  * subscribe to lobby pushes and react the moment the lobby is ready.
- * One initial GET covers the "already sitting in a lobby" case (the push fires on change)
- * a watchdog timer aborts if it never becomes ready.
+ * One initial GET covers the "already sitting in a lobby" case (the push only fires on change). No timeout - waiting continues until ready or cancelled.
  *
  * mode 'adopt':   take the lobby as it is ("requeue last lobby") - the native play-again flow restores the previous lobby, never rewrite it
  * mode 'enforce': make sure the lobby runs the selected queue (create/repair)
@@ -154,14 +151,12 @@ function waitForLobbyReady(mode, targetQueueId, isCancelled) {
     return new Promise(resolve => {
         let settled = false;
         let unsub = null;
-        let watchdog = null;
         let createAttempted = false;
         let rewriteAttemptedFor = null;
 
         const finish = (result) => {
             if (settled) return;
             settled = true;
-            clearTimeout(watchdog);
             _waitKick = null;
             unsub?.();
             resolve(result);
@@ -174,6 +169,16 @@ function waitForLobbyReady(mode, targetQueueId, isCancelled) {
             } catch (e) {
                 Utils.Debug.log('[AutoQueue]', 'ERROR creating lobby:', e?.message ?? e);
             }
+        };
+
+        const describeLobby = (lobby) => {
+            const members = lobby?.members || [];
+            const invited = (lobby?.invitations || []).filter(i => i.state === 'INVITED').length;
+            const ready = members.filter(m => m.ready).length;
+            const leader = members.find(m => m.isLeader);
+            return `members=${members.length} ready=${ready}/${members.length} invites=${invited} `
+                + `leader=${leader ? (leader.isLocal ? 'you' : (leader.puuid ?? leader.summonerId)) : '?'} `
+                + `canStart=${!!lobby?.canStartActivity} queue=${lobbyQueueId(lobby)}`;
         };
 
         const evaluate = (lobby) => {
@@ -189,6 +194,10 @@ function waitForLobbyReady(mode, targetQueueId, isCancelled) {
                 return;
             }
             if (!lobby.localMember) return; // member entry not synced yet
+
+            // Diagnostics for the ready wait
+            Utils.Debug.log('[AutoQueue]', `lobby: ${describeLobby(lobby)}`);
+
             if (!lobby.localMember.isLeader) return finish({ ok: false, reason: 'not-leader', lobby });
 
             const currentQueue = lobbyQueueId(lobby);
@@ -200,6 +209,7 @@ function waitForLobbyReady(mode, targetQueueId, isCancelled) {
                 }
                 return;
             }
+
             // Same condition as the native Find Match button
             if (lobby.canStartActivity) finish({ ok: true, lobby });
         };
@@ -212,9 +222,6 @@ function waitForLobbyReady(mode, targetQueueId, isCancelled) {
 
         // Single initial state fetch (websocket pushes only fire on change)
         getCurrentLobby().then(lobby => evaluate(lobby)).catch(() => {});
-
-        // Watchdog: abort if the lobby never becomes ready
-        watchdog = setTimeout(() => finish({ ok: false, reason: 'timeout' }), LOBBY_READY_TIMEOUT_MS);
     });
 }
 
@@ -250,38 +257,6 @@ async function reQueue(trigger) {
 
         Utils.Debug.log('[AutoQueue]', `reQueue(${trigger}) - queueId=${requeueLast ? 'last-lobby' : targetQueueId}, delay=${delay}s, requeueLastLobby=${requeueLast}`);
 
-        if (delayMs > 0) {
-            Utils.Debug.log('[AutoQueue]', `Waiting ${delay}s before queuing...`);
-            let isCancelled = false;
-            await new Promise(resolve => {
-                let settled = false;
-                let unregisterPanic = null;
-                const finish = (cancelled = false) => {
-                    if (settled) return;
-                    settled = true;
-                    isCancelled = cancelled;
-                    clearTimeout(timer);
-                    unregisterPanic?.();
-                    unregisterPanic = null;
-                    if (_cancelPendingRequeue === cancel) _cancelPendingRequeue = null;
-                    resolve();
-                };
-                const cancel = () => finish(true);
-                const timer = setTimeout(() => finish(false), delayMs);
-                unregisterPanic = Utils.Panic.register(cancel);
-                _cancelPendingRequeue = cancel;
-            });
-
-            if (isCancelled) {
-                Utils.Debug.log('[AutoQueue]', 'Cancelled via Panic Key / Stop - aborting.');
-                return;
-            }
-            if (!isAutoQueueEnabled()) {
-                Utils.Debug.log('[AutoQueue]', 'Feature was disabled during delay - aborting.');
-                return;
-            }
-        }
-
         // From here until the search starts the Panic Key / Stop button aborts immediately.
         let cancelled = false;
         _cancelActiveRun = () => { cancelled = true; };
@@ -313,19 +288,52 @@ async function reQueue(trigger) {
                 }
             }
 
+            // Wait for the lobby to be startable. Parties waiting for members to return from EOG are handled by canStartActivity.
             const mode = requeueLast ? 'adopt' : 'enforce';
             const ready = await waitForLobbyReady(mode, targetQueueId, () => cancelled);
             if (!ready.ok) {
                 if (ready.reason === 'cancelled') {
-                    Utils.Debug.log('[AutoQueue]', 'Cancelled via Panic Key - aborting.');
+                    Utils.Debug.log('[AutoQueue]', 'Cancelled via Panic Key / Stop - aborting.');
                 } else if (ready.reason === 'not-leader') {
                     Utils.Debug.warn('[AutoQueue]', 'Not the party leader - cannot start matchmaking.');
                     Utils.Toast.warning(t('Auto Queue: you are not the party leader.'));
                 } else {
-                    Utils.Debug.warn('[AutoQueue]', `Lobby not ready within ${LOBBY_READY_TIMEOUT_MS / 1000}s - aborting.`);
-                    Utils.Toast.warning(t('Auto Queue: lobby did not become ready in time.'));
+                    Utils.Debug.warn('[AutoQueue]', 'Lobby wait ended without readiness - aborting.');
                 }
                 return;
+            }
+
+            // Delay starts once the lobby is actually startable.
+            if (delayMs > 0) {
+                Utils.Debug.log('[AutoQueue]', `Lobby ready - waiting ${delay}s before searching...`);
+                let isCancelled = false;
+                await new Promise(resolve => {
+                    let settled = false;
+                    let unregisterDelayPanic = null;
+                    const finish = (cancelledNow = false) => {
+                        if (settled) return;
+                        settled = true;
+                        isCancelled = cancelledNow;
+                        clearTimeout(timer);
+                        unregisterDelayPanic?.();
+                        unregisterDelayPanic = null;
+                        if (_cancelPendingRequeue === cancel) _cancelPendingRequeue = null;
+                        resolve();
+                    };
+                    const cancel = () => finish(true);
+                    const timer = setTimeout(() => finish(false), delayMs);
+                    unregisterDelayPanic = Utils.Panic.register(cancel);
+                    _cancelPendingRequeue = cancel;
+                });
+
+                if (isCancelled) {
+                    Utils.Debug.log('[AutoQueue]', 'Cancelled via Panic Key / Stop - aborting.');
+                    return;
+                }
+                if (!isAutoQueueEnabled()) {
+                    Utils.Debug.log('[AutoQueue]', 'Feature was disabled during delay - aborting.');
+                    return;
+                }
             }
 
             Utils.Debug.log('[AutoQueue]', `Lobby ready (queueId=${lobbyQueueId(ready.lobby)}) - starting matchmaking search.`);

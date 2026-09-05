@@ -561,7 +561,6 @@
   "Requeue last lobby (ignores queue selection)": "Repetir a última sala (ignora a fila selecionada)",
   "Delay before queue (seconds)": "Atraso antes de entrar na fila (segundos)",
   "Auto Queue: you are not the party leader.": "Fila automática: você não é o líder do grupo.",
-  "Auto Queue: lobby did not become ready in time.": "Fila automática: a sala não ficou pronta a tempo.",
   "Auto Queue: searching for a match...": "Fila automática: procurando partida...",
   "Auto Queue: failed to start matchmaking.": "Fila automática: falha ao iniciar a busca de partida.",
   "Auto Queue: matchmaking error - {{msg}}": "Fila automática: erro de matchmaking - {{msg}}",
@@ -575,5 +574,7 @@
   "Stop": "Parar",
   "Full Automation Guide:": "Guia de automação completa:",
   "For a completely hands-free journey from queue to game, make sure to also enable the following features:": "Para uma jornada totalmente automática da fila ao jogo, certifique-se de ativar também os seguintes recursos:",
-  "with the 'Skip Honor' option checked": "com a opção 'Pular honra' marcada"
+  "with the 'Skip Honor' option checked": "com a opção 'Pular honra' marcada",
+  "Mayhem (Classic)": "Caos (Clássico)",
+  "SR (Classic)": "Fenda (Clássica)"
 }

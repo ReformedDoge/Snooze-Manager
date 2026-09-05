@@ -561,7 +561,6 @@
   "Requeue last lobby (ignores queue selection)": "重新排队上一个房间（忽略所选队列）",
   "Delay before queue (seconds)": "排队前延迟（秒）",
   "Auto Queue: you are not the party leader.": "自动排队：你不是队伍队长。",
-  "Auto Queue: lobby did not become ready in time.": "自动排队：房间未在限时内准备就绪。",
   "Auto Queue: searching for a match...": "自动排队：正在寻找对局...",
   "Auto Queue: failed to start matchmaking.": "自动排队：开始匹配失败。",
   "Auto Queue: matchmaking error - {{msg}}": "自动排队：匹配出错 - {{msg}}",
@@ -575,5 +574,7 @@
   "Stop": "停止",
   "Full Automation Guide:": "全自动指南：",
   "For a completely hands-free journey from queue to game, make sure to also enable the following features:": "要想从排队到进入对局完全解放双手，请确保同时启用以下功能：",
-  "with the 'Skip Honor' option checked": "勾选“跳过点赞”选项"
+  "with the 'Skip Honor' option checked": "勾选“跳过点赞”选项",
+  "Mayhem (Classic)": "大乱斗（经典）",
+  "SR (Classic)": "召唤师峡谷（经典）"
 }

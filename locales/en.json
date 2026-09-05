@@ -561,7 +561,6 @@
   "Requeue last lobby (ignores queue selection)": "Requeue last lobby (ignores queue selection)",
   "Delay before queue (seconds)": "Delay before queue (seconds)",
   "Auto Queue: you are not the party leader.": "Auto Queue: you are not the party leader.",
-  "Auto Queue: lobby did not become ready in time.": "Auto Queue: lobby did not become ready in time.",
   "Auto Queue: searching for a match...": "Auto Queue: searching for a match...",
   "Auto Queue: failed to start matchmaking.": "Auto Queue: failed to start matchmaking.",
   "Auto Queue: matchmaking error - {{msg}}": "Auto Queue: matchmaking error - {{msg}}",
@@ -575,5 +574,7 @@
   "Stop": "Stop",
   "Full Automation Guide:": "Full Automation Guide:",
   "For a completely hands-free journey from queue to game, make sure to also enable the following features:": "For a completely hands-free journey from queue to game, make sure to also enable the following features:",
-  "with the 'Skip Honor' option checked": "with the 'Skip Honor' option checked"
+  "with the 'Skip Honor' option checked": "with the 'Skip Honor' option checked",
+  "Mayhem (Classic)": "Mayhem (Classic)",
+  "SR (Classic)": "SR (Classic)"
 }
