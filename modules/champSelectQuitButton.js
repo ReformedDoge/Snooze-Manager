@@ -20,24 +20,44 @@ function toggleFeature(enabled) {
 }
 
 async function dodgeQueue() {
-    const endpoint = '/lol-login/v1/session/invoke?destination=lcdsServiceProxy&method=call&args=["","teambuilder-draft","quitV2",""]';
-    for (let i = 0; i < 10; i++) {
-        try {
-            await Utils.LCU.post(endpoint, '["","teambuilder-draft","quitV2",""]', {
-                raw: true
-            });
-            Utils.Debug.log(`[DodgeButton] quitV2 attempt ${i + 1} sent`);
-        } catch (err) {
-            Utils.Debug.error(`[DodgeButton] quitV2 attempt ${i + 1} failed:`, err);
-        }
-        await new Promise(resolve => setTimeout(resolve, 250));
-    }
+    Utils.Debug.log('[DodgeButton] Initiating champion select dodge...');
+    let succeeded = false;
+
+    // 1. Primary: Official Riot champion select quit endpoint
     try {
-        await Utils.LCU.post('/lol-lobby/v1/lobby/custom/cancel-champ-select', null);
-        Utils.Debug.log('[DodgeButton] cancel-champ-select sent');
+        await Utils.LCU.post('/lol-lobby-team-builder/champ-select/v1/session/quit', {});
+        Utils.Debug.log('[DodgeButton] /lol-lobby-team-builder/champ-select/v1/session/quit succeeded');
+        succeeded = true;
     } catch (err) {
-        Utils.Debug.error('[DodgeButton] cancel-champ-select failed:', err);
+        Utils.Debug.warn('[DodgeButton] team-builder session quit failed:', err);
+        // Fallback: gameflow dodge endpoint
+        try {
+            await Utils.LCU.post('/lol-gameflow/v1/session/dodge', {});
+            Utils.Debug.log('[DodgeButton] /lol-gameflow/v1/session/dodge sent');
+            succeeded = true;
+        } catch (dodgeErr) {
+            Utils.Debug.warn('[DodgeButton] gameflow dodge failed:', dodgeErr);
+        }
     }
+
+    // Fallback: Custom lobby champ-select cancel
+    try {
+        await Utils.LCU.post('/lol-lobby/v1/lobby/custom/cancel-champ-select', {});
+        Utils.Debug.log('[DodgeButton] /lol-lobby/v1/lobby/custom/cancel-champ-select sent');
+    } catch (err) {
+        Utils.Debug.debug('[DodgeButton] custom cancel-champ-select skipped or failed:', err);
+    }
+
+    // 2. Clean up matchmaking search state so the client doesn't get stuck in "Finding Match (0:00)"
+    const cancelSearch = async () => {
+        try { await Utils.LCU.delete('/lol-lobby/v2/lobby/matchmaking/search'); } catch (e) {}
+        try { await Utils.LCU.delete('/lol-matchmaking/v1/search'); } catch (e) {}
+    };
+
+    await cancelSearch();
+    setTimeout(cancelSearch, 300);
+
+    return succeeded;
 }
 
 export function init(context) {
